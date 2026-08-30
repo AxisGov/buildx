@@ -88,6 +88,8 @@ Invoca o **stackx**. Num projeto vazio não há convenção a detectar, então o
 
 Também cria o esqueleto mínimo que torna o projeto testável: gerenciador de pacote, runner de teste, lint, e um teste que passa. Sem isso a primeira sprint do sprintx não tem onde se apoiar.
 
+E instala a casca do design system: os tokens das duas variantes, o alternador de tema e as regiões de layout, ainda vazias (`references/08-design-system.md`). Sem indicação do usuário, o padrão é o design system do **VS Code**.
+
 Roteiro: `references/03-fundacao.md`.
 
 ### B3 — Decomposição
@@ -225,6 +227,7 @@ Kinds do buildx: `projeto`, `premissas`, `mapa`, `recursao`, `validacao`, `relat
 | `references/05-construcao.md` | B4: o laço, a F2 respondida pelo buildx, o tratamento de bloqueio |
 | `references/06-recursao.md` | B5: classificação de pendência, o teto de ciclos |
 | `references/07-validacao.md` | B6: a conferência item a item e o relatório final |
+| `references/08-design-system.md` | o design system padrão: tokens do VS Code nas duas variantes, tipografia, espaçamento, layout e componentes |
 | `references/integracao/prodx.md` | o modo greenfield: o que muda no prodx |
 | `references/integracao/sprintx.md` | a F2 autônoma e o contrato de invocação por feature |
 | `references/integracao/mergex.md` | onde a mergex entra no laço, e por que o merge fica de fora |

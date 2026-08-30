@@ -42,7 +42,7 @@ Para cada linha, o buildx procura a evidência e registra uma de quatro conclus�
 - **funcionalidade** → o arquivo que a implementa **e** o teste que a verifica. Código sem teste é `parcial`, nunca `atendido`.
 - **premissa de segurança** → o código que a realiza, e o teste que prova que a proteção funciona. Uma verificação de permissão sem teste que tente violá-la não é evidência.
 - **feature** → PR aberto, suíte verde, `mergex-check` PRONTO.
-- **premissa de interface** → tema claro e escuro presentes, estados de tela tratados, responsivo. Aqui vale abrir a aplicação e olhar.
+- **premissa de interface** → as duas variantes de tema completas, os três estados de tela tratados, responsivo, e os componentes sobre os tokens do design system — nenhuma cor literal. Aqui vale abrir a aplicação e olhar.
 
 **Nunca aceite como evidência:** o `MAPA.md` dizer `entregue`; a task estar `concluida`; o plano prever a coisa; o nome de um arquivo sugerir o conteúdo.
 
@@ -52,7 +52,7 @@ O que o usuário vai fazer no primeiro minuto, e que nenhum artefato prova:
 
 1. numa cópia limpa: instalar, migrar, semear, subir
 2. entrar com o usuário de demonstração (P-5), com as credenciais que o relatório vai documentar
-3. alternar tema claro e escuro
+3. alternar as duas variantes de tema pela barra de status, e conferir que ambas ficam completas
 4. percorrer a entrega principal de cada feature
 5. abrir em largura de celular
 

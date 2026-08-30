@@ -37,7 +37,7 @@ Conferência do construído contra o `PROJETO.md`. **Confere, não conserta.**
 | seed de demonstração roda | <ok \| falhou: motivo> |
 | o projeto sobe | <ok \| falhou: motivo> |
 | usuário de demonstração entra | <ok \| falhou: motivo> |
-| tema claro e escuro alternam | <ok \| falhou: motivo> |
+| as duas variantes de tema alternam e ficam completas | <ok \| falhou: motivo> |
 | funciona em largura de celular | <ok \| falhou: motivo> |
 
 <Qualquer falha aqui é nao_atendido de peso alto. Um sistema que não sobe
@@ -98,8 +98,9 @@ O QUE CONTA COMO EVIDÊNCIA
   segurança         proteção funciona. Verificação de permissão sem teste
                     que tente violá-la não é evidência.
   feature         → PR aberto, suíte verde, mergex-check PRONTO.
-  interface       → temas presentes, estados tratados, responsivo.
-                    Aqui vale abrir a aplicação e olhar.
+  interface       → as duas variantes completas, os tres estados de tela
+                    tratados, responsivo, e nenhuma cor literal em componente.
+                    Aqui vale abrir a aplicacao e olhar.
 
 O QUE NUNCA CONTA
 

@@ -185,3 +185,33 @@ O efeito colateral é que o `init` não avisa que o buildx precisa de sprintx e 
 O stackx é diferente: o que ele faz no B2 é gravar um arquivo que o buildx já decidiu. Perde-se a revisão automática da primeira feature, que é real mas não é estrutural.
 
 **O que invalida:** nada para as três duras. Para o stackx, se a revisão da primeira feature se mostrar decisiva na prática.
+
+---
+
+## D-15 — O design system padrão é o do VS Code
+
+**Decisão:** sem indicação do usuário, a aplicação adota os tokens, a tipografia, o espaçamento e a estrutura de layout do VS Code — Dark+ e Light+, com os nomes semânticos preservados.
+
+**Alternativa descartada:** "SaaS moderno, tema claro e escuro, destaque azul", que era o P-6 original.
+
+**Por quê:** o P-6 original não era um design system — era um adjetivo. "SaaS moderno" não diz qual cinza, qual altura de linha, onde vai a navegação, e por isso produziria uma aplicação diferente a cada projeto e, pior, incoerente entre features do mesmo projeto: a `FT-03` escolheria um cinza, a `FT-07` outro, e ninguém notaria até o B6.
+
+O VS Code resolve exatamente o que é caro decidir sozinho: um par claro/escuro coerente, tokens semânticos em vez de paleta (`button-background`, não `#0078d4`), e uma estrutura de layout definida. E é o ambiente em que esta casa trabalha — a aplicação entregue parece pertencer ao lugar de onde saiu.
+
+O ganho concreto para o modo autônomo: uma regra verificável no `CONVENCOES.md` — *nenhuma cor literal em componente* — que o `stackx-check` cobra sozinho. "Faça bonito" não é verificável; "todo valor de cor vem de um token" é.
+
+**O que invalida:** o usuário indicar um design system; o projeto ser site institucional, página de marketing ou produto de consumo, onde a estética de ferramenta é a errada.
+
+---
+
+## D-16 — Os tokens ficam no reference, não no SKILL.md
+
+**Decisão:** `references/08-design-system.md` carrega os tokens completos das duas variantes, e o `SKILL.md` só aponta.
+
+**Alternativa descartada:** um resumo do design system no `SKILL.md`, que é lido sempre.
+
+**Por quê:** o mesmo argumento do D-08. O `SKILL.md` diz como o método funciona; os tokens dizem o que esta casa assume, e vão mudar quando o usuário indicar outro design system ou o VS Code mudar de tema padrão.
+
+Há um segundo motivo, prático: são ~90 linhas de CSS. Carregá-las em toda invocação do buildx, inclusive nas que não tocam interface, é custo puro — e o `SKILL.md` já diz para ler o reference da etapa apenas quando a etapa chega.
+
+**O que invalida:** nada. É a mesma regra que já governa os padrões da casa.

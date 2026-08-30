@@ -106,8 +106,8 @@ O que o buildx assume quando o usuário não diz nada. Detalhe em `references/02
 | P-3 | SQLite local — dependência mínima é requisito de execução autônoma |
 | P-4 | autenticação própria, JWT, hash forte |
 | P-5 | usuário de demonstração com dados de exemplo, sempre |
-| P-6 | visual SaaS, tema claro e escuro, destaque azul |
-| P-7 | skill de frontend design da Anthropic quando disponível |
+| P-6 | design system do VS Code — tokens Dark+/Light+, tipografia, layout |
+| P-7 | skill de frontend design da Anthropic, trabalhando dentro do P-6 |
 | P-8 | o projeto nasce com a suíte Expx instalada, Claude Code e OpenCode |
 
 ## Estrutura em disco de um projeto do buildx

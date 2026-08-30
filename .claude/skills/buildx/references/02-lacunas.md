@@ -61,28 +61,34 @@ Regra dura: a seed de demonstração **nunca roda em produção** e é clarament
 
 **O que invalida:** nada. Este padrão não tem exceção — se o sistema tem login, tem usuário de demonstração.
 
-## P-6 — Visual: SaaS moderno, tema claro e escuro
+## P-6 — Design system: o do VS Code
 
-**Decisão:** interface com acabamento de produto SaaS — não protótipo, não template cru. Obrigatoriamente:
+**Decisão:** quando o usuário não indicar design system, a aplicação inteira adota o **design system do Visual Studio Code** — os tokens de cor dos temas Dark+ e Light+, a tipografia, o espaçamento, e a estrutura de layout (barra de atividade, barra lateral, área do editor, painel, barra de status).
 
-- **tema claro e tema escuro**, ambos completos, com a preferência do sistema respeitada e alternância manual persistida
-- **cor de destaque azul**, quando o usuário não indicar outra
-- tipografia, espaçamento e estados (vazio, carregando, erro) tratados como parte da entrega, não como sobra
-- responsivo: a interface funciona em tela de celular sem rolagem horizontal
+Não é "inspirado em": são os tokens nomeados do VS Code, com os mesmos nomes, nos mesmos papéis, nas duas variantes.
 
-**Por quê:** o critério de "pronto" do usuário é visual. Um sistema funcionalmente completo com interface de rascunho é reprovado por quem olha, e reprovar no fim custa um ciclo inteiro de recursão.
+**Por quê:** quatro razões, e a segunda é a que decide.
 
-**O que invalida:** o usuário indicar outra cor, outro estilo, um design system existente, ou pedir explicitamente algo sem interface polida.
+1. **É um design system completo e público**, com par claro/escuro coerente já resolvido — o problema mais caro de acertar à mão, e onde o acabamento improvisado costuma falhar.
+2. **É um sistema de tokens semânticos, não uma paleta.** `--vscode-button-background` diz o papel, não a cor. Isso é o que permite trocar o tema inteiro sem tocar em componente — e é o que faz uma decisão de aparência tomada pela máquina permanecer revisável depois.
+3. **É o ambiente em que o usuário desta casa trabalha o dia inteiro.** A aplicação entregue parece pertencer ao lugar de onde saiu.
+4. **Tem estrutura de layout definida**, não só cores. Onde vai a navegação, onde vai o conteúdo, onde vai o estado — decidido, e não reinventado por feature.
+
+**O que invalida:** o usuário indicar um design system (o da casa dele, Material, shadcn, Tailwind puro, uma marca existente), pedir outra identidade visual, ou o projeto não ter interface. Também não se aplica a site institucional ou página de marketing, onde a estética de ferramenta é a errada.
+
+Detalhe completo — tokens das duas variantes, tipografia, espaçamento, layout e componentes: `references/08-design-system.md`.
 
 ## P-7 — Design: usar a skill de frontend design quando houver
 
-**Decisão:** a parte visual e de UX é conduzida pela skill de **frontend design da Anthropic** quando ela estiver disponível.
+**Decisão:** a parte visual e de UX é conduzida pela skill de **frontend design da Anthropic** quando ela estiver disponível — trabalhando **dentro** do design system do P-6, não escolhendo outro.
+
+A divisão entre os dois padrões é clara: o P-6 fixa o vocabulário (tokens, tipografia, espaçamento, layout); o P-7 decide o que fazer com ele em cada tela — hierarquia, densidade, o que merece destaque, como o fluxo se organiza. Uma skill de design que escolhesse a própria paleta contrariaria o P-6, e é o P-6 que ganha.
 
 Ordem de tentativa, no B2:
 
 1. **Skill disponível na sessão** → use. É o caminho normal.
 2. **Não disponível** → o buildx pode buscar a skill no GitHub oficial da Anthropic e instalá-la no projeto, em `.claude/skills/`, e usá-la a partir dali.
-3. **Instalação falhou** (sem rede, repositório mudou, licença) → não é bloqueio. Siga com o P-6 aplicado à mão e registre uma premissa dizendo que o acabamento saiu sem a skill.
+3. **Instalação falhou** (sem rede, repositório mudou, licença) → não é bloqueio. Siga com o P-6 aplicado à mão — os tokens e a estrutura de `references/08-design-system.md` bastam para uma interface consistente — e registre uma premissa dizendo que o acabamento saiu sem a skill.
 
 Regras da instalação, sem exceção:
 
@@ -184,10 +190,10 @@ Nenhum item é pulado por parecer óbvio. A saída "descartado" é uma resposta 
 
 | # | Eixo | Padrão sensato quando não declarado |
 |---|---|---|
-| L26 | Acabamento visual | P-6 |
-| L27 | Tema | claro e escuro completos, preferência do sistema respeitada, alternância persistida (P-6) |
-| L28 | Responsividade | funciona em celular sem rolagem horizontal |
-| L29 | Acessibilidade | contraste suficiente nos dois temas, navegação por teclado, rótulo em todo campo |
+| L26 | Acabamento visual | P-6: o design system do VS Code, tokens e estrutura |
+| L27 | Tema | Dark+ e Light+ completos, preferência do sistema respeitada, alternância persistida na barra de status (P-6) |
+| L28 | Responsividade | abaixo de 768px a barra lateral vira gaveta; alvos de toque a 44px (P-6) |
+| L29 | Acessibilidade | contraste 4.5:1 nas duas variantes, foco visível com borda, rótulo em todo ícone sozinho |
 | L30 | Estados da tela | vazio, carregando e erro tratados em toda tela que busca dado |
 | L31 | Internacionalização | **descartado por padrão.** Um idioma, textos centralizados para facilitar depois. Só entra se o usuário indicar público fora de um idioma |
 

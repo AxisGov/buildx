@@ -81,7 +81,7 @@ A R8 merece nota: ela já foi escrita pensando em execução autônoma, e é o q
 | F3.5 estimativa | **opcional.** Não há prazo a negociar; rode se for barata |
 | F4 orquestrador | normal |
 | F5 auditoria | normal, e obedecida. Reprovado três vezes: a feature vira `bloqueada` |
-| F6 execução | normal. O acabamento visual (P-6, P-7) acontece nas tasks de interface |
+| F6 execução | normal. O acabamento visual acontece nas tasks de interface, sobre os tokens do design system (P-6, P-7) |
 
 ## O laço F3 ↔ F5
 

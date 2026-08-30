@@ -25,7 +25,7 @@ O `PROJETO.md` manda; na omissão, valem os padrões da casa de `02-lacunas.md`:
 | Framework | Next.js, TypeScript, App Router | P-2 |
 | Banco | SQLite em arquivo, migrations versionadas | P-3 |
 | Autenticação | JWT, e-mail e senha, hash forte | P-4 |
-| Interface | SaaS, tema claro e escuro, destaque azul | P-6 |
+| Interface | design system do VS Code, Dark+ e Light+ | P-6 |
 
 Cada escolha vira premissa em `PREMISSAS.md` com `origem: decisao_de_stack` — inclusive as que vieram do padrão da casa. O humano precisa poder ler, num arquivo só, tudo que foi decidido em nome dele.
 
@@ -56,7 +56,7 @@ Padrão P-7, e só se o projeto tiver interface.
 
 1. Skill de frontend design disponível na sessão → use no B4, nada a fazer aqui.
 2. Não disponível → busque no repositório oficial da Anthropic e instale em `.claude/skills/` **do projeto**, nunca no ambiente global do usuário.
-3. Falhou → **não é bloqueio.** Registre a premissa dizendo que o acabamento sairá sem a skill, com o P-6 aplicado à mão, e siga.
+3. Falhou → **não é bloqueio.** Registre a premissa dizendo que o acabamento sairá sem a skill, com o P-6 aplicado à mão — os tokens e a estrutura de `08-design-system.md` bastam —, e siga.
 
 Nunca instale nada além dessa skill, nunca de fonte que não seja o repositório oficial, nunca em laço de tentativas.
 

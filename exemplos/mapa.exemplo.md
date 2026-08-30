@@ -51,8 +51,9 @@ Ordem de dependência. Nenhuma feature precede aquilo de que depende.
 **PR:** #3 · **Sprints:** 3 · **Testes:** 34
 
 > A fundação. Carrega junto o usuário de demonstração (PR-11) e a casca
-> visual com tema claro e escuro (PR-12) — são o que a torna demonstrável.
-> Sem eles a primeira entrega seria uma tela de login vazia sem conta para
+> visual do design system (PR-12): barra de atividade, barra lateral, barra
+> de status e as duas variantes de tema. São o que a torna demonstrável —
+> sem eles a primeira entrega seria uma tela de login vazia sem conta para
 > entrar, indistinguível de um sistema quebrado.
 
 ---

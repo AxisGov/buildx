@@ -53,8 +53,9 @@ Autenticação, modelo de usuário e papéis — porque toda outra feature vai
 verificar quem está pedindo, e acrescentar autorização depois exige
 revisar toda rota já escrita.
 
-Junto com ela, e não em feature separada: o usuário de demonstração (P-5),
-o tema claro e escuro e a casca visual (P-6). São o que torna a FT-01
+Junto com ela, e não em feature separada: o usuário de demonstração (P-5) e
+a casca visual do design system (P-6) — barra de atividade, barra lateral,
+barra de status e alternância de tema, funcionando. São o que torna a FT-01
 demonstrável: uma tela de login com acabamento e uma conta para entrar.
 
 OS TRÊS TESTES DE UMA FEATURE

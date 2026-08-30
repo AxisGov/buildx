@@ -53,7 +53,7 @@ A varredura de lacunas é a razão de o buildx existir em vez de você falar dir
 
 **Qualidade** — TDD, lint, pipeline, semente de dados.
 
-**Interface** — acabamento SaaS, tema claro e escuro, responsividade, acessibilidade, estados de vazio, carregando e erro.
+**Interface** — o design system do VS Code nas duas variantes, responsividade, acessibilidade, estados de vazio, carregando e erro.
 
 Cada uma tem três destinos possíveis: virou requisito, foi descartada com o porquê registrado, ou já estava no que você pediu. Nenhuma é pulada em silêncio — e o B6 confere a lista dos três.
 
@@ -86,8 +86,8 @@ O que o buildx assume quando você não diz nada. Você sempre ganha do padrão.
 | **Banco** | SQLite local — dependência mínima é requisito de execução autônoma |
 | **Autenticação** | própria, JWT, hash forte |
 | **Demonstração** | usuário e dados de exemplo, sempre — um sistema que sobe numa tela de login vazia é indistinguível de um sistema quebrado |
-| **Visual** | SaaS, tema claro e escuro completos, destaque azul |
-| **Design** | a skill de frontend design da Anthropic, quando disponível |
+| **Visual** | o design system do **VS Code** — tokens Dark+ e Light+, tipografia do sistema, grade de 4px, e a estrutura de barra de atividade, barra lateral e barra de status |
+| **Design** | a skill de frontend design da Anthropic, trabalhando dentro desses tokens |
 | **Método** | o projeto **nasce com a suíte Expx instalada**, Claude Code e OpenCode configurados |
 
 ## A fronteira que ele não atravessa

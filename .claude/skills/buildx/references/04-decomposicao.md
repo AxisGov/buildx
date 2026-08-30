@@ -64,7 +64,7 @@ Não é negociável em dois pontos.
 
 **1. A fundação vem primeiro.** A `FT-01` é sempre a feature que entrega autenticação e o modelo de usuário — porque toda outra feature vai verificar quem está pedindo, e acrescentar autorização depois exige revisar toda rota já escrita (L2).
 
-Junto com a `FT-01`, e não numa feature separada: o usuário de demonstração (P-5), o tema claro e escuro e a casca visual (P-6). São o que torna a `FT-01` demonstrável — uma tela de login com acabamento e uma conta para entrar. Sem isso a primeira entrega não passa no teste "demonstrável".
+Junto com a `FT-01`, e não numa feature separada: o usuário de demonstração (P-5) e a casca visual do design system (P-6) — barra de atividade, barra lateral, barra de status e alternância de tema, funcionando. São o que torna a `FT-01` demonstrável: uma tela de login com acabamento e uma conta para entrar. Sem isso a primeira entrega não passa no teste "demonstrável".
 
 **2. Nenhuma feature precede aquilo de que depende.** Ordene por dependência topológica. Empate, decida por: primeiro o que mais features dependem; depois o que está no escopo mínimo do `PROJETO.md`; depois o que é mais simples.
 

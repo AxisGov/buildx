@@ -85,7 +85,9 @@ Rodam sem intervenção do buildx. Três pontos de atenção:
 
 A F6 executa o plano auditado sob TDD estrito. O buildx não interfere: a regra 8 do sprintx já diz o que fazer com dúvida nova — registra em `00-BLOQUEIOS.md`, pula a task, segue para a próxima paralelizável, nunca para e espera.
 
-**O acabamento visual acontece aqui**, dentro das tasks de interface, não numa passada depois. Se a skill de frontend design estiver disponível (P-7), é aqui que ela é usada; senão, o P-6 é aplicado à mão. Toda tela entregue tem tema claro e escuro, estados de vazio, carregando e erro, e funciona em tela de celular.
+**O acabamento visual acontece aqui**, dentro das tasks de interface, não numa passada depois. Todo componente é construído sobre os tokens do design system (P-6, detalhado em `08-design-system.md`) — nenhum valor de cor literal entra em componente. Se a skill de frontend design estiver disponível (P-7), ela trabalha dentro desse vocabulário, não escolhe outro.
+
+Toda tela entregue tem as duas variantes de tema, os três estados obrigatórios (vazio, carregando, erro) e funciona em tela de celular.
 
 **O que o buildx nunca relaxa na F6:**
 
