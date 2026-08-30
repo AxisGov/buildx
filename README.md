@@ -1,7 +1,35 @@
 <div align="center">
 
-<strong>build^x</strong> — a camada de orquestração do método <a href="https://github.com/bittencourtthulio/expxdev">Expx</a><br>
-uma descrição entra, um sistema sai.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/banner-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/banner-light.svg">
+  <img alt="buildx — a camada de orquestracao do metodo Expx" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/banner-light.svg" width="100%">
+</picture>
+
+<p>
+  <img alt="harness: Claude Code" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/badge-claude.svg">
+  <img alt="harness: OpenCode" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/badge-opencode.svg">
+  <img alt="camada: orquestracao" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/badge-camada.svg">
+  <img alt="perguntas ao usuario: 1" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/badge-perguntas.svg">
+  <img alt="merge: humano" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/badge-merge.svg">
+  <img alt="design system: VS Code" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/badge-design.svg">
+  <img alt="schema expx v1" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/badge-schema.svg">
+  <img alt="docs pt-BR" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/badge-lang.svg">
+  <img alt="licenca MIT" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/badge-license.svg">
+</p>
+
+<p>
+  <a href="https://bittencourtthulio.github.io/expxdev/"><strong>📘 Documentação do método</strong></a>
+  &nbsp;·&nbsp;
+  <a href="https://bittencourtthulio.github.io/expxdev/#ecossistema">O ecossistema</a>
+  &nbsp;·&nbsp;
+  <a href="https://bittencourtthulio.github.io/expxdev/#instalacao">Instalação</a>
+  &nbsp;·&nbsp;
+  <a href="https://bittencourtthulio.github.io/expxdev/#schema">Contratos</a>
+</p>
+
+<strong>A camada de orquestração do método Expx</strong> — uma descrição entra,<br>
+um sistema sai, para <a href="https://claude.com/claude-code">Claude Code</a> e <a href="https://opencode.ai">OpenCode</a>.
 
 </div>
 
@@ -11,6 +39,31 @@ uma descrição entra, um sistema sai.
 ```
 
 O buildx faz **uma única pergunta** — autônomo ou briefing — e depois conduz `prodx`, `stackx`, `sprintx` e `mergex` até o sistema estar construído, testado e validado. Nenhuma outra pergunta chega a você.
+
+> **Ele não implementa nada, não planeja nada e não escreve teste nenhum.**
+> Toda a competência mora nas camadas irmãs. A única coisa que o buildx faz e nenhuma outra faz é quebrar um projeto em features — o vão entre "quero um sistema de gestão de contratos" e "planejar a feature de upload de PDF".
+
+---
+
+## O ecossistema Expx
+
+O método Expx é um conjunto de skills que se compõem, instaladas e mantidas pelo CLI [`expxdev`](https://github.com/bittencourtthulio/expxdev).
+
+| Peça | Papel | Relação com o `buildx` |
+|---|---|---|
+| **[expxdev](https://github.com/bittencourtthulio/expxdev)** | o CLI: instala, atualiza e diagnostica o ecossistema | é quem instala esta skill (`npx expxdev init`) |
+| **[prodx](https://github.com/bittencourtthulio/prodx)** | **camada** de produto: decide **se** há trabalho | abre o projeto no B1 (modo greenfield) e o valida no B6 — **obrigatório** |
+| **[sprintx](https://github.com/bittencourtthulio/sprintx)** | **Build** — feature nova, F1…F6 | planeja e executa cada feature do mapa, no B4 — **obrigatório** |
+| **[mergex](https://github.com/bittencourtthulio/mergex)** | entrega: branch, commit por task, PR e pacote de QA | abre a branch, verifica prontidão e monta o PR, no B4 — **obrigatório** |
+| **[stackx](https://github.com/bittencourtthulio/stackx)** | **camada** de convenções do repositório | grava o `CONVENCOES.md` no B2, invertido: decide em vez de detectar |
+| **[memox](https://github.com/bittencourtthulio/MemoX)** | **camada** de memória do projeto | consultado no B5, para não repetir uma tentativa que já falhou |
+| **[runx](https://github.com/bittencourtthulio/runx)** | **Run** — ocorrência em produção, E1…E5 | não participa: o buildx constrói, não corrige |
+| **[legadox](https://github.com/bittencourtthulio/legadox)** | **camada** de segurança para código legado | não participa: projeto novo não tem legado |
+| **buildx** *(este repositório)* | orquestra um projeto inteiro | — |
+
+O buildx é a única peça do método que **depende** de outras: sem `prodx`, `sprintx` e `mergex` ele não roda, e diz o que falta. Não é falta de educação, é a arquitetura — rodar sem elas significaria reimplementar quatro skills mal, dentro de uma quinta.
+
+Detalhes do ecossistema inteiro no [README do expxdev](https://github.com/bittencourtthulio/expxdev).
 
 ---
 
@@ -136,7 +189,13 @@ A ordem é deliberada: **o que exige ação vem antes do que foi feito.** Um rel
 npx expxdev init
 ```
 
-O buildx **depende** de `prodx`, `sprintx` e `mergex` — sem elas não roda, e diz o que falta. O `stackx` e o `memox` são opcionais e degradam com aviso. O `legadox` não participa: projeto novo não tem legado.
+Selecione `buildx` junto de `prodx`, `sprintx` e `mergex` — as três são obrigatórias. O `init` busca as skills nos repositórios oficiais, empacota as selecionadas como um plugin local e configura os dois harnesses: os comandos ficam com namespace no Claude Code (`/expx:buildx`) e sem namespace no OpenCode (`/buildx`).
+
+O `stackx` e o `memox` são opcionais e degradam com aviso. O `legadox` não participa.
+
+**A instalação é travada por lock.** Quem clonar o projeto recebe exatamente as mesmas skills que o time está usando, sem rede e sem rodar nada.
+
+E há uma simetria que vale notar: todo projeto que o buildx cria **já nasce com a suíte instalada** (padrão P-8). Quem receber o sistema entregue corrige defeito com `runx`, acrescenta feature com `sprintx` e entrega com `mergex`, sem precisar preparar nada.
 
 ## Documentação
 
@@ -146,11 +205,37 @@ O buildx **depende** de `prodx`, `sprintx` e `mergex` — sem elas não roda, e 
 | [`.claude/skills/buildx/SKILL.md`](.claude/skills/buildx/SKILL.md) | a skill: máquina de estados, contratos, as 12 regras |
 | [`references/02-lacunas.md`](.claude/skills/buildx/references/02-lacunas.md) | os padrões da casa e o catálogo de 31 eixos |
 | [`references/04-decomposicao.md`](.claude/skills/buildx/references/04-decomposicao.md) | como recortar um projeto em features |
+| [`references/08-design-system.md`](.claude/skills/buildx/references/08-design-system.md) | o design system padrão: tokens do VS Code nas duas variantes |
 | [`DECISOES-DA-SKILL.md`](.claude/skills/buildx/DECISOES-DA-SKILL.md) | as ambiguidades resolvidas, com o que as invalida |
 | [`exemplos/`](exemplos/) | um projeto completo, do parágrafo ao relatório |
 
 ---
 
+## Como contribuir
+
+Abra uma issue descrevendo o caso concreto — a descrição que você passou, o que o buildx decidiu e o que deveria ter decidido — antes de abrir um PR grande.
+
+Contribuição mais útil, em ordem:
+
+1. **Lacuna que faltou no catálogo** — um requisito não-funcional que todo sistema daquele tipo precisa ter e que o `references/02-lacunas.md` não percorre. É o que torna a varredura do B1 melhor para todo mundo.
+2. **Recorte errado no B3** — um projeto em que a decomposição em features produziu fatias que o sprintx não soube planejar. Traga o `MAPA.md` gerado: o recorte é a decisão mais difícil do método.
+3. **Premissa que se mostrou errada na prática** — uma decisão do catálogo cujo `o_que_invalida` deveria ter disparado e não disparou.
+
+A fronteira do D-05 não se flexibiliza sem um caso de uso que a justifique: **o buildx decide como o sistema se protege, não o que o sistema faz.** Um sistema com a regra de negócio chutada funciona e está errado, que é o pior resultado possível — parece pronto, e ninguém procura o defeito.
+
+O mesmo vale para o merge (D-03). O buildx entrega PRs abertos e verdes; integrar é decisão humana, e essa é a última rede antes de produção.
+
+---
+
 <div align="center">
-<sub>parte do método <strong>Expx</strong> · prodx · buildx · sprintx · runx · mergex · stackx · legadox · memox</sub>
+<sub>Parte do método <strong>Expx</strong> ·
+<a href="https://github.com/bittencourtthulio/expxdev">expxdev</a> ·
+<a href="https://github.com/bittencourtthulio/prodx">prodx</a> ·
+buildx ·
+<a href="https://github.com/bittencourtthulio/sprintx">sprintx</a> ·
+<a href="https://github.com/bittencourtthulio/runx">runx</a> ·
+<a href="https://github.com/bittencourtthulio/mergex">mergex</a> ·
+<a href="https://github.com/bittencourtthulio/stackx">stackx</a> ·
+<a href="https://github.com/bittencourtthulio/legadox">legadox</a> ·
+<a href="https://github.com/bittencourtthulio/MemoX">memox</a></sub>
 </div>
