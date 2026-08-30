@@ -133,6 +133,65 @@ O que fica no projeto, versionado:
 
 **O que invalida:** o usuário pedir explicitamente um projeto sem o método instalado; o diretório já ser um projeto com Expx instalado e lock íntegro.
 
+## P-9 — O esqueleto de aplicação
+
+**Decisão:** toda entrega do buildx traz, funcionando, quatro coisas que nenhum sistema com login dispensa — independentemente do que o usuário descreveu:
+
+| # | O que | Rota | Conteúdo mínimo |
+|---|---|---|---|
+| E-1 | **Painel inicial** | `/` (após entrar) | a tela onde o login desemboca, com título e subtítulo próprios. Sem widget inventado: as features do B4 preenchem |
+| E-2 | **Cadastro de usuários** | `/configuracoes/usuarios` | listar, criar, editar, desativar e atribuir papel. Restrito a `admin` (L2) |
+| E-3 | **Perfil do usuário logado** | `/perfil` | o próprio usuário troca nome e e-mail |
+| E-4 | **Troca de senha** | `/perfil/senha` | exige a senha atual, confirma a nova, invalida as outras sessões (L4) |
+
+E a navegação que dá acesso a eles, já montada na barra lateral:
+
+```
+Painel
+Configurações
+  └ Usuários
+  └ Meu perfil
+```
+
+O E-1 é a tela inicial e vem sempre; os três outros ficam sob Configurações. A barra lateral nasce com esses itens, e as features do B4 acrescentam os seus — não os recriam.
+
+**Por quê:** três razões.
+
+1. **Não é escopo do sistema, é a moldura dele.** Trocar a própria senha e cadastrar quem entra não são funcionalidades de um sistema de contratos ou de uma clínica: são o que qualquer sistema com login precisa ter para ser operável por alguém que não é o desenvolvedor. Ninguém descreve isso porque ninguém acha que precisa dizer.
+2. **É a diferença entre demonstrável e usável.** O P-5 garante que existe conta para entrar; o P-9 garante que existe onde chegar depois de entrar, e como criar a segunda conta sem abrir o banco à mão. Um sistema em que o único jeito de cadastrar usuário é um `INSERT` não foi entregue.
+3. **Acrescentar depois custa mais.** A rota de perfil e o cadastro de usuários mexem no mesmo modelo de usuário e nas mesmas verificações de papel da `FT-01`. Feitos junto, são a mesma sprint; feitos no mês três, são uma revisão de tudo que já leu usuário.
+
+**Onde entra:** ele **já vem implementado no template** que o B2 copia (P-10), com suíte verde. A `FT-01` o herda, adapta ao projeto e verifica. Nunca é feature separada.
+
+**O que invalida:** o sistema não ter área restrita (invalidação já herdada do P-4 — sem login, não há perfil nem cadastro de quem entra); o usuário pedir explicitamente que a gestão de usuários fique fora do sistema, delegada a um provedor externo (aí o E-2 sai, o E-1, E-3 e E-4 ficam); o projeto ser de usuário único e local, sem conceito de segunda conta (aí só o E-2 sai).
+
+Nenhuma dessas invalidações derruba o E-1. **Toda entrega tem tela inicial.**
+
+## P-10 — O esqueleto vem de um template pronto, não é gerado
+
+**Decisão:** o buildx não escreve o esqueleto do projeto: ele **copia** `template/`, um projeto real versionado dentro desta skill, com código implementado, suíte verde e CI próprio. O B2 copia, ajusta três coisas (nome do projeto, `JWT_SECRET`, primeiro commit) e verifica.
+
+O template materializa de uma vez os padrões P-1 a P-6 e o P-9: três camadas, Next.js com TypeScript, SQLite com migrations, autenticação JWT com papéis, usuário de demonstração, tokens do VS Code nas duas variantes, e as quatro telas do esqueleto com a navegação montada.
+
+**Por quê:** três razões.
+
+1. **Custo.** Gerar o mesmo esqueleto a cada projeto queima milhares de tokens para produzir algo que já existe. O que se copia é grátis.
+2. **Determinismo, que importa mais que o custo.** Código gerado sai diferente a cada vez — outro nome de arquivo, outra forma de tratar erro, outro jeito de montar a sessão. O projeto número um e o número trinta recebem exatamente o mesmo esqueleto, e é o mesmo que já passou no CI.
+3. **Verificação de verdade.** Um template tem dono, tem suíte e tem CI. Um esqueleto gerado tem, no melhor caso, os testes que o próprio gerador escreveu naquela hora.
+
+**A fronteira que o template não atravessa — e é a mesma do P-9.** Ele traz a **moldura**: o que não depende do que o usuário pediu. Não traz nenhuma entidade de domínio (o modelo para no `Usuario`), nenhuma regra de negócio, nenhum item extra de navegação. Tudo que depende do pedido continua nascendo no B4, sob TDD, sem exceção.
+
+É por isso que copiar o template **não viola o TDD**: o que ele traz é código que já foi provado, e o que ainda não foi provado é justamente o que ele não traz.
+
+**Regras de manutenção**, sem exceção:
+
+- o template roda em CI a cada mudança e semanalmente: instala, migra, semeia, linta, checa tipos, builda, testa, e **audita dependências** falhando em `high` ou acima
+- template com vulnerabilidade conhecida contamina todo projeto criado a partir dele — a auditoria é portão, não aviso
+- defeito encontrado num projeto que veio do template se corrige **na skill**, com o CI, e depois se recopia; consertar só no projeto deixa todo projeto futuro com o mesmo defeito
+- o lock de dependências é versionado: dois projetos criados no mesmo dia recebem exatamente as mesmas versões
+
+**O que invalida:** o usuário pedir stack que o template não atende (outra linguagem, outro framework, outro banco) — aí o B2 volta a montar o esqueleto à mão, a partir dos padrões, e registra a premissa dizendo por quê; o projeto não ter interface web.
+
 ---
 
 # Parte II — O catálogo
@@ -196,6 +255,9 @@ Nenhum item é pulado por parecer óbvio. A saída "descartado" é uma resposta 
 | L29 | Acessibilidade | contraste 4.5:1 nas duas variantes, foco visível com borda, rótulo em todo ícone sozinho |
 | L30 | Estados da tela | vazio, carregando e erro tratados em toda tela que busca dado |
 | L31 | Internacionalização | **descartado por padrão.** Um idioma, textos centralizados para facilitar depois. Só entra se o usuário indicar público fora de um idioma |
+| L32 | Tela inicial | P-9 (E-1): rota inicial após o login, com título e subtítulo próprios. Nunca cair numa tela em branco nem numa lista solta |
+| L33 | Gestão de usuários | P-9 (E-2): área de configurações onde um `admin` cadastra, edita, desativa e atribui papel. Sem ela, criar a segunda conta exige acesso ao banco |
+| L34 | Conta do próprio usuário | P-9 (E-3 e E-4): o usuário logado edita nome e e-mail, e troca a própria senha exigindo a atual |
 
 ---
 
@@ -221,6 +283,6 @@ O campo **o que invalida** é o que torna o arquivo auditável em vez de decorat
 
 ## Erros que este catálogo evita, e os que ele comete
 
-**Evita:** entregar um sistema sem autenticação; descobrir na validação que não há como restaurar um backup; construir onze features e só então perceber que nenhuma verifica permissão; entregar uma tela de login vazia sem conta para entrar.
+**Evita:** entregar um sistema sem autenticação; descobrir na validação que não há como restaurar um backup; construir onze features e só então perceber que nenhuma verifica permissão; entregar uma tela de login vazia sem conta para entrar; entregar um sistema em que o único jeito de cadastrar o segundo usuário, ou de trocar a própria senha, é abrir o banco à mão.
 
 **Comete, se aplicado sem juízo:** inchar um projeto pequeno com trilha de auditoria, métrica e rate limit que ninguém pediu. O antídoto é a **proporcionalidade** — a mesma regra do prodx. O catálogo é percorrido inteiro sempre; a profundidade de cada item é proporcional ao porte do sistema. Uma ferramenta interna de cinco usuários registra L12 como "descartado: trilha de auditoria desproporcional ao porte, sem dado de terceiro envolvido" — e isso é uma resposta correta, registrada, auditável.

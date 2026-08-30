@@ -211,6 +211,28 @@ Raio de borda: **2px**. Só isso, em tudo. Cantos arredondados de 8px ou mais pe
 
 A barra de status com fundo azul é a peça mais reconhecível do VS Code. Ela não é decoração: é onde vai o estado global que não pertence a nenhuma tela.
 
+### A navegação que já nasce montada
+
+As regiões são vazias no B2; o que as preenche vem da `FT-01`. E parte disso é fixo, independentemente do que o sistema faz — é o esqueleto de aplicação do P-9:
+
+```
+barra lateral
+  Painel                 →  /
+  Configurações
+    Usuários             →  /configuracoes/usuarios
+    Meu perfil           →  /perfil
+```
+
+| Item | Quem vê | Observação |
+|---|---|---|
+| Painel | todo usuário autenticado | é a rota onde o login desemboca; tem título e subtítulo próprios, e as features do B4 preenchem o corpo |
+| Usuários | apenas `admin` | some da navegação para quem não é `admin` — e a rota nega no servidor, não só na interface (L2) |
+| Meu perfil | todo usuário autenticado | dá acesso à edição de nome e e-mail, e à troca de senha |
+
+A barra de status já mostra quem está logado (P-6), e o nome ali leva ao **Meu perfil** — é o caminho que o usuário procura primeiro.
+
+Feature do B4 **acrescenta** item a essa barra lateral; nunca recria a área de Configurações nem substitui o Painel por uma tela de listagem.
+
 ### No celular
 
 Abaixo de 768px a estrutura colapsa, e essa é a única adaptação:
@@ -256,7 +278,7 @@ Não é seção separada do design: é parte de cada componente.
 
 **No B2**, junto do esqueleto: os tokens das duas variantes num arquivo de estilo global, o alternador de tema, e o componente de layout com as seis regiões — vazias. Nenhuma tela ainda; isto é casca.
 
-**No B4**, em toda task de interface: os componentes vão sendo construídos sobre os tokens. A `FT-01` entrega a casca preenchida — login, barra de status com o usuário, alternância funcionando —, e é isso que a torna demonstrável.
+**No B4**, em toda task de interface: os componentes vão sendo construídos sobre os tokens. A `FT-01` entrega a casca preenchida — login, barra de status com o usuário, alternância funcionando, e a navegação do P-9 com Painel, Usuários e Meu perfil —, e é isso que a torna demonstrável.
 
 **No `CONVENCOES.md`**, uma regra que o `stackx-check` verifica depois: *nenhum valor de cor literal em componente; toda cor vem de um token.* É a regra que impede o sistema de derivar feature a feature.
 

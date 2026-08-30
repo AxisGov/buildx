@@ -8,7 +8,7 @@ O B2 é a etapa mais mecânica do buildx e a que mais dá errado quando pulada. 
 
 ## Passo 1 — Repositório
 
-Se não houver `.git` no diretório de trabalho nem em nenhum ancestral, inicialize aqui. Um `.gitignore` adequado à stack entra agora — antes do primeiro commit, para que segredo, `node_modules` e o arquivo do banco nunca tenham estado versionados.
+Se não houver `.git` no diretório de trabalho nem em nenhum ancestral, inicialize aqui. O `.gitignore` vem do template, no Passo 5, e já cobre segredo, `node_modules`, o arquivo do banco e o client gerado — mas ele precisa estar no lugar **antes do primeiro commit**, para que nada sensível chegue a ter estado versionado. Se for commitar antes do Passo 5, commite vazio.
 
 Nunca versione: `.env`, `node_modules/`, o arquivo `.db` do SQLite, artefatos de build, o índice do memox.
 Sempre versione: `.env.example`, `.expx/expx-lock.json`, as migrations, a seed de demonstração.
@@ -26,8 +26,11 @@ O `PROJETO.md` manda; na omissão, valem os padrões da casa de `02-lacunas.md`:
 | Banco | SQLite em arquivo, migrations versionadas | P-3 |
 | Autenticação | JWT, e-mail e senha, hash forte | P-4 |
 | Interface | design system do VS Code, Dark+ e Light+ | P-6 |
+| Telas obrigatórias | painel inicial, cadastro de usuários, perfil e troca de senha | P-9 |
 
 Cada escolha vira premissa em `PREMISSAS.md` com `origem: decisao_de_stack` — inclusive as que vieram do padrão da casa. O humano precisa poder ler, num arquivo só, tudo que foi decidido em nome dele.
+
+**Na omissão, o template já é essa decisão inteira.** Ele materializa P-1 a P-6 de uma vez, e o Passo 5 só o copia. Registre as premissas do mesmo jeito — o que muda é que elas descrevem um código que já existe e já passa, não uma intenção.
 
 **Se o usuário indicou stack**, a dele vence sem discussão, e a premissa registra que houve indicação explícita.
 
@@ -60,30 +63,69 @@ Padrão P-7, e só se o projeto tiver interface.
 
 Nunca instale nada além dessa skill, nunca de fonte que não seja o repositório oficial, nunca em laço de tentativas.
 
-## Passo 5 — O esqueleto testável
+## Passo 5 — Copiar o template
 
-O mínimo para a primeira sprint do sprintx ter onde se apoiar. Nada de negócio entra aqui — nem uma tela, nem uma tabela de domínio.
+O buildx **não escreve o esqueleto: ele copia.** `assets/../template/` é um
+projeto de verdade, versionado nesta skill, que sobe, testa e já traz o P-9
+implementado. O B2 o copia para a raiz e verifica.
 
-Obrigatório:
+```
+cp -R <skill>/template/. <raiz do projeto>/
+```
 
-| Item | Critério de pronto |
+O que vem junto:
+
+| Camada | Conteúdo |
 |---|---|
-| Gerenciador de pacote | `package.json` com scripts `dev`, `build`, `test`, `lint` |
-| Runner de teste | configurado, e **um teste que passa** |
-| Lint e formatação | configurados, e rodando limpo |
-| Tipos | TypeScript em modo estrito |
-| Migrations | mecanismo instalado, com a migration inicial vazia ou de esquema base |
-| Configuração | leitura por ambiente; variável obrigatória ausente **falha no start**, não em produção (L20) |
-| `.env.example` | versionado, com toda variável, sem nenhum valor real |
-| Estrutura de pastas | as três camadas de P-1, com uma pasta por camada, ainda vazias |
+| Configuração | `package.json` com `dev`/`build`/`test`/`lint`, TypeScript estrito, ESLint, Vitest, `.env.example` |
+| Banco | SQLite via Prisma, migration inicial versionada, seed de demonstração (P-5) |
+| Autenticação | e-mail e senha, hash bcrypt, sessão JWT em cookie `httpOnly`, papéis `admin` e `usuario` (P-4, L2, L3, L4) |
+| Interface | tokens do VS Code nas duas variantes, layout de regiões, alternador de tema (P-6) |
+| Esqueleto | as quatro telas do P-9, com a navegação montada |
+| Testes | a suíte que prova tudo acima, verde |
 
-O critério de saída do esqueleto é binário e verificável numa máquina limpa:
+**Por que copiar em vez de gerar.** Gerar o mesmo esqueleto a cada projeto
+custa milhares de tokens e — o que importa mais — sai diferente a cada vez.
+O template é determinístico: o projeto número um e o número trinta recebem
+exatamente o mesmo código, já verificado. E o que ele traz não depende do
+que o usuário pediu; é a moldura, idêntica em todo sistema com login.
+
+**O TDD não é violado, e a fronteira é esta:** o template é código que já foi
+provado — tem suíte verde e CI próprio. O que **depende do pedido do
+usuário** continua nascendo sob TDD no B4, sem exceção. O template não traz
+nenhuma entidade de domínio, nenhuma regra de negócio e nenhum item extra de
+navegação, justamente para que essa fronteira não se borre.
+
+### Adaptar ao projeto
+
+Depois de copiar, três ajustes — e só esses:
+
+| O quê | Onde |
+|---|---|
+| nome do projeto | `package.json`, e o `<title>` em `src/app/layout.tsx` |
+| `JWT_SECRET` | gerado e gravado no `.env` local, **nunca** no `.env.example` nem em artefato |
+| primeiro commit | o template inteiro, antes de qualquer feature |
+
+Não renomeie as pastas das três camadas nem as rotas do P-9: o
+`CONVENCOES.md` do Passo 6 as registra, e o B6 as confere pelo caminho.
+
+### As quatro verificações
+
+Copiado e ajustado, o critério de saída é binário e verificável numa máquina
+limpa — o mesmo de sempre:
 
 ```
 instalar dependências → build passa → teste passa → lint passa → o projeto sobe
 ```
 
-Se qualquer um desses quatro falhar, o B2 não terminou. Não avance para o B3 com um esqueleto que não sobe: toda feature do B4 herdaria o defeito, e o custo de descobrir isso na feature sete é sete vezes maior.
+Se qualquer um falhar, o B2 não terminou, e a causa é uma de duas: o ajuste
+acima saiu errado, ou o template regrediu. A segunda é grave — significa que
+todo projeto novo nasceria quebrado —, e o lugar de corrigir é o repositório
+da skill, com o CI do template, não este projeto.
+
+Não avance para o B3 com um esqueleto que não sobe: toda feature do B4
+herdaria o defeito, e o custo de descobrir isso na feature sete é sete vezes
+maior.
 
 ## Passo 6 — O stackx invertido
 
@@ -109,14 +151,18 @@ Todos verdadeiros:
 
 - repositório inicializado, `.gitignore` correto, nada sensível versionado
 - suíte Expx instalada, lock versionado, `.claude/` e `.opencode/` presentes
+- template copiado, com o nome do projeto ajustado e o `JWT_SECRET` gerado
 - numa máquina limpa: dependências instalam, build passa, teste passa, lint passa, projeto sobe
+- a suíte herdada do template passa inteira
 - `docs/stack/CONVENCOES.md` existe, com toda regra marcada `decidido_pelo_buildx`
 - toda escolha de stack registrada em `PREMISSAS.md`
-- nenhuma linha de código de negócio escrita
+- nenhuma entidade de domínio criada, nenhuma regra de negócio escrita
 
 ## Erros que esta etapa comete
 
-- **Escrever feature no esqueleto.** A tentação de "já deixar o login pronto, que é padrão" é forte e errada: autenticação é a primeira feature do B3, planejada e testada pelo sprintx como qualquer outra.
+- **Escrever de novo o que o template já traz.** Autenticação, painel, cadastro de usuários e perfil vêm prontos e testados. Reimplementá-los gasta tokens para produzir uma variação não verificada do que já estava verificado.
+- **Acrescentar entidade de domínio ao template copiado.** "Já que estou aqui, deixo a tabela de clientes" é o erro simétrico: aquilo depende do pedido do usuário, e o que depende do pedido nasce no B4 sob TDD. O template para no `Usuario`.
+- **Mexer no template do projeto para consertar um defeito do template da skill.** Se a suíte herdada falha numa máquina limpa, o defeito é da skill e afeta todo projeto futuro. Corrija lá, com o CI, e recopie.
 - **Instalar a suíte depois do código.** Inverte a ordem que dá sentido ao P-8, e o memox perde o histórico da construção.
 - **Aceitar esqueleto que "quase" sobe.** Quatro verificações binárias; três não bastam.
 - **Gravar convenção sem marcar a origem.** Uma regra `decidido_pelo_buildx` lida como se fosse detectada faz o projeto acreditar que tem evidência onde só tem opinião.

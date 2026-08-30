@@ -53,10 +53,20 @@ Autenticação, modelo de usuário e papéis — porque toda outra feature vai
 verificar quem está pedindo, e acrescentar autorização depois exige
 revisar toda rota já escrita.
 
-Junto com ela, e não em feature separada: o usuário de demonstração (P-5) e
-a casca visual do design system (P-6) — barra de atividade, barra lateral,
-barra de status e alternância de tema, funcionando. São o que torna a FT-01
-demonstrável: uma tela de login com acabamento e uma conta para entrar.
+Junto com ela, e não em feature separada:
+
+  P-5  usuário de demonstração — a conta com que se entra
+  P-6  casca visual — barra de atividade, barra lateral, barra de status
+       e alternância de tema, funcionando
+  P-9  esqueleto de aplicação — painel inicial, Configurações > Usuários,
+       Meu perfil e troca de senha, com os itens já na barra lateral
+
+São o que torna a FT-01 demonstrável: uma tela de login com acabamento, uma
+conta para entrar, um lugar aonde chegar depois de entrar, e como criar a
+segunda conta sem abrir o banco à mão.
+
+Nenhuma feature de negócio recria o que o P-9 entrega: ela acrescenta item
+à barra lateral, não uma segunda área de configurações.
 
 OS TRÊS TESTES DE UMA FEATURE
 

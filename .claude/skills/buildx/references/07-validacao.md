@@ -52,11 +52,17 @@ O que o usuário vai fazer no primeiro minuto, e que nenhum artefato prova:
 
 1. numa cópia limpa: instalar, migrar, semear, subir
 2. entrar com o usuário de demonstração (P-5), com as credenciais que o relatório vai documentar
-3. alternar as duas variantes de tema pela barra de status, e conferir que ambas ficam completas
-4. percorrer a entrega principal de cada feature
-5. abrir em largura de celular
+3. **cair no painel inicial**, com título e subtítulo próprios (P-9, E-1)
+4. **cadastrar um segundo usuário** pela área de Configurações → Usuários, e entrar com ele (P-9, E-2)
+5. **editar o próprio nome e e-mail** em Meu perfil (P-9, E-3)
+6. **trocar a própria senha**, exigindo a atual, e entrar de novo com a nova (P-9, E-4)
+7. alternar as duas variantes de tema pela barra de status, e conferir que ambas ficam completas
+8. percorrer a entrega principal de cada feature
+9. abrir em largura de celular
 
 Qualquer um que falhe é `nao_atendido` de peso alto. Um sistema que não sobe numa máquina limpa não está entregue, por mais verde que esteja a suíte — e o usuário de demonstração existe justamente para tornar essa verificação possível em trinta segundos.
+
+Os passos 3 a 6 são o **esqueleto de aplicação do P-9**, e não dependem do que o sistema faz: valem para um gestor de contratos e para uma agenda de clínica igualmente. Um sistema em que o segundo usuário só nasce por `INSERT`, ou em que ninguém troca a própria senha, é `nao_atendido` mesmo com todas as features de negócio verdes. Verifique também que **Usuários some da navegação para quem não é `admin`** e que a rota nega no servidor, não apenas na interface (L2).
 
 ## Passo 4 — O veredito
 
@@ -103,6 +109,7 @@ Use `assets/TEMPLATE-RELATORIO.md`.
 - `VALIDACAO.md` existe, com todo item conferido e evidência em cada `atendido`
 - toda premissa do `PREMISSAS.md` foi conferida
 - o sistema sobe numa cópia limpa e o usuário de demonstração entra
+- o esqueleto do P-9 responde: painel inicial, cadastro de usuários, edição de perfil e troca de senha, com a navegação da barra lateral
 - nenhuma premissa de segurança está sem código
 - `RELATORIO.md` existe, na ordem acima, com credenciais de demonstração documentadas
 - `PROJETO.md` com `etapa: concluido`

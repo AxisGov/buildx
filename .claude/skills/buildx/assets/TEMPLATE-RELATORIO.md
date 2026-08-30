@@ -113,6 +113,18 @@ demonstração não roda em produção.>
 O sistema abre em `<endereço>`. O tema acompanha a preferência do seu
 sistema e pode ser alternado na interface.
 
+**O que já está lá, sem você ter pedido** (padrão P-9):
+
+| Onde | O que dá para fazer |
+|---|---|
+| Painel | a tela inicial, onde o login desemboca |
+| Configurações → Usuários | cadastrar, editar, desativar e dar papel a quem entra — só `admin` vê |
+| Meu perfil | trocar o próprio nome e e-mail |
+| Meu perfil → Senha | trocar a própria senha, exigindo a atual |
+
+É por aí que você cria a sua conta de verdade e para de usar a de
+demonstração.
+
 ---
 
 ## 7. O que fazer agora

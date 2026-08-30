@@ -215,3 +215,40 @@ O ganho concreto para o modo autônomo: uma regra verificável no `CONVENCOES.md
 Há um segundo motivo, prático: são ~90 linhas de CSS. Carregá-las em toda invocação do buildx, inclusive nas que não tocam interface, é custo puro — e o `SKILL.md` já diz para ler o reference da etapa apenas quando a etapa chega.
 
 **O que invalida:** nada. É a mesma regra que já governa os padrões da casa.
+---
+
+## D-17 — O esqueleto de aplicação é padrão da casa, e mora dentro da FT-01
+
+**Decisão:** toda entrega do buildx traz painel inicial, cadastro de usuários sob Configurações, perfil do usuário logado e troca de senha, com a navegação já montada na barra lateral. É o P-9, e ele é construído dentro da `FT-01`, nunca como feature separada.
+
+**Alternativas descartadas:** duas.
+
+**A primeira — deixar que o usuário peça.** Ninguém pede. "Quero um sistema de gestão de contratos" não menciona troca de senha porque quem descreve um sistema descreve o que ele faz, não a moldura que todo sistema com login tem. O resultado de esperar o pedido é uma entrega em que o segundo usuário só nasce por `INSERT` e ninguém troca a própria senha — tecnicamente conforme ao pedido, e inútil para quem não é o desenvolvedor.
+
+**A segunda — uma feature própria, tipo `FT-02 — Administração`.** Parece mais limpo e é pior. Cadastro de usuários e perfil mexem no mesmo modelo de usuário e nas mesmas verificações de papel da autenticação: separá-los cria duas features que sempre tocam os mesmos arquivos — o sintoma de "corte errado" que o próprio B3 manda corrigir. E uma feature que parece de negócio é uma feature que se adia; recortada como `FT-08`, chega depois de sete features que já leem usuário, e cada uma precisa ser revisada.
+
+**Por quê a fronteira ficou onde ficou.** O P-9 entrega a moldura, não o escopo. Ele decide **como o sistema é operado** — quem entra, quem administra, como cada um cuida da própria conta —, que é exatamente o território dos padrões da casa. Não decide o que o sistema faz: nenhuma tela de negócio nasce dele, e o painel inicial vem deliberadamente vazio, com título e subtítulo, para que as features do B4 o preencham.
+
+Isso também é o que separa o P-9 do P-5. O usuário de demonstração torna a entrega **demonstrável** — há conta para entrar. O esqueleto torna a entrega **operável** — há aonde chegar depois de entrar, e como criar a segunda conta. As duas coisas são necessárias, e nenhuma substitui a outra.
+
+**O que invalida:** o sistema não ter área restrita (sem login não há perfil nem cadastro de quem entra); a gestão de usuários ser delegada a um provedor externo por pedido do usuário (sai o E-2, ficam E-1, E-3 e E-4); o projeto ser de usuário único e local (sai o E-2). Nenhuma invalidação derruba o painel inicial: toda entrega tem tela inicial.
+
+---
+
+## D-18 — O esqueleto é um template real, copiado, não gerado
+
+**Decisão:** a skill carrega `template/` — um projeto Next.js de verdade, com dependências fixadas, banco, autenticação, o P-9 implementado, 61 testes verdes e CI próprio. O B2 copia essa pasta para a raiz do projeto novo, ajusta o nome e o segredo, e verifica. Nada disso é gerado.
+
+**Alternativa descartada:** o B2 escrever o esqueleto a cada projeto, guiado pelos padrões da casa — que era o desenho original.
+
+**Por quê a alternativa perde.** O custo em tokens é o argumento óbvio e o menos importante. O que decide é o **determinismo**: código gerado sai diferente a cada vez. O projeto de janeiro trata erro de um jeito, o de março de outro, e os dois são "corretos" segundo o mesmo reference. Isso corrói justamente o que o `stackx` existe para sustentar — um dialeto único, verificável. Com template, o projeto número trinta recebe byte a byte o mesmo esqueleto do número um, e é um esqueleto que já passou no CI.
+
+Há um terceiro efeito, mais silencioso: um esqueleto gerado tem, no melhor caso, os testes que o gerador escreveu naquela hora, sobre o código que ele mesmo acabou de escrever. Um template tem uma suíte que já sobreviveu a mudanças de dependência.
+
+**A objeção que eu levantei e que o usuário derrubou.** Argumentei que copiar código implementado violaria o TDD do sprintx, que a SKILL.md lista como inviolável. O argumento estava errado, e vale registrar por quê: **o TDD existe para garantir que o código foi provado, não para garantir que o teste foi escrito num instante específico.** Um template com suíte verde e CI é código provado — provado uma vez, com cuidado, em vez de re-provado a cada projeto por uma máquina que varia. Fazer o F6 reimplementar login e troca de senha em todo projeto novo não é rigor: é desperdício com risco de variação.
+
+**A fronteira real, que substitui a que eu tinha proposto.** Não é "código vs. testes". É **o que não depende do pedido do usuário vs. o que depende**. O template traz a moldura — o modelo para no `Usuario`, sem nenhuma entidade de domínio, nenhuma regra de negócio, nenhum item extra de navegação. Tudo que depende do pedido nasce no B4 sob TDD, sem exceção. Enquanto essa linha for respeitada, o TDD segue intacto onde ele importa.
+
+**O que a decisão obriga.** Um template distribuído a todo projeto novo é uma dívida distribuída se ninguém o mantiver. Daí o `.github/workflows/template.yml`: instala, migra, semeia, linta, checa tipos, builda, testa e audita dependências a cada mudança e toda segunda-feira, falhando em vulnerabilidade `high` ou acima. Defeito no template se corrige na skill, com o CI, e se recopia — nunca só no projeto que o encontrou.
+
+**O que invalida:** o usuário pedir stack que o template não atende (outra linguagem, outro framework, outro banco) — aí o B2 volta a montar o esqueleto à mão e registra a premissa; o projeto não ter interface web.

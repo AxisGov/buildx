@@ -42,19 +42,26 @@ Ordem de dependência. Nenhuma feature precede aquilo de que depende.
 ### FT-01 — Acesso ao sistema
 
 **Slug:** `acesso-ao-sistema` → `docs/acesso-ao-sistema/`
-**Entrega:** uma pessoa cria conta, entra com e-mail e senha, e vê o sistema com a identidade dela; um administrador alcança o que um usuário comum não alcança.
+**Entrega:** uma pessoa entra com e-mail e senha e cai no painel; um administrador cadastra os outros usuários e atribui papel; cada um edita o próprio perfil e troca a própria senha.
 **Depende de:** []
 **Paralelizável:** false
 **Origem:** premissa
-**Premissas que realiza:** [PR-01, PR-02, PR-03, PR-04, PR-11, PR-12]
+**Premissas que realiza:** [PR-01, PR-02, PR-03, PR-04, PR-11, PR-12, PR-14]
 **Status:** entregue
-**PR:** #3 · **Sprints:** 3 · **Testes:** 34
+**PR:** #3 · **Sprints:** 3 · **Testes:** 51
 
-> A fundação. Carrega junto o usuário de demonstração (PR-11) e a casca
-> visual do design system (PR-12): barra de atividade, barra lateral, barra
-> de status e as duas variantes de tema. São o que a torna demonstrável —
-> sem eles a primeira entrega seria uma tela de login vazia sem conta para
-> entrar, indistinguível de um sistema quebrado.
+> A fundação. Carrega junto o usuário de demonstração (PR-11), a casca
+> visual do design system (PR-12) e o esqueleto de aplicação (PR-14):
+> painel inicial, Configurações → Usuários, Meu perfil e troca de senha,
+> com os itens já na barra lateral. São o que a torna demonstrável — sem
+> eles a primeira entrega seria uma tela de login vazia, sem conta para
+> entrar e sem lugar aonde chegar depois, indistinguível de um sistema
+> quebrado.
+>
+> Repare que ninguém pediu cadastro de usuários nem troca de senha. É o
+> P-9: não é escopo do sistema, é a moldura dele — e é o que separa um
+> sistema demonstrável de um sistema operável por quem não é o
+> desenvolvedor.
 
 ---
 

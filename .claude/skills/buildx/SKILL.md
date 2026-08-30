@@ -86,9 +86,9 @@ Roteiro: `references/01-concepcao.md`.
 
 Invoca o **stackx**. Num projeto vazio não há convenção a detectar, então o stackx inverte de papel: em vez de descobrir o dialeto do repositório, o buildx **escolhe** a stack a partir do `PROJETO.md` e grava `docs/stack/CONVENCOES.md` como decisão, com cada escolha marcada `origem: decidido_pelo_buildx` em vez de `origem: <arquivo>:<linha>`.
 
-Também cria o esqueleto mínimo que torna o projeto testável: gerenciador de pacote, runner de teste, lint, e um teste que passa. Sem isso a primeira sprint do sprintx não tem onde se apoiar.
+Também **copia o template** (`template/`): um projeto real, versionado nesta skill, que já sobe, testa e traz implementado o que não depende do pedido do usuário — três camadas, banco com migrations, autenticação com papéis, usuário de demonstração, o design system do VS Code nas duas variantes, e as quatro telas do esqueleto de aplicação (P-9). Tudo com suíte verde e CI próprio.
 
-E instala a casca do design system: os tokens das duas variantes, o alternador de tema e as regiões de layout, ainda vazias (`references/08-design-system.md`). Sem indicação do usuário, o padrão é o design system do **VS Code**.
+O buildx não gera esse esqueleto: gerar custa milhares de tokens para produzir, a cada projeto, uma variação não verificada do que já estava verificado. O que depende do pedido do usuário continua nascendo no B4, sob TDD, sem exceção — e é por isso que o template não traz nenhuma entidade de domínio nem regra de negócio.
 
 Roteiro: `references/03-fundacao.md`.
 
@@ -109,7 +109,11 @@ Contrato da feature — toda feature do mapa declara, obrigatoriamente:
 | `origem` | `descricao` (o usuário pediu) \| `premissa` (o buildx descobriu que faltava) |
 | `status` | `pendente` \| `em_andamento` \| `entregue` \| `bloqueada` |
 
-A ordem não é negociável em dois pontos: a **feature de fundação** (auth, modelo de dados base, esqueleto de deploy) vem primeiro, e nenhuma feature de negócio precede aquilo de que depende.
+A ordem não é negociável em dois pontos: a **feature de fundação** vem primeiro, e nenhuma feature de negócio precede aquilo de que depende.
+
+A `FT-01` é sempre a fundação — autenticação, usuário e papéis —, e carrega junto o **esqueleto de aplicação** (P-9): painel inicial com título e subtítulo, Configurações com cadastro de usuários, perfil e troca de senha, com os itens já na barra lateral. Não é escopo do sistema, é a moldura dele: nenhum usuário descreve isso, e sem isso a entrega não é operável por quem não é o desenvolvedor.
+
+Ela chega ao B4 **já implementada pelo template do B2**, e por isso declara `origem: template`: o trabalho dela é adaptar ao projeto, semear os dados do domínio e verificar a suíte herdada — não construir do zero.
 
 Roteiro: `references/04-decomposicao.md`.
 
@@ -221,13 +225,14 @@ Kinds do buildx: `projeto`, `premissas`, `mapa`, `recursao`, `validacao`, `relat
 |---|---|
 | `references/00-schema.md` | o contrato de frontmatter — **leitura obrigatória** em qualquer etapa que grave arquivo |
 | `references/01-concepcao.md` | B1: a pergunta única, o prodx greenfield, o briefing de perguntas |
-| `references/02-lacunas.md` | o catálogo de requisitos não-funcionais e o padrão sensato de cada um |
+| `references/02-lacunas.md` | os padrões da casa (P-1 a P-9) e o catálogo de requisitos não-funcionais |
 | `references/03-fundacao.md` | B2: escolha de stack, esqueleto testável, o stackx invertido |
 | `references/04-decomposicao.md` | B3: como recortar um projeto em features, o contrato e a ordenação |
 | `references/05-construcao.md` | B4: o laço, a F2 respondida pelo buildx, o tratamento de bloqueio |
 | `references/06-recursao.md` | B5: classificação de pendência, o teto de ciclos |
 | `references/07-validacao.md` | B6: a conferência item a item e o relatório final |
 | `references/08-design-system.md` | o design system padrão: tokens do VS Code nas duas variantes, tipografia, espaçamento, layout e componentes |
+| `template/` | **o esqueleto real** que o B2 copia: projeto Next.js com banco, autenticação, o P-9 implementado e suíte verde. Tem CI próprio; veja o `README.md` dele |
 | `references/integracao/prodx.md` | o modo greenfield: o que muda no prodx |
 | `references/integracao/sprintx.md` | a F2 autônoma e o contrato de invocação por feature |
 | `references/integracao/mergex.md` | onde a mergex entra no laço, e por que o merge fica de fora |

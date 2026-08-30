@@ -160,8 +160,8 @@ ciclos_recursao: 2
 | `modo` | `autonomo` · `briefing` |
 | `etapa` | `b1` · `b2` · `b3` · `b4` · `b5` · `b6` · `concluido` |
 | `status` (feature) | `pendente` · `em_andamento` · `entregue` · `bloqueada` |
-| `origem` (feature) | `descricao` · `premissa` · `recursao` |
-| `origem` (premissa) | `catalogo_lacunas` · `decisao_de_stack` · `f2_autonoma` · `recursao` |
+| `origem` (feature) | `descricao` · `premissa` · `recursao` · `template` |
+| `origem` (premissa) | `catalogo_lacunas` · `decisao_de_stack` · `f2_autonoma` · `recursao` · `template` |
 | `veredito` (validação) | `aprovado` · `aprovado_com_pendencia` · `reprovado` |
 | `classe` (pendência) | `trabalho_novo` · `replanejamento` · `decisao_humana` · `recurso_externo` |
 

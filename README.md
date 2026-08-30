@@ -139,6 +139,8 @@ O que o buildx assume quando você não diz nada. Você sempre ganha do padrão.
 | **Banco** | SQLite local — dependência mínima é requisito de execução autônoma |
 | **Autenticação** | própria, JWT, hash forte |
 | **Demonstração** | usuário e dados de exemplo, sempre — um sistema que sobe numa tela de login vazia é indistinguível de um sistema quebrado |
+| **Esqueleto** | painel inicial, cadastro de usuários em Configurações, perfil e troca de senha — **em toda entrega**, porque ninguém pede e todo sistema com login precisa |
+| **Ponto de partida** | um **template real**, com código e 61 testes verdes, copiado para a raiz. O buildx não gera o esqueleto: ele parte de um que já passa no CI |
 | **Visual** | o design system do **VS Code** — tokens Dark+ e Light+, tipografia do sistema, grade de 4px, e a estrutura de barra de atividade, barra lateral e barra de status |
 | **Design** | a skill de frontend design da Anthropic, trabalhando dentro desses tokens |
 | **Método** | o projeto **nasce com a suíte Expx instalada**, Claude Code e OpenCode configurados |
@@ -203,7 +205,8 @@ E há uma simetria que vale notar: todo projeto que o buildx cria **já nasce co
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | orientação do agente, e o mapa da skill |
 | [`.claude/skills/buildx/SKILL.md`](.claude/skills/buildx/SKILL.md) | a skill: máquina de estados, contratos, as 12 regras |
-| [`references/02-lacunas.md`](.claude/skills/buildx/references/02-lacunas.md) | os padrões da casa e o catálogo de 31 eixos |
+| [`references/02-lacunas.md`](.claude/skills/buildx/references/02-lacunas.md) | os padrões da casa e o catálogo de 34 eixos |
+| [`template/`](.claude/skills/buildx/template/) | o esqueleto real que todo projeto recebe — Next.js, SQLite, autenticação, o esqueleto de telas e a suíte |
 | [`references/04-decomposicao.md`](.claude/skills/buildx/references/04-decomposicao.md) | como recortar um projeto em features |
 | [`references/08-design-system.md`](.claude/skills/buildx/references/08-design-system.md) | o design system padrão: tokens do VS Code nas duas variantes |
 | [`DECISOES-DA-SKILL.md`](.claude/skills/buildx/DECISOES-DA-SKILL.md) | as ambiguidades resolvidas, com o que as invalida |

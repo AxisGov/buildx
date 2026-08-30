@@ -53,7 +53,7 @@ Toda feature do `MAPA.md` declara, obrigatoriamente:
 | `entrega` | o que o usuário consegue fazer que não conseguia | **verificável, sem adjetivo** |
 | `depende_de` | `[ids]` ou `[]` | explícito; nunca inferido em tempo de execução |
 | `paralelizavel` | `true` \| `false` | declarado aqui, nunca decidido no B4 |
-| `origem` | `descricao` \| `premissa` \| `recursao` | rastreia por que a feature existe |
+| `origem` | `descricao` \| `premissa` \| `recursao` \| `template` | rastreia por que a feature existe |
 | `status` | `pendente` \| `em_andamento` \| `entregue` \| `bloqueada` | nasce `pendente` |
 
 O campo `origem` é o que o B6 usa para conferir: toda premissa de segurança do `PREMISSAS.md` precisa ter virado feature com `origem: premissa`, ou estar explicitamente dentro de uma feature com `origem: descricao`. Premissa registrada que não virou código é a falha mais cara que este método pode cometer — ela cria a impressão de que o sistema está protegido.
@@ -62,9 +62,34 @@ O campo `origem` é o que o B6 usa para conferir: toda premissa de segurança do
 
 Não é negociável em dois pontos.
 
-**1. A fundação vem primeiro.** A `FT-01` é sempre a feature que entrega autenticação e o modelo de usuário — porque toda outra feature vai verificar quem está pedindo, e acrescentar autorização depois exige revisar toda rota já escrita (L2).
+**1. A fundação vem primeiro.** A `FT-01` é sempre a feature da fundação —
+autenticação, modelo de usuário e papéis —, porque toda outra feature vai
+verificar quem está pedindo, e acrescentar autorização depois exige revisar
+toda rota já escrita (L2).
 
-Junto com a `FT-01`, e não numa feature separada: o usuário de demonstração (P-5) e a casca visual do design system (P-6) — barra de atividade, barra lateral, barra de status e alternância de tema, funcionando. São o que torna a `FT-01` demonstrável: uma tela de login com acabamento e uma conta para entrar. Sem isso a primeira entrega não passa no teste "demonstrável".
+**Mas ela chega ao B4 já implementada.** O template copiado no B2 traz a
+autenticação, o usuário de demonstração (P-5), a casca visual (P-6) e o
+esqueleto de aplicação (P-9) prontos e com suíte verde. Então a `FT-01`
+muda de natureza: em vez de construir do zero, ela **adapta e verifica**.
+
+O que a `FT-01` faz, então:
+
+| Trabalho | O que é |
+|---|---|
+| adaptar | nome do sistema, textos do painel, itens de navegação que o projeto exigir |
+| semear | os dados de exemplo do domínio, para que as telas do projeto tenham o que mostrar |
+| verificar | rodar a suíte herdada inteira, numa cópia limpa |
+| converter | rodar o `stackx-detectar` sobre o código real e trocar `decidido_pelo_buildx` pela evidência (o Passo 6 do B2) |
+
+Ela declara `origem: template` — um valor a mais no contrato, ao lado de
+`descricao`, `premissa` e `recursao` —, e é a única feature que pode nascer
+com o código já escrito. Isso é rastro, não atalho: o B6 continua tendo o
+que conferir, e as premissas que ela realiza continuam tendo dona.
+
+**Se o projeto não precisar de adaptação nenhuma**, a `FT-01` ainda existe e
+ainda é entregue: rodar a suíte herdada numa cópia limpa e converter as
+convenções é trabalho real, e é o que prova que o template chegou inteiro
+*neste* projeto.
 
 **2. Nenhuma feature precede aquilo de que depende.** Ordene por dependência topológica. Empate, decida por: primeiro o que mais features dependem; depois o que está no escopo mínimo do `PROJETO.md`; depois o que é mais simples.
 
@@ -90,7 +115,7 @@ Na dúvida, `false`. Duas features paralelas que colidem no mesmo arquivo custam
 1. **Leia o `PROJETO.md` inteiro.** As oito seções, inclusive "considerado e descartado" — ela evita recortar feature que o B1 já descartou.
 2. **Liste os verbos do usuário.** Cada coisa que alguém consegue fazer no sistema é candidata a feature. É o recorte mais confiável, porque é o recorte do usuário.
 3. **Agrupe por entidade e por ator.** Verbos sobre a mesma entidade, para o mesmo ator, costumam ser uma feature ("criar, editar, arquivar contrato").
-4. **Extraia a fundação.** Autenticação, usuário, papéis, casca visual e usuário de demonstração viram a `FT-01`.
+4. **Extraia a fundação.** Autenticação, usuário, papéis, casca visual, usuário de demonstração e o esqueleto do P-9 viram a `FT-01`, com `origem: template` — ela chega implementada pelo B2, e o trabalho dela é adaptar e verificar.
 5. **Percorra o `PREMISSAS.md`.** Cada premissa: já está dentro de alguma feature? Se não, vira feature própria com `origem: premissa`. Nenhuma pode sobrar.
 6. **Aplique os três testes** a cada candidata. Ajuste o tamanho.
 7. **Ordene** por dependência, com o escopo mínimo primeiro.
@@ -101,7 +126,8 @@ Na dúvida, `false`. Duas features paralelas que colidem no mesmo arquivo custam
 
 - `MAPA.md` existe, com frontmatter válido e toda feature com os oito campos
 - toda feature passa nos três testes: vertical, enunciável, demonstrável
-- `FT-01` é a fundação, e inclui usuário de demonstração e casca visual
+- `FT-01` é a fundação, com `origem: template`: autenticação, usuário de demonstração, casca visual e o esqueleto do P-9, herdados do B2 e verificados
+- nenhuma feature do mapa duplica o que o P-9 já entrega: feature de negócio acrescenta item à barra lateral e tela ao sistema, não recria a área de configurações
 - o grafo de `depende_de` não tem ciclo, e nenhuma feature precede sua dependência
 - **toda premissa do `PREMISSAS.md` está coberta** por alguma feature
 - todo item de "o que foi pedido" do `PROJETO.md` está coberto por alguma feature
@@ -113,5 +139,6 @@ Na dúvida, `false`. Duas features paralelas que colidem no mesmo arquivo custam
 - **Cortar em camadas em vez de fatias.** "Banco", "API", "telas" é o erro clássico: nada é demonstrável até a última, e a última nunca chega inteira.
 - **Deixar premissa órfã.** Rate limit, trilha de auditoria e exclusão de conta pela LGPD não pertencem a nenhuma feature de negócio; se ninguém as adotar, viram feature própria.
 - **Deixar o acabamento visual para o fim.** Vira a feature que se corta quando o tempo aperta, e o sistema é reprovado por quem olha.
+- **Tratar o esqueleto do P-9 como feature adiável.** "Cadastro de usuários" e "perfil" parecem features de negócio e não são: são a moldura. Recortados como `FT-08`, chegam depois de sete features que já leem usuário — e cada uma precisa ser revisada.
 - **Otimismo no paralelismo.** Marcar `true` porque "provavelmente não conflita" troca tempo de máquina por decisão humana no meio do modo autônomo.
 - **Feature que só um desenvolvedor entende.** Se a `entrega` não faz sentido para quem vai usar o sistema, o corte é técnico e não sobrevive à validação do B6.
