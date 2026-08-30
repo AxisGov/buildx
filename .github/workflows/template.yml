@@ -1,0 +1,64 @@
+# O template é copiado para todo projeto novo que o buildx cria. Se ele
+# quebrar, todo projeto nasce quebrado — então ele roda as mesmas quatro
+# verificações que o B2 exige, a cada mudança.
+name: template
+
+on:
+  push:
+    paths:
+      - '.claude/skills/buildx/template/**'
+      - '.github/workflows/template.yml'
+  pull_request:
+    paths:
+      - '.claude/skills/buildx/template/**'
+      - '.github/workflows/template.yml'
+  # Semanal: pega vulnerabilidade nova em dependência que não mudou.
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: .claude/skills/buildx/template
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: file:./prisma/ci.db
+      JWT_SECRET: segredo-de-ci-nao-usar-em-producao
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar
+        run: npm ci
+
+      - name: Gerar o client do Prisma
+        run: npx prisma generate
+
+      - name: Aplicar as migrations
+        run: npx prisma migrate deploy
+
+      - name: Semear
+        run: npm run db:seed
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tipos
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+      - name: Testes
+        run: npm test
+
+      # Um template com vulnerabilidade conhecida contamina todo projeto
+      # criado a partir dele. Falha o CI, não avisa e segue.
+      - name: Auditoria de dependências
+        run: npm audit --audit-level=high
