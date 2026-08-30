@@ -132,17 +132,45 @@ A camada de dados (P-1) existe em parte para tornar a troca por Postgres uma fea
 
 ---
 
-## D-11 — `expx_tool: buildx` é extensão do contrato
+## D-11 — `expx_tool: buildx` e um segundo nível de estado no contrato
 
-**Decisão:** o buildx grava `expx_tool: buildx`, valor que o `CONTRATO-expx-schema-v1.md` ainda não declara.
+**Decisão:** o buildx grava `expx_tool: buildx`, com estágios próprios (`b1`..`b6`) e seis kinds que usam `projeto_id` em vez de `trabalho_id`. Contrato e parser foram estendidos para conhecê-los.
 
-**Alternativa descartada:** reusar `sprintx` para não quebrar o contrato.
+**Alternativa descartada:** reusar `sprintx` e `trabalho_id`, para não tocar no contrato.
 
-**Por quê:** reusar mentiria sobre a origem do artefato e quebraria a rastreabilidade que o contrato existe para dar. A extensão é de uma linha e o painel já trata chave inesperada como violação visível, não como rejeição (R6) — então nada quebra enquanto o contrato não for atualizado.
+**Por quê:** reusar mentiria sobre a origem do artefato e apagaria a relação que o buildx existe para manter — um projeto tem N trabalhos, e tratar os dois níveis como a mesma chave perde exatamente isso.
 
-O prodx tem a mesma pendência para os kinds dele. Tratar as duas juntas é o caminho mais barato.
+Havia uma suposição errada no caminho, que vale registrar: eu supus que kind desconhecido viraria violação visível (R6) e que a extensão do contrato podia esperar. Não é o caso — `rejeicao.ts` **rejeita** kind desconhecido, e o arquivo não é lido. Sem os seis kinds registrados, todo artefato de projeto seria descartado em silêncio pelo painel.
 
-**O que invalida:** nada; é dívida a pagar no repositório do painel.
+`estagioCoerenteCom` também precisou mudar de ternário para mapa explícito: com três ferramentas, `tool === "sprintx" ? ... : ...` mandaria a buildx para os estágios da runx e acusaria estágio incoerente num arquivo correto.
+
+**O que invalida:** nada. Está feito e coberto por teste.
+
+---
+
+## D-13 — O `veredito` da validação tem três valores, não dois
+
+**Decisão:** enum próprio `VereditoBuildx` — `aprovado`, `aprovado_com_pendencia`, `reprovado` — em vez do `Veredito` de dois valores que o contrato já tinha.
+
+**Alternativa descartada:** reusar o enum existente e registrar a pendência em prosa no corpo do arquivo.
+
+**Por quê:** a diferença entre entrega íntegra e entrega com pendência declarada é exatamente o que o relatório final existe para mostrar, e o painel precisa distingui-las sem ler prosa. Um enum de dois valores forçaria a escolha entre marcar `aprovado` (mentira por omissão) ou `reprovado` (que faria o usuário descartar uma entrega utilizável).
+
+**O que invalida:** se o painel passar a ler o `RECURSAO.md` junto, o terceiro valor vira redundante.
+
+---
+
+## D-14 — A buildx entra no catálogo do `init` como skill, não como camada
+
+**Decisão:** `camada: false` no `CATALOGO`, ao lado de sprintx, runx e mergex.
+
+**Alternativa descartada:** `camada: true`, junto de legadox, stackx, memox e prodx.
+
+**Por quê:** camada, no vocabulário do CLI, é skill que *modifica o comportamento* da sprintx ou da runx e sozinha não faz nada. O buildx não modifica nenhuma delas — ele as **invoca**. É um nível acima, não um modificador.
+
+O efeito colateral é que o `init` não avisa que o buildx precisa de sprintx e mergex para rodar. Criar o conceito de dependência entre skills por causa de uma única aresta custaria mais do que a skill avisar em tempo de execução, que é o que ela já faz.
+
+**O que invalida:** se outra skill do ecossistema passar a ter dependência dura, aí vale modelar de verdade.
 
 ---
 

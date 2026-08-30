@@ -14,17 +14,23 @@ O buildx adota o contrato **expx-schema v1**, o mesmo do sprintx, runx e prodx. 
 | **R9** | `atualizado_em` reescrito a cada gravação |
 | **R10** | nenhum caminho absoluto em nenhum valor |
 
-## A extensão que o buildx exige
+## Os dois níveis de estado
 
-O contrato v1 declara `expx_tool` com dois valores: `sprintx` e `runx`. O buildx **acrescenta um terceiro**:
+O contrato v1 nasceu com duas ferramentas que gravam artefato de estado: `sprintx` e `runx`. Ambas descrevem o estado de um **trabalho**, costurado por `trabalho_id`.
+
+O buildx acrescentou um terceiro valor a `expx_tool` — e um nível acima:
 
 ```yaml
 expx_tool: buildx
 ```
 
-Essa é a única extensão do contrato. Ela precisa entrar no `CONTRATO-expx-schema-v1.md` do repositório do painel para que os artefatos do buildx sejam lidos em vez de reportados como violação. Até lá o painel mostra o artefato com o defeito à vista, que é o comportamento correto do contrato (R6) e não bloqueia nada.
+Ele grava o estado de um **projeto**, costurado por `projeto_id`. Um projeto tem N trabalhos, um por feature do mapa. Por isso os seis kinds do buildx são, junto com `relatorios_indice`, os únicos sem `trabalho_id`.
 
-O `prodx` tem a mesma pendência para os kinds dele. Tratar as duas juntas é o caminho mais barato.
+A ponte entre os níveis são duas chaves que a cadeia acrescenta ao artefato de cada feature: `origem_buildx` (o `projeto_id`) e `feature_id` (o `FT-NN`).
+
+**O contrato e o parser já conhecem tudo isso.** `expx_tool` aceita `buildx`, `estagio` aceita `b1`..`b6`, e os seis kinds estão registrados — kind desconhecido é *rejeitado* pelo parser, não lido com o defeito à vista, então sem esse registro todo artefato de projeto seria descartado em silêncio pelo painel.
+
+O `prodx` ainda não tem os kinds dele no contrato, e por isso os artefatos dele continuam invisíveis ao painel. É a pendência simétrica desta, e vale tratar.
 
 ## Cabeçalho comum
 
