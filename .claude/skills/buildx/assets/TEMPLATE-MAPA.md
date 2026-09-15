@@ -25,7 +25,7 @@ Ordem de dependência. Nenhuma feature precede aquilo de que depende.
 
 ### FT-01 — <titulo>
 
-**Slug:** `<slug-da-feature>` → `docs/<slug-da-feature>/`
+**Slug:** `<slug-da-feature>` → `docs/sprintx/features/<slug-da-feature>/`, na branch `feature/<slug-da-feature>`
 **Entrega:** <o que o usuário do sistema consegue fazer que não conseguia.
 Verificável, sem adjetivo, numa frase.>
 **Depende de:** <[FT-NN, ...] ou []>

@@ -2,36 +2,61 @@
 
 O laço. Percorrer o `MAPA.md` em ordem de dependência e, para cada feature, conduzir sprintx e mergex de ponta a ponta.
 
-Entrada: `MAPA.md`. Saída: uma branch, um plano, um PR aberto e verde por feature; o `MAPA.md` atualizado.
+Entrada: `MAPA.md`. Saída: uma área de trabalho própria, um plano, um PR aberto e verde por feature; o `MAPA.md` atualizado no checkout de controle.
 
 O B4 é longo mas é a etapa mais simples do buildx: ele quase não decide nada. A competência está no sprintx e na mergex; o trabalho aqui é invocar na ordem certa, com a entrada certa, e não parar quando algo falha.
 
 ## O ciclo de uma feature
 
 ```
-1. mergex-abrir      → branch da feature
-2. sprintx F1        → base de conhecimento
-3. sprintx F2        → descoberta, RESPONDIDA PELO BUILDX
-4. sprintx F3        → plano de sprints, fases e tasks
-5. sprintx F4        → ORQUESTRADOR.md
-6. sprintx F5        → auditoria do plano
-7. sprintx F6        → execução autônoma sob TDD
-8. mergex-check      → portão de prontidão
-9. mergex-pr         → descrição, push, PR aberto
-10. atualiza o MAPA.md
+checkout de controle (MAPA.md, PROJETO.md, PREMISSAS.md)
+  │
+  1. marca a feature em_andamento no MAPA.md
+  │
+  2. sprintx F1 ─── cria ou retoma ───► worktree ../<repo>--<slug>
+  │                                     branch  feature/<slug>
+  │                                          │
+  │                                          ├─ 3. sprintx F2  descoberta, RESPONDIDA PELO BUILDX
+  │                                          ├─ 4. sprintx F3  plano de sprints, fases e tasks
+  │                                          ├─ 5. sprintx F4  ORQUESTRADOR.md
+  │                                          ├─ 6. sprintx F5  auditoria do plano
+  │                                          ├─ 7. sprintx F6  execução TDD — e é ela que aciona a mergex E0
+  │                                          ├─ 8. mergex-check  portão de prontidão
+  │                                          ├─ 9. mergex-pr     descrição, push, PR aberto
+  │                                          └─ 10. mergex-qa    pacote de teste manual
+  │                                          │
+  ◄──────────── volta ao checkout de controle ┘
+  11. atualiza o MAPA.md  →  próxima feature
 ```
 
-Nenhuma etapa é pulada, e o sprintx nunca é invocado fora de ordem — a máquina de estados dele detecta a fase pelo disco, então basta invocar a skill e ela continua de onde parou.
+Nenhuma etapa é pulada, e o sprintx nunca é invocado fora de ordem — a máquina de estados dele detecta a fase pelo disco de `docs/sprintx/features/<slug>/`, então basta invocar a skill **de dentro da área de trabalho certa** e ela continua de onde parou.
 
-## Passo 1 — Abrir a branch
+## O checkout de controle e o worktree da feature
 
-`mergex-abrir`, antes da primeira linha de código. Nome da branch derivado do `slug` da feature.
+São duas árvores diferentes, e confundi-las é o erro mais caro desta etapa.
 
-Marque a feature como `em_andamento` no `MAPA.md` **agora**, não no fim. Se a sessão morrer no meio, o `/buildx-retomar` precisa saber onde estava.
+| Árvore | O que mora nela | Quem escreve |
+|---|---|---|
+| **checkout de controle** — onde o buildx roda | `docs/projeto/PROJETO.md`, `PREMISSAS.md`, `MAPA.md`, `RECURSAO.md`, `VALIDACAO.md`, `RELATORIO.md`, e `docs/stack/CONVENCOES.md` | o buildx |
+| **worktree da feature** — `../<repo>--<slug>`, branch `feature/<slug>` | `docs/sprintx/features/<slug>/` (base, decisões, plano, orquestrador, auditoria, bloqueios, fechamento) e **o código da feature** | o sprintx e a mergex |
+
+O worktree é criado pela **F1 do sprintx** (regra 21 dele: uma feature por árvore de trabalho). O buildx **não cria branch e não cria worktree** — ele entra no que a F1 abriu, trabalha lá do F2 ao PR, e volta.
+
+**O checkout de controle não recebe o código das features.** O buildx não faz merge (regra 8), então nunca presuma que o plano, os artefatos ou o código de uma feature estão visíveis na árvore de controle: eles estão no worktree e na branch daquela feature.
+
+## Passo 1 — Marcar a feature e chamar a F1
+
+Marque a feature como `em_andamento` no `MAPA.md` **agora**, no checkout de controle, não no fim. Se a sessão morrer no meio, o `/buildx-retomar` precisa saber onde estava.
+
+**Não invoque `mergex-abrir`.** A branch e o worktree são da F1, e a mergex entra depois: quem aciona o E0 dela é a própria F6 do sprintx, já dentro do worktree, quando o `ORQUESTRADOR.md` existe. Chamar `mergex-abrir` antes da F1 tenta abrir uma segunda área de trabalho para a mesma feature — na melhor hipótese ela é recusada, na pior o trabalho se divide em duas árvores.
 
 ## Passo 2 — A F1, com o briefing do buildx
 
-A F1 do sprintx monta a base de conhecimento da feature. Ela recebe do buildx um briefing por feature, montado a partir do `MAPA.md`, do `PROJETO.md` e do `PREMISSAS.md` — o mesmo papel que o `BRIEFING.md` do prodx cumpre num pedido isolado.
+**A F1 abre a área de trabalho e monta a base de conhecimento** — nessa ordem. Antes do scaffold, ela cria ou retoma o worktree `../<repo>--<slug>` na branch `feature/<slug>`; a partir daí, tudo da feature acontece lá dentro. Se a F1 anunciar a área de trabalho e encerrar (é o comportamento dela quando o harness não troca de árvore sozinho), **continue de dentro do diretório que ela indicou** — não recomece a fase na árvore de controle.
+
+Sem git, ou com worktree recusado, a F1 segue na árvore atual e nada aqui muda: o buildx continua não abrindo branch.
+
+Ela recebe do buildx um briefing por feature, montado a partir do `MAPA.md`, do `PROJETO.md` e do `PREMISSAS.md` — o mesmo papel que o `BRIEFING.md` do prodx cumpre num pedido isolado.
 
 O briefing da feature carrega:
 
@@ -97,6 +122,10 @@ Toda tela entregue tem as duas variantes de tema, os três estados obrigatórios
 
 ## Passo 6 — O portão e o PR
 
+As três chamadas da mergex rodam **de dentro do worktree da feature**, onde estão os commits, o plano e o `docs/entregas/<slug>/`. Rodá-las da árvore de controle olharia para a branch errada.
+
+A branch já existe desde a F1, e a entrega já foi registrada pelo E0 que a **F6 acionou**. O buildx não abre branch aqui — nem antes, nem agora. Se a versão do sprintx instalada não acionar o E0, a `mergex-check` dirá que falta o registro da entrega: nesse caso rode `/mergex-abrir` **de dentro do worktree**, onde o E0 adota a branch que já existe. Nunca antes da F1, e nunca para retomar.
+
 `mergex-check` roda as dez verificações. Devolveu **BLOQUEADO**: não force o PR. Trate como bloqueio da feature — marque `bloqueada` no `MAPA.md` com o motivo que a mergex deu, e siga para a próxima feature. O B5 decide o que fazer.
 
 Devolveu **PRONTO**: `mergex-pr` monta a descrição, sobe a branch e abre o PR. A descrição referencia o `projeto_id` e o `FT-NN`.
@@ -107,9 +136,11 @@ Devolveu **PRONTO**: `mergex-pr` monta a descrição, sobe a branch e abre o PR.
 
 ## Passo 7 — Fechar a feature
 
-Atualize o `MAPA.md`: `status` para `entregue` ou `bloqueada`, e os contadores do frontmatter.
+**Volte ao checkout de controle** e atualize o `MAPA.md`: `status` para `entregue` ou `bloqueada`, e os contadores do frontmatter. O `MAPA.md` é do projeto, não da feature: ele nunca é editado dentro do worktree, senão a atualização fica presa na branch daquela feature e a próxima nasce de um mapa desatualizado.
 
-**Depois da primeira feature entregue**, rode a revisão de convenções do B2: `stackx-detectar` agora tem código real para varrer. Converta cada regra de `decidido_pelo_buildx` para a evidência encontrada; regra contradita pelo código vira achado a resolver. É quando o projeto passa a acreditar em si mesmo em vez de no buildx.
+O worktree da feature **fica onde está** ao fim do ciclo. Ele é a única cópia dos artefatos e do código daquela feature até o humano fazer o merge do PR — o B5 e o B6 ainda vão lê-lo, e removê-lo apagaria trabalho que ninguém integrou.
+
+**Depois da primeira feature entregue**, rode a revisão de convenções do B2 **na árvore daquela feature** — é lá que o código real existe; o checkout de controle ainda só tem o template do B2. Converta cada regra de `decidido_pelo_buildx` para a evidência encontrada, citando o arquivo e a linha como eles aparecem naquela branch; regra contradita pelo código vira achado a resolver. O `CONVENCOES.md` atualizado é do projeto: grave-o **no checkout de controle**, como todo artefato de `docs/stack/`. É quando o projeto passa a acreditar em si mesmo em vez de no buildx.
 
 ## O relato de progresso
 
@@ -125,6 +156,8 @@ Nunca peça confirmação para seguir. Nunca ofereça parar. O usuário fechou o
 ## Critério de saída do B4
 
 - toda feature do `MAPA.md` está `entregue` ou `bloqueada` — nenhuma `pendente` ou `em_andamento`
+- cada feature trabalhada tem worktree e branch próprios, abertos pela F1 — nenhuma segunda branch foi criada para a mesma feature
+- o `MAPA.md` foi atualizado no checkout de controle, não dentro de um worktree
 - toda feature entregue tem PR aberto, com a suíte verde
 - toda feature bloqueada tem o motivo registrado no `MAPA.md` e a pendência no `RECURSAO.md`
 - as convenções foram revisadas contra o código real depois da primeira entrega
@@ -132,6 +165,9 @@ Nunca peça confirmação para seguir. Nunca ofereça parar. O usuário fechou o
 
 ## Erros que esta etapa comete
 
+- **Chamar `mergex-abrir` antes da F1.** É o fluxo antigo. A branch e o worktree são da F1; abrir branch antes dela cria uma segunda área de trabalho para a mesma feature, ou falha — e nos dois casos o trabalho se perde de vista.
+- **Trabalhar a feature na árvore de controle.** Do F2 ao PR, tudo acontece dentro do worktree que a F1 abriu. A árvore de controle só guarda o estado do projeto.
+- **Procurar o artefato da feature no checkout de controle.** Ele não está lá: o buildx não faz merge. Está no worktree e na branch daquela feature.
 - **Parar no primeiro bloqueio.** O laço não para: registra, marca, segue. Uma feature bloqueada com dez entregues é um bom dia; dez pendentes porque a primeira travou não é.
 - **Responder a F2 com invenção.** Os quatro degraus existem para isso. Sem premissa registrada, a resposta não é auditável e o `00-DECISOES.md` vira ficção.
 - **Decidir regra de negócio.** A fronteira é dura: o buildx decide como o sistema se protege, não o que ele faz.

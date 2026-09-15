@@ -42,7 +42,7 @@ B1 CONCEPÇÃO → B2 FUNDAÇÃO → B3 DECOMPOSIÇÃO → B4 CONSTRUÇÃO → B
 | B1 | mapeia o escopo, varre lacunas, registra premissas | prodx (modo greenfield) |
 | B2 | escolhe a stack, instala a suíte, monta o esqueleto testável | stackx (invertido) |
 | B3 | **quebra o projeto em features** | só o buildx |
-| B4 | o laço: por feature, sprintx F1–F6 + mergex | sprintx, mergex |
+| B4 | o laço: por feature, sprintx F1–F6 + mergex, dentro do worktree que a F1 abre | sprintx, mergex |
 | B5 | classifica pendências e devolve ao laço | buildx |
 | B6 | confere o construído contra o mapa, e relata | prodx (como auditor) |
 
@@ -112,6 +112,8 @@ O que o buildx assume quando o usuário não diz nada. Detalhe em `references/02
 
 ## Estrutura em disco de um projeto do buildx
 
+No **checkout de controle**, onde o buildx roda:
+
 ```
 docs/
   projeto/
@@ -123,8 +125,17 @@ docs/
     RELATORIO.md      o que o usuário lê no fim
   produto/            do prodx
   stack/              do stackx
-  <slug-da-feature>/  do sprintx, uma pasta por feature
 ```
+
+No **worktree de cada feature** (`../<repo>--<slug>`, branch `feature/<slug>`, aberto pela F1 do sprintx):
+
+```
+docs/
+  sprintx/features/<slug>/   plano, decisões, auditoria, bloqueios, fechamento
+  entregas/<slug>/           registro da entrega e pacote de QA
+```
+
+O buildx não faz merge: o código e os artefatos de uma feature **não** aparecem no checkout de controle.
 
 ## Dependências
 

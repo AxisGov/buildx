@@ -2,7 +2,11 @@
 
 Varrer tudo que ficou pelo caminho no B4, classificar cada pendência, e devolver ao laço o que a máquina ainda consegue resolver.
 
-Entrada: `MAPA.md`, os `00-BLOQUEIOS.md` de todas as features, os achados da F5 e os relatórios da `mergex-check`. Saída: `docs/projeto/RECURSAO.md` atualizado, e possivelmente features novas no `MAPA.md`.
+Entrada: `MAPA.md`, os `00-BLOQUEIOS.md` de todas as features, os achados da F5 e os relatórios da `mergex-check`. Saída: `docs/projeto/RECURSAO.md` atualizado no checkout de controle, e possivelmente features novas no `MAPA.md`.
+
+**Os artefatos das features não estão na árvore de controle.** Cada feature tem worktree e branch próprios (`../<repo>--<slug>`, `feature/<slug>`), e o buildx não faz merge. Antes de varrer, localize a árvore de cada feature com `git worktree list --porcelain`; quando o worktree não existir mais, leia da branch sem trocar de árvore (`git show feature/<slug>:docs/sprintx/features/<slug>/00-BLOQUEIOS.md`).
+
+**Artefato que não aparece no checkout de controle não é artefato inexistente.** Concluir "a feature não registrou bloqueio" porque o arquivo não está aqui é o erro que faz o B5 fechar um ciclo cego.
 
 O B5 é o que separa "rodou até o fim" de "entregou". Sem ele o buildx produziria um repositório com nove features prontas e três bloqueadas, e chamaria isso de terminado.
 
@@ -13,8 +17,8 @@ Colete de todas as fontes, sem filtrar nada ainda:
 | Fonte | O que colher |
 |---|---|
 | `MAPA.md` | toda feature `bloqueada`, com o motivo |
-| `docs/<slug>/00-BLOQUEIOS.md` | toda dúvida que a F6 registrou e pulou |
-| `docs/<slug>/00-AUDITORIA.md` | todo achado alto que mandou voltar à F3 |
+| `docs/sprintx/features/<slug>/00-BLOQUEIOS.md` | toda dúvida que a F6 registrou e pulou — **no worktree/branch daquela feature** |
+| `docs/sprintx/features/<slug>/00-AUDITORIA.md` | todo achado alto que mandou voltar à F3 — idem |
 | relatório da `mergex-check` | toda verificação que devolveu BLOQUEADO |
 | `PREMISSAS.md` | toda premissa marcada provisória |
 | `RECURSAO.md` do ciclo anterior | toda pendência que continua aberta |
@@ -37,7 +41,9 @@ Exemplos: a exclusão de conta pela LGPD não coube em nenhuma feature; a rota d
 
 A feature existe, foi planejada, e o plano é que estava errado. Costuma vir de achado alto da F5, ou de `mergex-check` reprovando cobertura.
 
-**Destino:** apague o plano da feature (`sprint-*/`, `ORQUESTRADOR.md`, `00-AUDITORIA.md`), preserve a base e as decisões da F1 e F2, e devolva a feature ao B4 — a máquina de estados do sprintx a encontra na F3.
+**Destino:** **dentro do worktree original daquela feature**, apague o plano (`sprint-*/`, `ORQUESTRADOR.md`, `00-AUDITORIA.md` em `docs/sprintx/features/<slug>/`), preserve a base e as decisões da F1 e F2, e devolva a feature ao B4 — a máquina de estados do sprintx a encontra na F3.
+
+Replanejar é continuar a mesma feature: nunca abra árvore nova, nunca faça isso no checkout de controle e nunca crie uma segunda branch. Worktree removido: reabra-o sobre a branch que já existe (`git worktree add ../<repo>--<slug> feature/<slug>`) e trabalhe de lá.
 
 **Teto próprio:** uma feature replanejada **duas vezes** e reprovada de novo não volta uma terceira. Vira `decisao_humana`. Um plano que a auditoria reprova três vezes tem um problema que replanejar não resolve.
 

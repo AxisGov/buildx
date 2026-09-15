@@ -13,7 +13,9 @@ Se não houver `.git` no diretório de trabalho nem em nenhum ancestral, inicial
 Nunca versione: `.env`, `node_modules/`, o arquivo `.db` do SQLite, artefatos de build, o índice do memox.
 Sempre versione: `.env.example`, `.expx/expx-lock.json`, as migrations, a seed de demonstração.
 
-Commit inicial vazio ou com o esqueleto, na branch padrão. As branches de feature vêm depois, uma por feature, abertas pela `mergex-abrir` no B4.
+Commit inicial vazio ou com o esqueleto, na branch padrão. Este é o **checkout de controle** do projeto: é dele que o buildx conduz as seis etapas, e é nele que `docs/projeto/` e `docs/stack/` vivem.
+
+As branches de feature vêm depois, uma por feature, **abertas pela F1 do sprintx no B4**, junto com o worktree daquela feature (`../<repo>--<slug>`). O buildx não abre branch e não invoca `mergex-abrir`.
 
 ## Passo 2 — Escolher a stack
 
@@ -143,7 +145,7 @@ Então o buildx **decide** e o stackx **registra**:
 
 O `CONVENCOES.md` do B2 cobre, no mínimo: onde mora o teste e como se chama, como o banco é isolado entre testes, os comandos de teste/lint/build que funcionam de verdade, as três camadas e quem pode chamar quem, como erro é sinalizado, como configuração é lida.
 
-**A revisão da primeira feature.** Depois que a primeira feature do B4 for entregue, o código existe e o `stackx-detectar` normal pode rodar. O buildx roda, compara com o que decidiu, e converte cada regra confirmada de `decidido_pelo_buildx` para a evidência real. Regra que o código contradisse vira achado: ou o código se ajusta, ou a convenção estava errada e é corrigida. Este é o momento em que o projeto deixa de acreditar no buildx e passa a acreditar em si mesmo.
+**A revisão da primeira feature.** Depois que a primeira feature do B4 for entregue, o código existe **na árvore daquela feature** — não aqui, porque o buildx não faz merge — e é lá que o `stackx-detectar` normal roda. O buildx roda, compara com o que decidiu, e converte cada regra confirmada de `decidido_pelo_buildx` para a evidência real, gravando o `CONVENCOES.md` atualizado de volta no checkout de controle. Regra que o código contradisse vira achado: ou o código se ajusta, ou a convenção estava errada e é corrigida. Este é o momento em que o projeto deixa de acreditar no buildx e passa a acreditar em si mesmo.
 
 ## Critério de saída do B2
 

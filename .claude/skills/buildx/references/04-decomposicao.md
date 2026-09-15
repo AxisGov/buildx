@@ -48,7 +48,7 @@ Toda feature do `MAPA.md` declara, obrigatoriamente:
 | Campo | Conteúdo | Regra |
 |---|---|---|
 | `id` | `FT-NN` | sequencial, nunca reaproveitado |
-| `slug` | o que o sprintx usará em `docs/<slug>/` | minúsculo, sem acento, hifens, no máximo 5 palavras |
+| `slug` | o que o sprintx usará em `docs/sprintx/features/<slug>/`, na branch `feature/<slug>` e no worktree da feature | minúsculo, sem acento, hifens, no máximo 5 palavras |
 | `titulo` | título curto | sem verbo de pedido |
 | `entrega` | o que o usuário consegue fazer que não conseguia | **verificável, sem adjetivo** |
 | `depende_de` | `[ids]` ou `[]` | explícito; nunca inferido em tempo de execução |

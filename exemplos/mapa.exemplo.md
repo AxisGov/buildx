@@ -41,7 +41,7 @@ Ordem de dependência. Nenhuma feature precede aquilo de que depende.
 
 ### FT-01 — Acesso ao sistema
 
-**Slug:** `acesso-ao-sistema` → `docs/acesso-ao-sistema/`
+**Slug:** `acesso-ao-sistema` → `docs/sprintx/features/acesso-ao-sistema/`, na branch `feature/acesso-ao-sistema`
 **Entrega:** uma pessoa entra com e-mail e senha e cai no painel; um administrador cadastra os outros usuários e atribui papel; cada um edita o próprio perfil e troca a própria senha.
 **Depende de:** []
 **Paralelizável:** false

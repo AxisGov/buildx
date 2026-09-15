@@ -4,13 +4,20 @@ A mergex leva o trabalho implementado até o repositório e até o revisor human
 
 ## Onde a mergex entra no laço
 
-| Etapa | Quando | O que faz |
-|---|---|---|
-| `mergex-abrir` (E0) | antes da F1 | abre a branch da feature |
-| `mergex-check` (E2) | depois da F6 | portão de prontidão, dez verificações |
-| `mergex-pr` (E4/E6/E7) | com o portão PRONTO | descrição, push, PR aberto |
-| `mergex-qa` (E5) | depois do PR | pacote de teste manual |
-| `mergex-revisar` | **nunca** | integrar código é decisão humana |
+| Etapa | Quando | Quem aciona | O que faz |
+|---|---|---|---|
+| E0 abertura | início da F6 | **a própria sprintx**, não o buildx | adota a branch `feature/<slug>` que a F1 abriu e registra a entrega |
+| E1 commit por task | a cada task que fecha | **a própria sprintx** | um commit por task |
+| `mergex-check` (E2) | depois da F6 | buildx | portão de prontidão, dez verificações |
+| `mergex-pr` (E4/E6/E7) | com o portão PRONTO | buildx | descrição, push, PR aberto |
+| `mergex-qa` (E5) | depois do PR | buildx | pacote de teste manual |
+| `mergex-revisar` | **nunca** | — | integrar código é decisão humana |
+
+**O buildx não invoca `mergex-abrir`.** A área de trabalho da feature é da F1 do sprintx (worktree + branch `feature/<slug>`), e o E0 entra depois, por dentro da F6, para adotar e registrar o que já existe. Chamar `mergex-abrir` antes da F1 é o fluxo antigo: hoje ele tentaria abrir uma segunda área de trabalho para a mesma feature.
+
+As três chamadas do buildx rodam **de dentro do worktree da feature** — é lá que estão os commits, o plano e `docs/entregas/<slug>/`.
+
+Exceção estreita: se a versão do sprintx instalada não acionar o E0, a `mergex-check` acusa a falta do registro da entrega. Aí rode `/mergex-abrir` **de dentro do worktree**, onde o E0 adota a branch existente sem criar outra. Nunca antes da F1, e nunca para retomar uma feature.
 
 `mergex-atencao` (E3) é opcional no modo autônomo: ela classifica o diff em faixas de atenção humana, e é útil no relatório final quando o projeto é grande. Rode se for barata.
 
@@ -55,6 +62,6 @@ Se um projeto do buildx um dia acumular legado, o legadox entra normalmente, e a
 
 ## Comportamento sem mergex
 
-O buildx **não roda**. Sem `mergex-abrir` não há branch por feature — todo o trabalho cairia na mesma, e o laço do B4 produziria um diff único ingovernável. Sem `mergex-check` não há portão, e sem `mergex-pr` a entrega não chega a lugar nenhum.
+O buildx **não roda**. A branch por feature continua existindo sem a mergex — quem a abre é a F1 do sprintx —, mas sem `mergex-check` não há portão, sem `mergex-pr` a entrega não chega a lugar nenhum, e sem o E1 nenhuma task vira commit: o laço do B4 produziria árvores cheias de trabalho não versionado.
 
 Diga que falta e como instalar (`npx expxdev init`), e pare.

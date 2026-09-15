@@ -20,9 +20,27 @@ Uma execução do buildx é longa e pode ser interrompida a qualquer momento. To
 
 ## 2. Se havia feature em andamento
 
-Não recomece a feature. A máquina de estados do sprintx detecta a fase pelo disco de `docs/<slug>/` — invoque a skill e ela continua de onde parou.
+Não recomece a feature — e **não rode `mergex-abrir` para retomar**. Cada feature tem uma árvore de trabalho própria, aberta pela F1 do sprintx, e retomar é voltar para dentro dela.
 
-Verifique antes: a branch da feature existe? Se `mergex-abrir` rodou mas o resto não, a branch está lá e não deve ser reaberta.
+1. **Leia o `slug`** daquela `FT-NN` no `MAPA.md` (checkout de controle). A branch é `feature/<slug>`.
+2. **Procure a árvore de trabalho:**
+   ```
+   git worktree list --porcelain
+   ```
+   Ele lista, para cada árvore, o `worktree <caminho>` e o `branch refs/heads/<nome>`.
+3. **Branch associada a um worktree:** retome **de dentro daquele diretório**. Se a sessão atual está em outra árvore, anuncie o caminho e continue de lá — nunca trabalhe a feature a partir do checkout de controle.
+4. **Branch existe, sem worktree associado:** reabra a árvore sobre a branch que já existe, sem criar outra e sem trocar a branch do checkout de controle:
+   ```
+   git worktree add ../<repo>--<slug> feature/<slug>
+   ```
+   Se `git` recusar (a branch está em uso por outra árvore, ou o diretório já existe), **pare e relate** — nunca force, nunca remova worktree de ninguém, nunca crie uma segunda branch para a mesma feature.
+5. **Nem branch nem worktree:** a F1 não chegou a rodar. Invoque o sprintx normalmente com o briefing da feature: é ela que abre a área de trabalho.
+
+**Só dentro da área certa** deixe a máquina de estados do sprintx detectar a fase, que ela lê do disco de `docs/sprintx/features/<slug>/` — invoque a skill e ela continua de onde parou.
+
+A existência da branch **não** diz onde continuar: ela não prova que a árvore existe, nem em que fase a feature está. Quem responde isso é o worktree mais o disco daquela feature.
+
+Se este comando foi chamado **de dentro de um worktree de feature**, o estado do projeto (`docs/projeto/MAPA.md`) está no checkout de controle, não aqui: leia-o de lá (`git worktree list --porcelain` mostra qual é a árvore principal) antes de decidir a etapa.
 
 ## 3. Confirme o modo
 

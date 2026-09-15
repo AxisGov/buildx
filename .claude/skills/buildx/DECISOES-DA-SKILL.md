@@ -252,3 +252,23 @@ Há um terceiro efeito, mais silencioso: um esqueleto gerado tem, no melhor caso
 **O que a decisão obriga.** Um template distribuído a todo projeto novo é uma dívida distribuída se ninguém o mantiver. Daí o `.github/workflows/template.yml`: instala, migra, semeia, linta, checa tipos, builda, testa e audita dependências a cada mudança e toda segunda-feira, falhando em vulnerabilidade `high` ou acima. Defeito no template se corrige na skill, com o CI, e se recopia — nunca só no projeto que o encontrou.
 
 **O que invalida:** o usuário pedir stack que o template não atende (outra linguagem, outro framework, outro banco) — aí o B2 volta a montar o esqueleto à mão e registra a premissa; o projeto não ter interface web.
+
+---
+
+## D-19 — A área de trabalho da feature é do sprintx, e o buildx trabalha dentro dela
+
+*(Atualiza o caminho citado na D-06: onde ela diz `docs/<slug>/`, hoje é `docs/sprintx/features/<slug>/`. A decisão da D-06 — um `MAPA.md` só, em vez de uma pasta por feature no buildx — continua valendo integralmente.)*
+
+**Decisão:** o buildx **não abre branch e não abre worktree**, e não invoca `mergex-abrir`. Quem cria ou retoma a árvore de trabalho de cada feature é a **F1 do sprintx** (regra 21 dele: uma feature por árvore de trabalho), em `../<repo>--<slug>`, na branch `feature/<slug>`. O buildx marca a feature `em_andamento` no `MAPA.md`, chama a F1, entra na árvore que ela abriu, conduz F2 → F6 e as três chamadas da mergex de lá, e volta ao checkout de controle para atualizar o mapa. A mergex entra pelo E0, acionado **pela própria F6**, para adotar a branch que já existe.
+
+**Alternativa descartada:** manter `mergex-abrir → sprintx F1`, o fluxo original, em que o buildx abria a branch antes de chamar o sprintx.
+
+**Por quê a alternativa perde.** Ela deixou de funcionar quando as skills irmãs evoluíram, e não por preferência: hoje a F1 abre o worktree **antes do scaffold**, então a branch criada pelo buildx seria uma segunda área de trabalho para a mesma feature — ou a F1 falharia, porque o git recusa duas árvores na mesma branch. Somam-se dois desencontros de contrato: os artefatos do sprintx passaram a viver em `docs/sprintx/features/<slug>/`, não em `docs/<slug>/`; e o E0 da mergex passou a ser acionado pela F6, quando o `ORQUESTRADOR.md` já existe, para adotar a branch em vez de criar.
+
+**O que isso torna explícito, e que antes ficava implícito:** existem **duas árvores**. O checkout de controle guarda o estado do projeto (`docs/projeto/`, `docs/stack/`); cada feature guarda o plano e o código na própria árvore. Como o buildx não faz merge (D-03), o conteúdo de uma feature **não** está visível no checkout de controle — e nenhuma etapa pode concluir que um artefato não existe só porque não o encontrou lá. O B5 e o B6 passam a localizar a árvore da feature (`git worktree list --porcelain`) ou a ler da branch (`git show feature/<slug>:<caminho>`), e o replanejamento acontece no worktree original, nunca numa árvore nova.
+
+**O que não muda:** nenhuma das 12 regras invioláveis. O buildx continua orquestrando sem implementar; a F2 continua respondida em quatro degraus; o TDD do sprintx continua intocado; o merge continua humano e `mergex-revisar` continua nunca sendo invocado; o teto de recursão, o P-9 e o contrato com o stackx seguem iguais.
+
+**O que esta decisão NÃO resolve:** features dependentes continuam nascendo de árvores que não contêm as dependências já entregues, porque não há integração entre elas. Isso é problema declarado e tratado em frente própria (`fix/p0-buildx-integration`), não aqui.
+
+**O que invalida:** o sprintx deixar de abrir worktree na F1 (aí o buildx volta a precisar de alguém que abra a branch antes da execução); o projeto não usar git, caso em que a F1 já trabalha na árvore atual e a distinção entre as duas árvores desaparece.

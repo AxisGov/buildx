@@ -19,8 +19,8 @@ O buildx **não implementa nada, não planeja nada e não escreve teste nenhum.*
 |---|---|
 | `prodx` | mapeia o escopo, varre lacunas, emite o veredito e o briefing (B1); valida no fim (B6) |
 | `stackx` | grava as convenções técnicas do projeto (B2) |
-| `sprintx` | planeja e executa cada feature, F1 a F6 (B4) |
-| `mergex` | abre a branch, verifica prontidão, monta PR e pacote de QA (B4) |
+| `sprintx` | abre a área de trabalho da feature (worktree + branch) e planeja e executa cada uma, F1 a F6 (B4) |
+| `mergex` | verifica prontidão, monta PR e pacote de QA (B4); a branch ela adota, não cria |
 | `legadox` | não participa: projeto novo não tem legado |
 | `memox` | indexa o que a cadeia produziu; consultado no B5 |
 
@@ -101,7 +101,7 @@ Contrato da feature — toda feature do mapa declara, obrigatoriamente:
 | Campo | Conteúdo |
 |---|---|
 | `id` | `FT-NN` |
-| `slug` | o `<slug-da-feature>` que o sprintx vai usar em `docs/<slug>/` |
+| `slug` | o `<slug-da-feature>` que o sprintx vai usar em `docs/sprintx/features/<slug>/`, e que nomeia a branch `feature/<slug>` e o worktree dela |
 | `titulo` | título curto |
 | `entrega` | o que o usuário do sistema consegue fazer que não conseguia |
 | `depende_de` | `[ids]` ou `[]` |
@@ -122,14 +122,18 @@ Roteiro: `references/04-decomposicao.md`.
 O laço. Para cada feature do `MAPA.md` em ordem de dependência:
 
 ```
-mergex-abrir      → branch da feature
-sprintx F1        → base de conhecimento
+sprintx F1        → worktree ../<repo>--<slug> + branch feature/<slug> + base
 sprintx F2        → descoberta: RESPONDIDA PELO BUILDX (ver abaixo)
 sprintx F3 → F5   → plano, orquestrador, auditoria
-sprintx F6        → execução autônoma sob TDD
+sprintx F6        → execução autônoma sob TDD (a sprintx aciona a mergex E0)
 mergex-check      → portão de prontidão
 mergex-pr         → descrição, push, PR aberto
+mergex-qa         → pacote de teste manual
 ```
+
+**Duas árvores, e não se confundem.** O buildx roda no **checkout de controle**, que guarda o estado do projeto (`docs/projeto/`, `docs/stack/`). Cada feature vive no **worktree que a F1 do sprintx abre** — `../<repo>--<slug>`, branch `feature/<slug>` —, e é lá que ficam `docs/sprintx/features/<slug>/` e o código. Do F2 ao PR o buildx trabalha de dentro desse worktree; depois volta ao controle e atualiza o `MAPA.md`.
+
+**O buildx não abre branch nem worktree, e não invoca `mergex-abrir`.** A área de trabalho é da F1; a mergex entra pela F6, que aciona o E0 dela de dentro do worktree. Como não há merge automático, o código de uma feature **não** está visível na árvore de controle.
 
 **A F2 no modo autônomo.** A regra 10 do sprintx obriga a F2 a entrevistar o humano. No buildx o humano já falou — na descrição e, no modo briefing, na rodada única. Então o buildx **responde a F2 no lugar dele**, derivando cada resposta do `PROJETO.md`, do `PREMISSAS.md` e do `CONVENCOES.md`, e gravando em `00-DECISOES.md` com `respondido_por: buildx`. Nenhuma resposta é inventada: o que não estiver derivável de um desses três arquivos vira premissa nova em `PREMISSAS.md`, registrada antes de ser usada.
 
@@ -139,7 +143,7 @@ Roteiro: `references/05-construcao.md`.
 
 ### B5 — Recursão
 
-Depois que o laço passou por todas as features, o buildx varre os `00-BLOQUEIOS.md` de todas elas e o `MAPA.md`, e classifica cada pendência:
+Depois que o laço passou por todas as features, o buildx varre os `00-BLOQUEIOS.md` de todas elas — **cada um na árvore ou na branch da sua feature**, porque não há merge — e o `MAPA.md`, e classifica cada pendência:
 
 | Classe | Destino |
 |---|---|
@@ -197,6 +201,8 @@ O modo autônomo viola regras que existem por bons motivos nas camadas irmãs. C
 
 ## Estrutura em disco
 
+No **checkout de controle**, onde o buildx roda:
+
 ```
 docs/
   projeto/
@@ -208,10 +214,19 @@ docs/
     RELATORIO.md      o que o usuário lê no fim
   produto/            do prodx
   stack/              do stackx
-  <slug-da-feature>/  do sprintx, uma pasta por feature do MAPA.md
 ```
 
-`docs/` é sempre ancorado na raiz do repositório Git mais próxima. Em projeto novo sem `.git`, o B2 inicializa o repositório antes de qualquer coisa.
+No **worktree de cada feature** (`../<repo>--<slug>`, branch `feature/<slug>`):
+
+```
+docs/
+  sprintx/
+    features/<slug>/  do sprintx: base, decisões, plano, orquestrador,
+                      auditoria, bloqueios e fechamento daquela feature
+  entregas/<slug>/    da mergex: o registro da entrega e o pacote de QA
+```
+
+`docs/` é sempre ancorado na raiz do repositório Git mais próxima — que, dentro de um worktree, é a raiz **daquele** worktree. Em projeto novo sem `.git`, o B2 inicializa o repositório antes de qualquer coisa.
 
 ### Frontmatter
 

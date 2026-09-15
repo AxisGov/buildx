@@ -76,8 +76,9 @@ siga em frente.
 | <titulo> | <a entrega, na linguagem de quem usa> | <#n> | <n> |
 
 <Cada PR está aberto, com a suíte verde e a descrição montada. O pacote de
-teste manual de cada feature está em `docs/<slug>/` — é o caminho para
-conferir sem abrir o editor.>
+teste manual de cada feature está em `docs/entregas/<slug>/QA-PACOTE.md`, na
+branch `feature/<slug>` daquela feature — é o caminho para conferir sem abrir
+o editor.>
 
 ---
 
@@ -148,7 +149,8 @@ demonstração.
 | `docs/projeto/RECURSAO.md` | as pendências, classificadas |
 | `docs/projeto/VALIDACAO.md` | a conferência item a item |
 | `docs/stack/CONVENCOES.md` | as convenções técnicas do projeto |
-| `docs/<slug>/` | o plano, as decisões e o QA de cada feature |
+| `docs/sprintx/features/<slug>/` | o plano, as decisões e os bloqueios de cada feature — **na branch daquela feature**, não aqui |
+| `docs/entregas/<slug>/` | o registro da entrega e o pacote de QA — idem |
 
 O método Expx está instalado neste projeto. Daqui em diante: `/sprintx`
 para feature nova, `/runx` para defeito, `/mergex` para entregar.

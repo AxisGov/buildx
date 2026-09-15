@@ -46,9 +46,15 @@ Para cada linha, o buildx procura a evidência e registra uma de quatro conclus�
 
 **Nunca aceite como evidência:** o `MAPA.md` dizer `entregue`; a task estar `concluida`; o plano prever a coisa; o nome de um arquivo sugerir o conteúdo.
 
+### Onde a evidência mora
+
+No checkout de controle só existem `docs/projeto/` e `docs/stack/`. O código e os artefatos de cada feature estão **no worktree e na branch dela** (`../<repo>--<slug>`, `feature/<slug>`), porque o buildx não faz merge — e é lá que a conferência acontece: `git worktree list --porcelain` localiza a árvore, e `git show feature/<slug>:<caminho>` lê um arquivo sem trocar de árvore.
+
+Item não encontrado no checkout de controle **não** é item não atendido. Procure na árvore da feature que deveria tê-lo entregue, e só então conclua.
+
 ## Passo 3 — Verificar o sistema de pé
 
-O que o usuário vai fazer no primeiro minuto, e que nenhum artefato prova:
+O que o usuário vai fazer no primeiro minuto, e que nenhum artefato prova. Como as features não estão integradas numa árvore só, **a verificação roda na árvore de cada feature entregue** — o worktree dela, que já contém a fundação herdada do B2 mais o que aquela feature acrescentou. Registre no `VALIDACAO.md` em qual árvore cada verificação rodou:
 
 1. numa cópia limpa: instalar, migrar, semear, subir
 2. entrar com o usuário de demonstração (P-5), com as credenciais que o relatório vai documentar
@@ -57,7 +63,7 @@ O que o usuário vai fazer no primeiro minuto, e que nenhum artefato prova:
 5. **editar o próprio nome e e-mail** em Meu perfil (P-9, E-3)
 6. **trocar a própria senha**, exigindo a atual, e entrar de novo com a nova (P-9, E-4)
 7. alternar as duas variantes de tema pela barra de status, e conferir que ambas ficam completas
-8. percorrer a entrega principal de cada feature
+8. percorrer a entrega principal **daquela** feature — a de outra feature está noutra árvore
 9. abrir em largura de celular
 
 Qualquer um que falhe é `nao_atendido` de peso alto. Um sistema que não sobe numa máquina limpa não está entregue, por mais verde que esteja a suíte — e o usuário de demonstração existe justamente para tornar essa verificação possível em trinta segundos.

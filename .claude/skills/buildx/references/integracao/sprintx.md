@@ -15,6 +15,22 @@ O sprintx planeja e executa uma feature, F1 a F6. O buildx o invoca uma vez por 
 
 O sprintx é excelente em profundidade e não tem opinião sobre largura: ele planeja *uma* feature com rigor e não sabe olhar um sistema e decidir onde cortar. O buildx corta; o sprintx aprofunda.
 
+## A F1 é dona da área de trabalho
+
+A regra 21 do sprintx — **uma feature por árvore de trabalho** — é anterior a qualquer coisa que o buildx faça na feature. Com git, a F1 cria ou retoma um `git worktree` próprio, em diretório irmão do checkout (`../<repo>--<slug>`), na branch `feature/<slug>`. Tudo da feature passa a viver lá: `docs/sprintx/features/<slug>/` e o código.
+
+| Quem | Faz |
+|---|---|
+| sprintx F1 | cria ou retoma o worktree e a branch `feature/<slug>` |
+| buildx | entra no worktree que a F1 abriu, conduz F2 → F6 e a mergex, e volta ao checkout de controle |
+| mergex E0 | acionado **pela F6**, de dentro do worktree, quando o `ORQUESTRADOR.md` já existe: adota a branch que a F1 abriu |
+
+O buildx **não abre branch, não abre worktree e não invoca `mergex-abrir`**. Se a F1 anunciar a área de trabalho e encerrar a fase — o comportamento dela quando o harness não troca de árvore sozinho —, continue de dentro do diretório indicado.
+
+Sem git, ou com "sem worktree" explícito, a F1 trabalha na árvore atual (`worktree: null` no `ORQUESTRADOR.md`) e nada disso muda para o buildx.
+
+**O que o buildx guarda de cada feature** é só o que cabe no `MAPA.md` — id, slug, status, PR. O detalhe fica no worktree dela, e o buildx o lê de lá; como não há merge automático, ele **não** aparece no checkout de controle.
+
 ## O que o buildx entrega por feature
 
 Um briefing montado do `MAPA.md`, `PROJETO.md` e `PREMISSAS.md` — o mesmo papel do `BRIEFING.md` do prodx num pedido isolado:
@@ -75,13 +91,13 @@ A R8 merece nota: ela já foi escrita pensando em execução autônoma, e é o q
 
 | Fase | Sob o buildx |
 |---|---|
-| F1 ingestão | normal, com o briefing do buildx como entrada |
+| F1 ingestão | normal, com o briefing do buildx como entrada. **É ela que abre a área de trabalho**: worktree `../<repo>--<slug>` e branch `feature/<slug>` (regra 21) |
 | F2 descoberta | **respondida pelo buildx**, quatro degraus |
 | F3 plano | normal. A pergunta da R11 é respondida pelo mesmo procedimento |
 | F3.5 estimativa | **opcional.** Não há prazo a negociar; rode se for barata |
 | F4 orquestrador | normal |
 | F5 auditoria | normal, e obedecida. Reprovado três vezes: a feature vira `bloqueada` |
-| F6 execução | normal. O acabamento visual acontece nas tasks de interface, sobre os tokens do design system (P-6, P-7) |
+| F6 execução | normal. É ela que aciona a mergex (E0 no início, E1 a cada task). O acabamento visual acontece nas tasks de interface, sobre os tokens do design system (P-6, P-7) |
 
 ## O laço F3 ↔ F5
 

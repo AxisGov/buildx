@@ -54,7 +54,7 @@ O método Expx é um conjunto de skills que se compõem, instaladas e mantidas p
 | **[expxdev](https://github.com/bittencourtthulio/expxdev)** | o CLI: instala, atualiza e diagnostica o ecossistema | é quem instala esta skill (`npx expxdev init`) |
 | **[prodx](https://github.com/bittencourtthulio/prodx)** | **camada** de produto: decide **se** há trabalho | abre o projeto no B1 (modo greenfield) e o valida no B6 — **obrigatório** |
 | **[sprintx](https://github.com/bittencourtthulio/sprintx)** | **Build** — feature nova, F1…F6 | planeja e executa cada feature do mapa, no B4 — **obrigatório** |
-| **[mergex](https://github.com/bittencourtthulio/mergex)** | entrega: branch, commit por task, PR e pacote de QA | abre a branch, verifica prontidão e monta o PR, no B4 — **obrigatório** |
+| **[mergex](https://github.com/bittencourtthulio/mergex)** | entrega: branch, commit por task, PR e pacote de QA | verifica prontidão, monta o PR e o pacote de QA no B4 — **obrigatório**. A branch da feature vem da F1 do `sprintx`; a mergex a adota |
 | **[stackx](https://github.com/bittencourtthulio/stackx)** | **camada** de convenções do repositório | grava o `CONVENCOES.md` no B2, invertido: decide em vez de detectar |
 | **[memox](https://github.com/bittencourtthulio/MemoX)** | **camada** de memória do projeto | consultado no B5, para não repetir uma tentativa que já falhou |
 | **[runx](https://github.com/bittencourtthulio/runx)** | **Run** — ocorrência em produção, E1…E5 | não participa: o buildx constrói, não corrige |
@@ -90,7 +90,7 @@ B1 CONCEPÇÃO → B2 FUNDAÇÃO → B3 DECOMPOSIÇÃO → B4 CONSTRUÇÃO → B
 | **B1** | Concepção | mapeia o escopo e **varre o que você não pediu** — autenticação, LGPD, auditoria, backup, observabilidade. Cada lacuna vira premissa registrada | `prodx` |
 | **B2** | Fundação | escolhe a stack, instala a suíte Expx, monta o esqueleto que instala, sobe e testa | `stackx` |
 | **B3** | Decomposição | **quebra o projeto em features**, com ordem de dependência | só o buildx |
-| **B4** | Construção | o laço: por feature, branch → plano → auditoria → execução TDD → PR | `sprintx`, `mergex` |
+| **B4** | Construção | o laço: por feature, área de trabalho própria → plano → auditoria → execução TDD → PR | `sprintx`, `mergex` |
 | **B5** | Recursão | classifica o que ficou pelo caminho e devolve ao laço o que a máquina resolve | buildx |
 | **B6** | Validação | confere o construído contra o mapa, item a item, e relata | `prodx` |
 
