@@ -22,6 +22,7 @@
 set -uo pipefail
 
 OK=0; FALHOU=0
+REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 TMP_RAIZ="$(mktemp -d)"
 trap 'rm -rf "$TMP_RAIZ"' EXIT
 
@@ -132,26 +133,67 @@ caminho_a_livre() { # <slug>
   ! git rev-parse --verify --quiet "refs/heads/feature/$1" >/dev/null
 }
 
-# §9: promoção de premissa, idempotente pelo PR-NN. Mesmo id com conteúdo
+# A premissa pendente mora em arquivo do buildx, dentro da pasta canônica da
+# feature: docs/sprintx/features/<slug>/BUILDX-PREMISSAS.md. O 00-DECISOES.md é
+# da sprintx e pode ser regerado por ela — por isso a premissa não mora lá.
+escreve_premissa() { # <arquivo> <PR-NN> <decisao>
+  mkdir -p "$(dirname "$1")"
+  [ -f "$1" ] || printf '# Premissas pendentes do BuildX\n' > "$1"
+  cat >> "$1" <<EOF
+
+### $2 — Politica de expiracao da sessao
+
+- origem: f2_autonoma
+- decisao: $3
+- justificativa: PR-02 e CONVENCOES.md estabelecem sessao stateless
+- o_que_invalida: requisito explicito de sessao permanente
+- status: pendente_promocao
+EOF
+}
+
+premissa_ids() { awk '{ sub(/\r$/, "") } /^### PR-/ { print $2 }' "$1" 2>/dev/null; }
+
+premissa_bloco() { # <arquivo> <PR-NN>
+  awk -v id="$2" '{ sub(/\r$/, "") } /^### / { dentro = ($2 == id) } dentro && NF { print }' "$1"
+}
+
+# O `status` é marca de feature, não conteúdo da premissa: a comparação de
+# idempotência é sobre o que a premissa afirma.
+premissa_corpo() { premissa_bloco "$1" "$2" | grep -v '^- status: '; }
+
+# §9: promoção depois do ff, idempotente pelo PR-NN. Mesmo id com conteúdo
 # diferente não é escolha: é parada.
-promover_premissas() { # <arquivo-feature-local> <PREMISSAS.md global>
+promover_premissas() { # <BUILDX-PREMISSAS.md da feature> <PREMISSAS.md global>
   local origem="$1"
   local destino="$2"
   [ -f "$origem" ] || return 0
-  local linha id existente achou
-  while IFS= read -r linha || [ -n "$linha" ]; do
-    linha="${linha%$'\r'}"                     # comparação não depende do fim de linha
-    case "$linha" in PR-*) ;; *) continue ;; esac
-    id="${linha%%:*}"
-    achou=nao
-    while IFS= read -r existente || [ -n "$existente" ]; do
-      existente="${existente%$'\r'}"
-      case "$existente" in
-        "$id":*) [ "$existente" = "$linha" ] || return 1; achou=sim ;;
-      esac
-    done < "$destino"
-    [ "$achou" = sim ] || printf '%s\n' "$linha" >> "$destino"
-  done < "$origem"
+  local id corpo
+  for id in $(premissa_ids "$origem"); do
+    premissa_bloco "$origem" "$id" | grep -q '^- status: pendente_promocao$' || continue
+    corpo="$(premissa_corpo "$origem" "$id")"
+    if grep -q "^### $id " "$destino" 2>/dev/null; then
+      [ "$(premissa_corpo "$destino" "$id")" = "$corpo" ] || return 1
+    else
+      printf '\n%s\n' "$corpo" >> "$destino"
+    fi
+  done
+}
+
+# Na retomada: o arquivo existente vale inteiro.
+premissa_estado() { # <arquivo> <PR-NN> <arquivo-com-o-bloco-desejado> -> ausente|reusar|conflito
+  if ! grep -q "^### $2 " "$1" 2>/dev/null; then
+    echo ausente
+  elif [ "$(premissa_corpo "$1" "$2")" = "$(premissa_corpo "$3" "$2")" ]; then
+    echo reusar
+  else
+    echo conflito
+  fi
+}
+
+# Para a mergex, a pasta da feature inteira é artefato de método; o
+# PREMISSAS.md do projeto seria arquivo de produto fora do plano (V9).
+artefato_de_metodo() { # <caminho> <slug>
+  case "$1" in "docs/sprintx/features/$2/"*) return 0 ;; *) return 1 ;; esac
 }
 
 # A única forma de integrar.
@@ -468,63 +510,98 @@ caso "37. e igualdade de tip nao e exigida" nao "$(sim_nao test "$BASE" = "$(git
 caso "38. recriar a branch existente falha" nao "$(sim_nao git branch feature/ft-01 "$BASE")"
 
 echo
-echo "premissas da F2 — nascem na feature, são promovidas depois do ff"
+echo "premissas do buildx — arquivo próprio, feature-local, promovido depois do ff"
 
 C="$(novo_projeto p39 sim)"; cd "$C"
-BASE="$(git rev-parse HEAD)"
 printf '# Premissas\n' > docs/projeto/PREMISSAS.md
 git add -A; git commit -q -m "chore(buildx): premissas do B1"; git push -q origin buildx/p39
 BASE="$(git rev-parse HEAD)"
 feature_nasce ft-01 "$BASE" p39
 WT="$TMP_RAIZ/p39/wt-ft-01"
+REL="docs/sprintx/features/ft-01/BUILDX-PREMISSAS.md"
+escreve_premissa "$WT/$REL" PR-07 "Sessao expira apos 8 horas"
+# A decisão resultante vai para o arquivo da sprintx, citando a fonte.
 mkdir -p "$WT/docs/sprintx/features/ft-01" "$WT/docs/entregas/ft-01" "$WT/src"
-printf 'status: pendente_promocao\nPR-07: sessao expira em 30 minutos\n' \
+printf -- '---\nkind: decisoes\n---\n\nD-01 | sessao de 8h | sessao permanente | respondido_por: buildx, fonte BUILDX-PREMISSAS.md#PR-07\n' \
   > "$WT/docs/sprintx/features/ft-01/00-DECISOES.md"
 printf 'codigo\n' > "$WT/src/ft-01.ts"
 printf 'estado: entregue\nportao: pronto\n' > "$WT/docs/entregas/ft-01/ENTREGA.md"
 git -C "$WT" add -A; git -C "$WT" -c user.email=t@t -c user.name=t commit -q -m "feat: ft-01"
-caso "39. premissa da F2 nao suja o CONTROL antes do ff" nao \
-  "$(sim_nao grep -q 'PR-07' docs/projeto/PREMISSAS.md)"
-caso "39. CONTROL segue limpo na janela"                 sim "$(sim_nao test -z "$(git status --porcelain)")"
-integrar feature/ft-01
-PREM="$C/docs/sprintx/features/ft-01/00-DECISOES.md"
-caso "40. promocao depois do ff"          sim "$(sim_nao promover_premissas "$PREM" docs/projeto/PREMISSAS.md)"
-caso "40. e a premissa chegou ao global"  sim "$(sim_nao grep -q '^PR-07:' docs/projeto/PREMISSAS.md)"
-caso "41. promover de novo e no-op"       sim "$(sim_nao promover_premissas "$PREM" docs/projeto/PREMISSAS.md)"
-caso "41. sem duplicar o PR-NN"           "1" "$(grep -c '^PR-07:' docs/projeto/PREMISSAS.md)"
-printf 'PR-07: sessao expira em 8 horas\n' > "$TMP_RAIZ/p39/divergente.md"
-caso "42. mesmo PR-NN com conteudo diferente: barra" nao \
-  "$(sim_nao promover_premissas "$TMP_RAIZ/p39/divergente.md" docs/projeto/PREMISSAS.md)"
-caso "42. e nao escolhe uma das versoes"             "1" "$(grep -c '^PR-07:' docs/projeto/PREMISSAS.md)"
 
-C="$(novo_projeto p43 sim)"; cd "$C"
-BASE="$(git rev-parse HEAD)"
-printf '# Premissas\n' > docs/projeto/PREMISSAS.md
-git add -A; git commit -q -m "chore(buildx): premissas do B1"; git push -q origin buildx/p43
-BASE="$(git rev-parse HEAD)"
-feature_bloqueada ft-01 "$BASE" p43
-WT="$TMP_RAIZ/p43/wt-ft-01"
-mkdir -p "$WT/docs/sprintx/features/ft-01"
-printf 'status: pendente_promocao\nPR-09: premissa de feature bloqueada\n' \
+caso "39. a premissa nasce no arquivo do buildx" sim "$(sim_nao test -f "$WT/$REL")"
+caso "39. e nao no arquivo da sprintx"           nao \
+  "$(sim_nao grep -q 'PR-07 —' "$WT/docs/sprintx/features/ft-01/00-DECISOES.md")"
+caso "39. o global nao e tocado na janela"       nao "$(sim_nao grep -q 'PR-07' docs/projeto/PREMISSAS.md)"
+caso "39. e o CONTROL segue limpo"               sim "$(sim_nao test -z "$(git status --porcelain)")"
+
+# A sprintx regera o 00-DECISOES.md quando a F2 roda de novo. A premissa
+# sobrevive exatamente por não morar lá.
+printf -- '---\nkind: decisoes\n---\n\nD-01 | regerado do zero pela F2 | - | -\n' \
   > "$WT/docs/sprintx/features/ft-01/00-DECISOES.md"
-git -C "$WT" add -A; git -C "$WT" -c user.email=t@t -c user.name=t commit -q -m "docs: decisoes"
+caso "40. 00-DECISOES regerado do zero: a premissa sobrevive" sim "$(sim_nao test -f "$WT/$REL")"
+caso "40. com o mesmo PR-NN e o mesmo conteudo" "reusar" \
+  "$(premissa_estado "$WT/$REL" PR-07 "$WT/$REL")"
+
+# Retomada: o desejado é idêntico ao gravado -> reusa; divergente -> para.
+escreve_premissa "$TMP_RAIZ/p39/desejado.md" PR-07 "Sessao expira apos 8 horas"
+caso "41. retomada reutiliza o mesmo PR-NN"  "reusar" \
+  "$(premissa_estado "$WT/$REL" PR-07 "$TMP_RAIZ/p39/desejado.md")"
+escreve_premissa "$TMP_RAIZ/p39/divergente.md" PR-07 "Sessao expira apos 30 minutos"
+caso "42. mesmo PR-NN divergente: conflito"  "conflito" \
+  "$(premissa_estado "$WT/$REL" PR-07 "$TMP_RAIZ/p39/divergente.md")"
+
+# Replanejamento: CONTROL não se mexe e o arquivo permanece.
+git -C "$WT" add -A
+git -C "$WT" -c user.email=t@t -c user.name=t commit -q -m "docs: F2 reexecutada"
+caso "43. replanejamento preserva o arquivo"    sim "$(sim_nao test -f "$WT/$REL")"
+caso "43. e o PR-NN continua o mesmo"           "PR-07" "$(premissa_ids "$WT/$REL")"
+caso "43. com CONTROL parada em BASE_SHA"       "$BASE" "$(git rev-parse HEAD)"
+
+integrar feature/ft-01
+caso "44. o ff leva o arquivo para o CONTROL"   sim "$(sim_nao test -f "$C/$REL")"
+caso "45. promocao depois do ff"                sim "$(sim_nao promover_premissas "$C/$REL" docs/projeto/PREMISSAS.md)"
+caso "45. a premissa chegou ao global"          sim "$(sim_nao grep -q '^### PR-07 ' docs/projeto/PREMISSAS.md)"
+caso "45. sem o status, que e marca de feature" nao \
+  "$(sim_nao grep -q 'pendente_promocao' docs/projeto/PREMISSAS.md)"
+caso "45. promover de novo e no-op"             sim "$(sim_nao promover_premissas "$C/$REL" docs/projeto/PREMISSAS.md)"
+caso "45. sem duplicar o PR-NN"                 "1" "$(grep -c '^### PR-07 ' docs/projeto/PREMISSAS.md)"
+caso "45. nada e escrito de volta na feature"   sim \
+  "$(sim_nao grep -q '^- status: pendente_promocao$' "$C/$REL")"
+caso "45. divergente no global: barra"          nao \
+  "$(sim_nao promover_premissas "$TMP_RAIZ/p39/divergente.md" docs/projeto/PREMISSAS.md)"
+caso "45. e nao escolhe uma das versoes"        "1" "$(grep -c '^### PR-07 ' docs/projeto/PREMISSAS.md)"
+
+C="$(novo_projeto p46 sim)"; cd "$C"
+printf '# Premissas\n' > docs/projeto/PREMISSAS.md
+git add -A; git commit -q -m "chore(buildx): premissas do B1"; git push -q origin buildx/p46
+BASE="$(git rev-parse HEAD)"
+feature_bloqueada ft-01 "$BASE" p46
+WT="$TMP_RAIZ/p46/wt-ft-01"
+escreve_premissa "$WT/$REL" PR-09 "Premissa de feature bloqueada"
+git -C "$WT" add -A; git -C "$WT" -c user.email=t@t -c user.name=t commit -q -m "docs: premissa pendente"
 # Nada no mecanismo impediria o fast-forward desta branch — ela descende da base
 # como qualquer outra. Quem a barra é a prova F, e é por isso que ela existe.
-caso "43. bloqueada: a prova F barra"        nao \
-  "$(sim_nao provas_abcdef "$BASE" ft-01 buildx/p43 "$WT")"
-caso "43. logo ela nao e integrada"          nao "$(sim_nao git merge-base --is-ancestor feature/ft-01 HEAD)"
-caso "43. e a premissa dela nao e promovida" nao "$(sim_nao grep -q 'PR-09' docs/projeto/PREMISSAS.md)"
+caso "46. bloqueada: a prova F barra"        nao \
+  "$(sim_nao provas_abcdef "$BASE" ft-01 buildx/p46 "$WT")"
+caso "46. logo ela nao e integrada"          nao "$(sim_nao git merge-base --is-ancestor feature/ft-01 HEAD)"
+caso "46. e a premissa dela nao e promovida" nao "$(sim_nao grep -q 'PR-09' docs/projeto/PREMISSAS.md)"
+caso "46. mas fica legivel como evidencia"   "PR-09" \
+  "$(git show "feature/ft-01:$REL" | awk '/^### PR-/ { print $2 }')"
+
+caso "47. o arquivo e artefato de metodo"    sim "$(sim_nao artefato_de_metodo "$REL" ft-01)"
+caso "47. o PREMISSAS global seria produto"  nao \
+  "$(sim_nao artefato_de_metodo docs/projeto/PREMISSAS.md ft-01)"
 
 echo
 echo "B6 — ciclo não-final e fechamento definitivo"
 
-C="$(novo_projeto p44 sim)"; cd "$C"
+C="$(novo_projeto p48 sim)"; cd "$C"
 mkdir -p docs/projeto
 printf 'veredito: reprovado\n' > docs/projeto/VALIDACAO.md
 git add -A; git commit -q -m "chore(buildx): validacao do ciclo 1"
-caso "44. ciclo nao-final: Branch base continua a do projeto" \
-  "Branch base: buildx/p44" "$(grep '^Branch base:' docs/stack/CONVENCOES.md)"
-caso "44. e nao ha PR-FINAL num ciclo que continua" nao \
+caso "48. ciclo nao-final: Branch base continua a do projeto" \
+  "Branch base: buildx/p48" "$(grep '^Branch base:' docs/stack/CONVENCOES.md)"
+caso "48. e nao ha PR-FINAL num ciclo que continua" nao \
   "$(sim_nao test -f docs/projeto/PR-FINAL.md)"
 
 # Fechamento final: o PR-FINAL.md é escrito **antes** do commit que o inclui.
@@ -534,12 +611,23 @@ printf '# PR final\n' > docs/projeto/PR-FINAL.md
 PRINCIPAL="$(detectar_principal)"
 printf 'Branch principal: %s\nBranch base: %s\n' "$PRINCIPAL" "$PRINCIPAL" > docs/stack/CONVENCOES.md
 git add -A; git commit -q -m "chore(buildx): fechamento do projeto"
-caso "45. o PR-FINAL esta no commit do fechamento" sim \
+caso "49. o PR-FINAL esta no commit do fechamento" sim \
   "$(sim_nao git cat-file -e HEAD:docs/projeto/PR-FINAL.md)"
-caso "45. a Branch base restaurada tambem"  "Branch base: main" \
+caso "49. a Branch base restaurada tambem"  "Branch base: main" \
   "$(git show HEAD:docs/stack/CONVENCOES.md | grep '^Branch base:')"
-git push -q origin buildx/p44
-caso "45. e o fechamento termina sincronizado" sim "$(sim_nao b2_fechada buildx/p44)"
+git push -q origin buildx/p48
+caso "49. e o fechamento termina sincronizado" sim "$(sim_nao b2_fechada buildx/p48)"
+
+echo
+echo "o contrato vivo não pede nada às skills irmãs"
+
+VIVOS="$REPO/.claude/skills/buildx/SKILL.md $REPO/.claude/skills/buildx/references $REPO/.claude/commands $REPO/.opencode/commands"
+caso "50. nenhuma regra viva guarda estado do buildx no 00-DECISOES" nao \
+  "$(sim_nao grep -rqE '00-DECISOES[^|]*pendente_promocao|pendente_promocao[^|]*00-DECISOES' $VIVOS)"
+caso "50. nem manda reparar secao que a sprintx apagou" nao \
+  "$(sim_nao grep -rqiE 'reescreva.{0,80}(secao|seção)|(secao|seção).{0,40}sumiu' $VIVOS)"
+caso "51. nenhuma regra viva exige mudar a sprintx ou a mergex" nao \
+  "$(sim_nao grep -rqiE '(altere|mude|ajuste|modifique) (a |o )?(sprintx|mergex)' $VIVOS)"
 
 echo
 echo "---------------------------------------------"
