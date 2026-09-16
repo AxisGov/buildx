@@ -9,6 +9,7 @@ A mergex leva o trabalho implementado até o repositório e até o revisor human
 | **E0** abertura | início da F6 | sprintx | adota a branch `feature/<slug>` e o worktree que a F1 abriu, e cria `docs/entregas/<slug>/ENTREGA.md` |
 | **E1** commit por task | a cada task que fecha | sprintx | um commit por task, com os artefatos de método do trabalho junto |
 | **E2 → E8** | depois do `FECHAMENTO.md`, ao fim da F6 | sprintx | portão de prontidão, classificação da atenção, descrição do PR, pacote de QA, push, abertura do PR e registro da entrega |
+| **E2 → E8 bloqueado** | quando o portão barra | sprintx | E3 a E7 **não executam**; o E8 registra `estado: bloqueado`, **commita** esse registro e **não publica** a branch |
 | **E9** `mergex-revisar` | **nunca** | — | integrar código é decisão humana |
 
 O buildx **não aparece nesta tabela**, e isso é o contrato: ele orquestra a feature, não micro-orquestra a entrega dentro dela.
@@ -17,9 +18,26 @@ O buildx **não aparece nesta tabela**, e isso é o contrato: ele orquestra a fe
 
 A `mergex-atencao` (E3) também não é chamada à parte: ela roda dentro da sequência E2 → E8 da F6.
 
+## O E8 persiste, e é por isso que o buildx lê o commitado
+
+O E8 da mergex **fecha commitando**: o registro final da entrega — ou do bloqueio — vira um commit próprio na branch da feature, e não fica só na árvore de trabalho. Com entrega pronta e remoto, esse commit também é **publicado**; com portão bloqueado, ele é commitado e a branch **não** é publicada.
+
+Isso muda de onde o buildx lê. Quem integra, integra **commits**:
+
+```
+git show feature/<slug>:docs/entregas/<slug>/ENTREGA.md
+git show feature/<slug>:docs/sprintx/features/<slug>/FECHAMENTO.md
+```
+
+Ler o arquivo da worktree seria decidir por uma evidência que pode não estar no que o fast-forward vai levar. Worktree contradizendo o commitado: **pare e relate**.
+
+**O que `push_feito: true` afirma ao fim do E8** é mais forte do que afirmava durante o E6: que o **HEAD final** — o commit que carrega o registro — está em `origin/<branch>`. O buildx usa exatamente isso como prova de que a entrega está publicada, e **nunca republica a branch da feature**: a mergex publica, o buildx consome.
+
+**O E0 é idempotente.** Feature replanejada roda a F6 de novo, e o E0 **retoma** o `ENTREGA.md` existente em vez de recriá-lo: `estado` volta a `aberto`, `portao` a `null`, `push_feito` a `false`, e `commits` e `criado_em` são **preservados**. Para o buildx isso significa que o histórico de execução de uma feature replanejada continua legível depois da integração — e que ver `commits` com mais entradas que tasks não é defeito.
+
 ## O que o buildx lê depois da F6
 
-Dois artefatos, na árvore da feature. Só o que os contratos das duas skills declaram — nada inventado:
+Dois artefatos, na branch da feature. Só o que os contratos das duas skills declaram — nada inventado:
 
 | Arquivo | Campos que decidem |
 |---|---|

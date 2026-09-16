@@ -29,8 +29,10 @@ CONTROL = checkout de controle = buildx/<projeto_id>
   │   └──────────────────────────────┘                     E0 · E1 por task ·
   │                                           │            FECHAMENTO.md · E2→E8
   ◄──────── volta ao checkout de controle ────┘
-  6. lê ENTREGA.md + FECHAMENTO.md
-  7. PROVAS: HEAD == BASE_SHA == origin · BASE_SHA ancestral da feature · árvore limpa
+  6. lê ENTREGA.md + FECHAMENTO.md COMMITADOS (git show feature/<slug>:...)
+  7. PROVAS: A HEAD==BASE_SHA · B origin==BASE_SHA · C ancestral · D CONTROL limpa
+             E worktree da feature limpa · F estado final no HEAD da feature
+             + entrega publicada: push_feito e origin/feature == feature
   8. git merge --ff-only feature/<slug>
   9. MAPA: entregue + Integrada em <FEATURE_SHA>
  10. commit   chore(buildx): FT-NN entregue
@@ -63,9 +65,25 @@ O `git merge --ff-only` do passo 7 não é apenas o mecanismo de integração: e
 
 Nunca substitua o ff-only por `merge --no-ff`, `rebase`, `cherry-pick`, `update-ref`, `reset`, `stash` ou qualquer forma de `--force`. Cada um deles faz o sintoma sumir e o problema ficar.
 
-## Passo 1 — Os dois portões, e o commit que fixa a base
+## Passo 1 — Os três portões, e o commit que fixa a base
 
-Nada começa antes destes dois portões. Os dois são binários, e os dois param o laço quando falham — parar aqui é barato; descobrir depois que a feature nasceu da árvore errada, não.
+Nada começa antes destes portões. Todos são binários, e todos param o laço quando falham — parar aqui é barato; descobrir depois que a feature nasceu da árvore errada, não.
+
+### Portão 0 — a feature realmente é nova
+
+Vale quando o `MAPA.md` diz `pendente`. Antes de marcar `em_andamento`, confirme que **nada daquela feature já existe**:
+
+```
+git rev-parse --verify --quiet refs/heads/feature/<slug>
+git worktree list --porcelain
+```
+
+| O que você encontra | O que fazer |
+|---|---|
+| Nenhuma branch, nenhum worktree, nenhum artefato antigo | siga |
+| Branch ou worktree existindo com o mapa dizendo `pendente` | **PARE E RELATE** a inconsistência |
+
+**Nunca reutilize em silêncio.** Uma branch que já existe com o mapa em `pendente` significa uma de três coisas: uma execução anterior morreu antes de o mapa ser atualizado, alguém criou a branch por fora, ou o slug está sendo reaproveitado. As três são decisão humana, e nenhuma se resolve começando por cima.
 
 ### Portão 1 — local e remoto no mesmo ponto
 
@@ -125,13 +143,35 @@ Passados os dois portões:
 
 **A F1 abre a área de trabalho e monta a base de conhecimento** — nessa ordem. Antes do scaffold, ela cria ou retoma o worktree `../<repo>--<slug>` na branch `feature/<slug>`; a partir daí, tudo da feature acontece lá dentro. Se a F1 anunciar a área de trabalho e encerrar (é o comportamento dela quando o harness não troca de árvore sozinho), **continue de dentro do diretório que ela indicou** — não recomece a fase na árvore de controle.
 
-**A base vem do `CONVENCOES.md`, e o buildx confere.** A F1 resolve a base sozinha, e a primeira precedência dela é a seção de versionamento — onde o B2 gravou `Branch base: buildx/<projeto_id>`. Depois que a F1 abrir a área de trabalho, confirme:
+**A base vem do `CONVENCOES.md`, e o buildx confere.** A F1 resolve a base sozinha, e a primeira precedência dela é a seção de versionamento — onde o B2 gravou `Branch base: buildx/<projeto_id>`. O que o buildx confere depois depende de **como** esta feature chegou aqui, e a diferença importa:
+
+### Caminho A — feature nova: igualdade exata
+
+Imediatamente depois de a F1 abrir a área de trabalho, **antes da F2 e antes de qualquer commit da feature**:
+
+```
+git rev-parse feature/<slug>        # tem que ser exatamente BASE_SHA
+```
+
+**Exatamente**, não "descendente". A F1 não implementa e não commita produto: uma branch recém-criada aponta para o mesmo commit da base. Se o tip já está à frente, a branch **não é nova** — carrega commits que ninguém auditou, e que entrariam na árvore do projeto no fast-forward sem nunca terem passado por um portão.
+
+Diferente de `BASE_SHA`: **pare e relate.**
+
+Descendência (`git merge-base --is-ancestor`) não basta aqui, e é justamente essa a lacuna: uma branch antiga que por acaso descenda de `BASE_SHA` passaria na prova de ancestralidade carregando trabalho estranho.
+
+### Caminho B — retomada: ancestralidade
+
+Quando o `MAPA.md` já dizia `em_andamento` e a feature volta de uma sessão interrompida, a branch **legitimamente** está à frente: são os commits que o E1 fez a cada task. Aqui a prova é a de ancestralidade:
 
 ```
 git merge-base --is-ancestor <BASE_SHA> feature/<slug>
 ```
 
-Falhou? A feature nasceu de outro lugar — `CONVENCOES.md` alterado, seção marcada `PROPOSTA`, branch reaproveitada de uma execução anterior. **Pare e relate.** Integrar depois seria impossível, e seguir seria construir sobre a árvore errada.
+E `BASE_SHA` é derivado da `CONTROL` congelada — o `HEAD` dela, que não se moveu desde o início da janela. **Nunca recrie a branch**, nunca exija igualdade de tip numa retomada.
+
+Nos dois caminhos, falhar significa a mesma coisa: a feature nasceu de outro lugar — `CONVENCOES.md` alterado, seção marcada `PROPOSTA`, branch reaproveitada. Integrar depois seria impossível, e seguir seria construir sobre a árvore errada.
+
+Sem git, ou com worktree recusado, a F1 segue na árvore atual e nada aqui se aplica.
 
 Sem git, ou com worktree recusado, a F1 segue na árvore atual e nada aqui muda: o buildx continua não abrindo branch.
 
@@ -211,7 +251,12 @@ Toda tela entregue tem as duas variantes de tema, os três estados obrigatórios
 
 **O buildx não executa etapa nenhuma da mergex aqui.** A F6 já conduziu E0, E1 e E2 a E8 dentro do worktree. Rodar `mergex-check`, `mergex-pr` ou `mergex-qa` agora repetiria o que acabou de acontecer — dois donos para o mesmo ciclo, dois PRs possíveis para a mesma branch, e um portão avaliado duas vezes sobre estados diferentes.
 
-O que o buildx faz é **ler dois artefatos**, na árvore da feature:
+O que o buildx faz é **ler dois artefatos — na branch, não na árvore de trabalho**:
+
+```
+git show feature/<slug>:docs/entregas/<slug>/ENTREGA.md
+git show feature/<slug>:docs/sprintx/features/<slug>/FECHAMENTO.md
+```
 
 | Arquivo | Quem grava | O que o buildx lê |
 |---|---|---|
@@ -219,6 +264,10 @@ O que o buildx faz é **ler dois artefatos**, na árvore da feature:
 | `docs/sprintx/features/<slug>/FECHAMENTO.md` | sprintx, ao fim da F6 | `fechado_em`, `resumo`, `risco_residual`, `testes_adicionados` |
 
 Nenhum campo além desses é inventado: são os que os contratos das duas skills declaram.
+
+**Por que o commitado, e não o arquivo da árvore.** O E8 da mergex fecha persistindo o registro final num commit próprio — o fechamento existe no histórico, não só no disco. E o que o fast-forward vai levar para a árvore do projeto são **commits**. Ler o arquivo da worktree seria decidir por uma evidência que pode não estar no que vai ser integrado; ler o commitado prova que a integração carregará exatamente o que o buildx acabou de ler.
+
+**Arquivo da worktree contradizendo o commitado: pare e relate.** Significa que alguém escreveu depois do fechamento, ou que o E8 não conseguiu persistir — e nos dois casos o estado real é incerto.
 
 ### A regra de decisão
 
@@ -230,9 +279,24 @@ Nenhum campo além desses é inventado: são os que os contratos das duas skills
 
 **`pr_url: null` não reprova a feature.** O contrato da mergex é explícito: PR não aberto — porque a ferramenta do serviço não estava disponível ou autenticada — não é falha, e a descrição fica em `docs/entregas/<slug>/PR.md`. O que decide é o portão, não a existência da URL. Registre no `MAPA.md` que a descrição está em arquivo, para o relatório final apontar para lá.
 
+### O portão bloqueado tem registro próprio
+
+`E2 BLOQUEADO` **não pula o E8**. No contrato atual da mergex, o bloqueio segue direto para o E8 em **fechamento bloqueado**: E3 a E7 não executam, o registro grava `estado: bloqueado` e `portao: bloqueado`, e esse registro é **commitado** — mas a branch **não é publicada**.
+
+Então, numa feature bloqueada:
+
+| O que você vê | Como ler |
+|---|---|
+| `push_feito: false` | **correto.** O E6 não rodou |
+| `pr_url: null`, `pr_estado: null` | **correto.** O E7 não rodou |
+| nenhum PR aberto para a feature | **correto**, e não é defeito adicional |
+| o `ENTREGA.md` commitado na branch, com o bloqueio | **é a evidência**, e é o que a triagem lê |
+
+Não trate a ausência de PR ou de push como problema a mais: é o portão funcionando. O que a triagem decide é outra coisa — se aquilo se resolve replanejando agora.
+
 ### Quando os artefatos não estão lá
 
-Com a mergex instalada — e ela é obrigatória —, a ausência de `ENTREGA.md` depois da F6 significa que **a sprintx instalada não tem o contrato E0/E1/E2→E8**. Isso é incompatibilidade de versão, não trabalho pendente.
+Com a mergex instalada — e ela é obrigatória —, a ausência de `ENTREGA.md` **commitado** depois da F6 significa que **a sprintx ou a mergex instaladas não têm o contrato E0/E1/E2→E8 com fechamento persistido**. Isso é incompatibilidade de versão, não trabalho pendente.
 
 Nesse caso: marque a feature `bloqueada` com o motivo `incompatibilidade_de_versao`, registre a pendência no `RECURSAO.md` dizendo qual artefato faltou, e **siga para a próxima feature**.
 
@@ -244,18 +308,43 @@ Nesse caso: marque a feature `bloqueada` com o motivo `incompatibilidade_de_vers
 
 Só chega aqui a feature cujo `ENTREGA.md` diz `estado: entregue` **e** `portao: pronto`. Qualquer outra coisa vai para a triagem, mais abaixo.
 
-### As quatro provas, antes de tocar em qualquer coisa
+### As seis provas, antes de tocar em qualquer coisa
 
 Havendo remoto, `git fetch origin` primeiro. Então:
 
 | # | Prova | Comando |
 |---|---|---|
-| 1 | `CONTROL` continua onde a feature nasceu | `git rev-parse HEAD` == `BASE_SHA` |
-| 2 | o remoto continua no mesmo ponto | `git rev-parse origin/buildx/<projeto_id>` == `BASE_SHA` |
-| 3 | a feature descende daquela base | `git merge-base --is-ancestor <BASE_SHA> feature/<slug>` |
-| 4 | a árvore de controle está limpa | `git status --porcelain` vazio |
+| **A** | `CONTROL` continua onde a feature nasceu | `git rev-parse HEAD` == `BASE_SHA` |
+| **B** | o remoto da `CONTROL` continua no mesmo ponto | `git rev-parse origin/buildx/<projeto_id>` == `BASE_SHA` |
+| **C** | a feature descende daquela base | `git merge-base --is-ancestor <BASE_SHA> feature/<slug>` |
+| **D** | a árvore de controle está limpa | `git status --porcelain` vazio, em `CONTROL` |
+| **E** | a árvore da feature está limpa | `git status --porcelain` vazio, no worktree da feature |
+| **F** | o estado final está no HEAD da feature | `git show feature/<slug>:docs/entregas/<slug>/ENTREGA.md` declara `estado: entregue` e `portao: pronto` |
 
-**Falhou qualquer uma: pare e relate.** Não tente entender, não tente consertar, não escolha outro caminho — as provas 1 e 3 falhando significam que a invariante foi violada, e a 2 significa que outra sessão ou outra pessoa mexeu no remoto. Nos dois casos quem decide é gente.
+**Falhou qualquer uma: pare e relate.** Não tente entender, não tente consertar, não escolha outro caminho — A e C falhando significam que a invariante foi violada; B, que outra sessão ou outra pessoa mexeu no remoto. Quem decide é gente.
+
+A prova **E** merece nota. Numa entrega `PRONTO`, a árvore da feature termina limpa: o E8 da mergex commita os artefatos de método que sobraram, e arquivo de produto fora do plano teria reprovado o portão antes (V9). Derivado e ignorado — o rastro de eventos, o `estado.json` da barra — não aparece em `git status --porcelain` e não conta. Então sujeira rastreável ali é **contradição**: a entrega diz pronta e a árvore diz que ficou coisa fora. Pare.
+
+### A entrega precisa estar publicada
+
+Havendo remoto e `versionado: true`, o E8 da mergex publica o commit final. O buildx confere, sem nunca republicar:
+
+```
+git fetch origin
+git rev-parse feature/<slug>
+git rev-parse origin/feature/<slug>
+```
+
+| Situação | O que fazer |
+|---|---|
+| `push_feito: true` e os dois SHAs iguais | siga para o fast-forward |
+| `push_feito: false` com remoto configurado | **PARE E RELATE.** A entrega não está no remoto |
+| `origin/feature/<slug>` ausente, inesperadamente | **PARE E RELATE** |
+| SHAs diferentes | **PARE E RELATE** |
+
+**O buildx não republica.** A posse é clara: a **mergex publica a feature**, o buildx consome o resultado. Empurrar a branch de outra skill para "consertar" quebraria essa fronteira e esconderia a causa — que é sempre uma das duas: o push final falhou, ou alguém mexeu na branch.
+
+Sem remoto, `push_feito: false` é o esperado, esta prova é `n/a`, e o fast-forward local continua permitido.
 
 ### O fast-forward
 
@@ -337,7 +426,10 @@ Nunca peça confirmação para seguir. Nunca ofereça parar. O usuário fechou o
 - toda feature `entregue` tem `**Integrada em:** <sha>` no mapa, e o SHA é alcançável em `buildx/<projeto_id>`
 - cada feature trabalhada tem worktree e branch próprios, abertos pela F1 — nenhuma segunda branch foi criada para a mesma feature
 - nenhuma feature começou com dependência não integrada
+- toda feature nova nasceu com o tip **exatamente** em `BASE_SHA`
 - `CONTROL` recebeu, por feature, no máximo dois commits do buildx: um antes da F1, outro depois da integração (ou o de bloqueio terminal)
+- toda decisão de integrar veio do `ENTREGA.md` **commitado** na branch da feature, não do arquivo da árvore
+- toda feature integrada com remoto estava publicada (`push_feito: true`, `origin/feature/<slug>` igual ao local); o buildx não publicou branch de feature nenhuma
 - toda integração foi fast-forward; nenhuma usou `--no-ff`, rebase, cherry-pick, `update-ref` ou força
 - o `MAPA.md` foi atualizado no checkout de controle, não dentro de um worktree
 - toda feature entregue tem `ENTREGA.md` com `estado: entregue` e `portao: pronto` — com o PR aberto, ou com a descrição em `PR.md` quando a ferramenta do serviço não estava disponível
