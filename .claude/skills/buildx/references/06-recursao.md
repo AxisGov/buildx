@@ -4,9 +4,11 @@ Varrer tudo que ficou pelo caminho no B4, classificar cada pendência, e devolve
 
 Entrada: `MAPA.md`, os `00-BLOQUEIOS.md` de todas as features, os achados da F5 e o portão que a mergex registrou no `ENTREGA.md` de cada feature. Saída: `docs/projeto/RECURSAO.md` atualizado no checkout de controle, e possivelmente features novas no `MAPA.md`.
 
-**Os artefatos das features não estão na árvore de controle.** Cada feature tem worktree e branch próprios (`../<repo>--<slug>`, `feature/<slug>`), e o buildx não faz merge. Antes de varrer, localize a árvore de cada feature com `git worktree list --porcelain`; quando o worktree não existir mais, leia da branch sem trocar de árvore (`git show feature/<slug>:docs/sprintx/features/<slug>/00-BLOQUEIOS.md`).
+**Feature integrada já está aqui.** O que entrou em `buildx/<projeto_id>` pelo fast-forward veio inteiro — código e artefatos —, então o `00-BLOQUEIOS.md`, o `00-AUDITORIA.md` e o `FECHAMENTO.md` de cada feature entregue são lidos direto no checkout de controle.
 
-**Artefato que não aparece no checkout de controle não é artefato inexistente.** Concluir "a feature não registrou bloqueio" porque o arquivo não está aqui é o erro que faz o B5 fechar um ciclo cego.
+**Feature bloqueada, não.** Ela nunca foi integrada: os artefatos dela existem só na árvore e na branch dela. Localize com `git worktree list --porcelain`; sem worktree, leia da branch sem trocar de árvore (`git show feature/<slug>:docs/sprintx/features/<slug>/00-BLOQUEIOS.md`).
+
+**Artefato que não aparece no checkout de controle não é artefato inexistente** — quando a feature não foi integrada, ele está noutro lugar. Concluir "a feature não registrou bloqueio" porque o arquivo não está aqui é o erro que faz o B5 fechar um ciclo cego.
 
 O B5 é o que separa "rodou até o fim" de "entregou". Sem ele o buildx produziria um repositório com nove features prontas e três bloqueadas, e chamaria isso de terminado.
 
@@ -35,17 +37,17 @@ A pendência descreve algo que ninguém construiu e que a máquina sabe construi
 
 Exemplos: a exclusão de conta pela LGPD não coube em nenhuma feature; a rota de saúde ficou de fora; uma tela não tratou o estado de erro.
 
-**Destino:** feature nova no `MAPA.md`, com `origem: recursao`, e volta ao B4.
+**Destino:** feature nova no `MAPA.md`, com `origem: recursao`, e volta ao B4 — nascendo do `HEAD` atual de `buildx/<projeto_id>`, como qualquer outra.
 
-### `replanejamento` — a feature volta à F3
+### `replanejamento` — e por que ele quase nunca chega aqui
 
-A feature existe, foi planejada, e o plano é que estava errado. Costuma vir de achado alto da F5, ou do portão reprovando cobertura.
+Replanejar uma feature é trabalho do **B4**, na triagem imediata, no momento em que ela falha: ali a árvore ainda está em `BASE_SHA`, a branch daquela feature ainda descende dela, e voltar à F3 no mesmo worktree é seguro (`references/05-construcao.md`, "a triagem imediata"). Teto de dois replanejamentos, como sempre.
 
-**Destino:** **dentro do worktree original daquela feature**, apague o plano (`sprint-*/`, `ORQUESTRADOR.md`, `00-AUDITORIA.md` em `docs/sprintx/features/<slug>/`), preserve a base e as decisões da F1 e F2, e devolva a feature ao B4 — a máquina de estados do sprintx a encontra na F3.
+**No B5, esse caminho já se fechou.** Quando o laço chega aqui, `buildx/<projeto_id>` avançou com as features seguintes, e a branch antiga não descende mais da árvore atual — um fast-forward depois seria impossível. Por isso:
 
-Replanejar é continuar a mesma feature: nunca abra árvore nova, nunca faça isso no checkout de controle e nunca crie uma segunda branch. Worktree removido: reabra-o sobre a branch que já existe (`git worktree add ../<repo>--<slug> feature/<slug>`) e trabalhe de lá.
+**Uma pendência que só se resolve com trabalho novo vira feature nova**, com `origem: recursao`, slug novo, branch nova e worktree novo, nascendo do `HEAD` atual de `buildx/<projeto_id>`. Não é burocracia: é o que garante que o trabalho novo enxergue tudo que foi entregue desde então.
 
-**Teto próprio:** uma feature replanejada **duas vezes** e reprovada de novo não volta uma terceira. Vira `decisao_humana`. Um plano que a auditoria reprova três vezes tem um problema que replanejar não resolve.
+**Nunca reabra uma branch antiga para forçá-la na árvore.** Sem `rebase`, sem `cherry-pick`, sem `merge --no-ff`, sem `--force`. A branch antiga continua existindo com o PR dela; o que continua a partir daqui é uma feature nova.
 
 ### `decisao_humana` — fica para o relatório
 
@@ -92,9 +94,11 @@ Nos três casos, reclassifique para `decisao_humana` imediatamente, sem esperar 
 Se sobrou pendência `trabalho_novo` ou `replanejamento` e o teto não foi atingido:
 
 1. acrescente as features novas ao `MAPA.md`, na posição correta de dependência — feature de recursão respeita a ordenação do B3 como qualquer outra
-2. devolva as features de replanejamento ao estado `pendente`
-3. incremente `ciclo_atual` no `RECURSAO.md`
+2. incremente `ciclo_atual` no `RECURSAO.md`
+3. commite o estado (`chore(buildx): ciclo <n> da recursão`) e faça push normal — a árvore precisa estar limpa antes de a próxima feature começar
 4. volte ao B4
+
+Features que ficaram `bloqueada` **não voltam a `pendente`**: o que volta ao laço é feature nova. A branch e o worktree da bloqueada permanecem como estão, para o relatório final apontar.
 
 Se não sobrou nada resolvível, ou o teto foi atingido: siga para o B6.
 

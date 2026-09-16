@@ -48,13 +48,15 @@ Para cada linha, o buildx procura a evidência e registra uma de quatro conclus�
 
 ### Onde a evidência mora
 
-No checkout de controle só existem `docs/projeto/` e `docs/stack/`. O código e os artefatos de cada feature estão **no worktree e na branch dela** (`../<repo>--<slug>`, `feature/<slug>`), porque o buildx não faz merge — e é lá que a conferência acontece: `git worktree list --porcelain` localiza a árvore, e `git show feature/<slug>:<caminho>` lê um arquivo sem trocar de árvore.
+**No produto integrado.** O checkout de controle é `buildx/<projeto_id>`, e toda feature entregue entrou nele por fast-forward: código, testes, plano, decisões e fechamento. É aqui que a conferência acontece, e é aqui que o comportamento executável do sistema é o comportamento real dele.
 
-Item não encontrado no checkout de controle **não** é item não atendido. Procure na árvore da feature que deveria tê-lo entregue, e só então conclua.
+**Feature terminalmente bloqueada é a exceção**, e uma exceção importante: ela nunca foi integrada, então o que existe dela está só na árvore e na branch dela (`git worktree list --porcelain`, ou `git show feature/<slug>:<caminho>`). Ela **não faz parte do produto** que vai ao PR final — e é isso que o `VALIDACAO.md` e o relatório precisam dizer, com todas as letras.
+
+Item que deveria ter vindo de uma feature entregue e não está na árvore integrada é `nao_atendido` de verdade: não procure fora para salvar o veredito.
 
 ## Passo 3 — Verificar o sistema de pé
 
-O que o usuário vai fazer no primeiro minuto, e que nenhum artefato prova. Como as features não estão integradas numa árvore só, **a verificação roda na árvore de cada feature entregue** — o worktree dela, que já contém a fundação herdada do B2 mais o que aquela feature acrescentou. Registre no `VALIDACAO.md` em qual árvore cada verificação rodou:
+O que o usuário vai fazer no primeiro minuto, e que nenhum artefato prova. **A verificação roda uma vez, sobre o produto integrado** — numa cópia limpa de `buildx/<projeto_id>`, que contém a fundação do B2 mais todas as features entregues. É a primeira vez no método inteiro em que o sistema existe inteiro num lugar só, e é essa a razão de a árvore acumulada existir:
 
 1. numa cópia limpa: instalar, migrar, semear, subir
 2. entrar com o usuário de demonstração (P-5), com as credenciais que o relatório vai documentar
@@ -63,7 +65,7 @@ O que o usuário vai fazer no primeiro minuto, e que nenhum artefato prova. Como
 5. **editar o próprio nome e e-mail** em Meu perfil (P-9, E-3)
 6. **trocar a própria senha**, exigindo a atual, e entrar de novo com a nova (P-9, E-4)
 7. alternar as duas variantes de tema pela barra de status, e conferir que ambas ficam completas
-8. percorrer a entrega principal **daquela** feature — a de outra feature está noutra árvore
+8. percorrer a entrega principal de **cada feature entregue**, uma depois da outra, no mesmo sistema de pé — inclusive as que dependem de outras, que é o que prova a acumulação
 9. abrir em largura de celular
 
 Qualquer um que falhe é `nao_atendido` de peso alto. Um sistema que não sobe numa máquina limpa não está entregue, por mais verde que esteja a suíte — e o usuário de demonstração existe justamente para tornar essa verificação possível em trinta segundos.
@@ -84,7 +86,46 @@ A regra que não se dobra: **nenhuma premissa de segurança sem código pode sai
 
 Grave o `VALIDACAO.md` com `assets/TEMPLATE-VALIDACAO.md`.
 
-## Passo 5 — O relatório final
+## Passo 5 — Devolver a base e fechar a árvore
+
+Antes de qualquer PR, o projeto precisa voltar a apontar para a própria principal. Na seção de versionamento do `docs/stack/CONVENCOES.md`:
+
+1. leia `Branch principal` — o valor que o **B2 gravou**. Não redetecte: `origin/HEAD` pode não existir mais, e a sessão que fecha o projeto raramente é a que o abriu;
+2. reescreva `Branch base` com esse mesmo valor. A partir daqui, feature nova neste repositório volta a nascer da principal, como em qualquer projeto sem buildx;
+3. `Branch principal` fica como está.
+
+Esquecer este passo entrega um repositório cujo `CONVENCOES.md` manda o sprintx nascer de uma branch de montagem que ninguém vai manter — o defeito mais silencioso que este método pode deixar para trás.
+
+Commite, no checkout de controle, `VALIDACAO.md`, `RELATORIO.md`, o `PR-FINAL.md` do passo 6 e o `CONVENCOES.md` corrigido:
+
+```
+commit   chore(buildx): validacao, relatorio e base restaurada
+git push origin buildx/<projeto_id>
+```
+
+Push normal. Rejeitado: **pare e relate**.
+
+## Passo 6 — O pull request final
+
+**Este PR é do buildx, e é o único que aponta para a branch principal.**
+
+Grave `docs/projeto/PR-FINAL.md`, derivado do `VALIDACAO.md` e do `RELATORIO.md`: o que o sistema faz, as features entregues com os respectivos PRs, o que ficou de fora e por quê, as pendências que exigem decisão, e como rodar. Título derivado do `titulo` do `PROJETO.md`.
+
+Havendo `gh` instalado e autenticado (`gh auth status`):
+
+```
+gh pr create --base <Branch principal> --head buildx/<projeto_id> \
+             --title "<título do projeto>" --body-file docs/projeto/PR-FINAL.md
+```
+
+| Situação | O que fazer |
+|---|---|
+| `gh` ausente, sem autenticação, ou sem remoto | `PR-FINAL.md` **é** a entrega. Informe o caminho e siga |
+| `gh pr create` falha | registre o erro literal, aponte o arquivo, e siga — não é falha do projeto |
+
+**Nunca** rode `gh auth login`, nunca peça credencial, nunca faça merge. O PR nasce e para ali: **integrar em `<Branch principal>` é decisão humana**, e essa é a última rede antes de produção.
+
+## Passo 7 — O relatório final
 
 A primeira coisa que o usuário lê desde a pergunta única. Ele fechou os olhos no começo; isto é o que ele encontra ao abrir.
 
@@ -114,7 +155,10 @@ Use `assets/TEMPLATE-RELATORIO.md`.
 
 - `VALIDACAO.md` existe, com todo item conferido e evidência em cada `atendido`
 - toda premissa do `PREMISSAS.md` foi conferida
-- o sistema sobe numa cópia limpa e o usuário de demonstração entra
+- o sistema sobe numa cópia limpa **de `buildx/<projeto_id>`** e o usuário de demonstração entra
+- toda feature `entregue` do mapa está alcançável na árvore integrada; as terminalmente bloqueadas estão declaradas como fora do produto
+- a `Branch base` do `CONVENCOES.md` voltou a ser a `Branch principal` gravada no B2
+- o PR final existe, ou o `PR-FINAL.md` está no disco com o motivo de o PR não ter sido aberto
 - o esqueleto do P-9 responde: painel inicial, cadastro de usuários, edição de perfil e troca de senha, com a navegação da barra lateral
 - nenhuma premissa de segurança está sem código
 - `RELATORIO.md` existe, na ordem acima, com credenciais de demonstração documentadas
@@ -128,3 +172,6 @@ Use `assets/TEMPLATE-RELATORIO.md`.
 - **Deixar premissa de segurança passar como pendência.** A regra existe porque a pressão para fechar é maior no fim, e é exatamente aí que ela não pode ceder.
 - **Escrever o relatório na ordem do trabalho.** A ordem do trabalho serve a quem construiu; a ordem do relatório serve a quem vai decidir.
 - **Consertar no B6.** Quem confere não conserta — no momento em que o buildx conserta, ele deixa de conferir.
+- **Validar feature por feature quando a árvore integrada existe.** O produto é a árvore acumulada; conferir cada worktree isolado esconde exatamente o que a integração existe para revelar — a feature que só funciona sozinha.
+- **Redetectar a branch principal no fim.** Ela foi gravada no B2 justamente porque `origin/HEAD` pode não existir na sessão que fecha o projeto. Detectar de novo é trocar um fato por um palpite.
+- **Deixar a `Branch base` apontando para a branch de montagem.** O projeto entregue passaria a criar feature a partir de uma branch que ninguém mantém.
