@@ -44,9 +44,9 @@ Os três comandos são o único item do B2 que **tem evidência real**: eles rod
 
 O momento em que o projeto deixa de acreditar no buildx e passa a acreditar em si mesmo.
 
-Depois da primeira feature entregue (B4, passo 7), existe código real — **na árvore daquela feature** (`../<repo>--<slug>`, branch `feature/<slug>`), porque o buildx não faz merge e o checkout de controle continua com o esqueleto do B2. Aí:
+Depois da primeira feature **integrada** (B4, passo 8), existe código real **no próprio checkout de controle** — o fast-forward o trouxe para `buildx/<projeto_id>`. Aí:
 
-1. rode o `stackx-detectar` normal **de dentro da árvore daquela feature** — é lá que ele tem o que varrer; o `CONVENCOES.md` atualizado volta para o checkout de controle, onde `docs/stack/` mora
+1. rode o `stackx-detectar` normal **no checkout de controle** — é lá que o produto acumulado está, e é lá que `docs/stack/` mora
 2. compare com o que o B2 decidiu
 3. **regra confirmada pelo código** → converta `decidido_pelo_buildx` para a evidência real (arquivo e linha)
 4. **regra contradita pelo código** → achado. Ou o código se ajusta à convenção, ou a convenção estava errada e é corrigida

@@ -80,50 +80,68 @@ Os passos 3 a 6 são o **esqueleto de aplicação do P-9**, e não dependem do q
 | `aprovado_com_pendencia` | há `parcial` ou `nao_atendido`, **todos declarados** no `RECURSAO.md`, e nenhum é premissa de segurança |
 | `reprovado` | há item não atendido **não declarado**, ou uma premissa de segurança sem código, ou o sistema não sobe |
 
-**Reprovado não é o fim.** Item reprovado e resolvível volta ao B3 como feature nova, e a cadeia roda outro ciclo — respeitando o teto do B5. Reprovado com o teto atingido: o relatório final declara, em primeiro lugar, o que está reprovado.
+**Reprovado não é o fim.** Item reprovado e resolvível volta ao B3 como feature nova, e a cadeia roda outro ciclo — respeitando o teto do B5. Reprovado com o teto atingido: o relatório final declara, em primeiro lugar, o que está reprovado. O passo 5 é quem decide entre os dois caminhos.
 
 A regra que não se dobra: **nenhuma premissa de segurança sem código pode sair como `aprovado_com_pendencia`.** Ou vira feature e roda outro ciclo, ou o veredito é `reprovado` e o relatório abre com isso. Autenticação, autorização, validação de entrada e proteção de segredo não têm versão parcial aceitável.
 
 Grave o `VALIDACAO.md` com `assets/TEMPLATE-VALIDACAO.md`.
 
-## Passo 5 — Devolver a base e fechar a árvore
+## Passo 5 — Vai haver outro ciclo?
 
-Antes de qualquer PR, o projeto precisa voltar a apontar para a própria principal. Na seção de versionamento do `docs/stack/CONVENCOES.md`:
+Esta é a bifurcação do B6, e confundi-la fecha um projeto que ainda ia continuar.
 
-1. leia `Branch principal` — o valor que o **B2 gravou**. Não redetecte: `origin/HEAD` pode não existir mais, e a sessão que fecha o projeto raramente é a que o abriu;
-2. reescreva `Branch base` com esse mesmo valor. A partir daqui, feature nova neste repositório volta a nascer da principal, como em qualquer projeto sem buildx;
-3. `Branch principal` fica como está.
-
-Esquecer este passo entrega um repositório cujo `CONVENCOES.md` manda o sprintx nascer de uma branch de montagem que ninguém vai manter — o defeito mais silencioso que este método pode deixar para trás.
-
-Commite, no checkout de controle, `VALIDACAO.md`, `RELATORIO.md`, o `PR-FINAL.md` do passo 6 e o `CONVENCOES.md` corrigido:
-
-```
-commit   chore(buildx): validacao, relatorio e base restaurada
-git push origin buildx/<projeto_id>
-```
-
-Push normal. Rejeitado: **pare e relate**.
-
-## Passo 6 — O pull request final
-
-**Este PR é do buildx, e é o único que aponta para a branch principal.**
-
-Grave `docs/projeto/PR-FINAL.md`, derivado do `VALIDACAO.md` e do `RELATORIO.md`: o que o sistema faz, as features entregues com os respectivos PRs, o que ficou de fora e por quê, as pendências que exigem decisão, e como rodar. Título derivado do `titulo` do `PROJETO.md`.
-
-Havendo `gh` instalado e autenticado (`gh auth status`):
-
-```
-gh pr create --base <Branch principal> --head buildx/<projeto_id> \
-             --title "<título do projeto>" --body-file docs/projeto/PR-FINAL.md
-```
-
-| Situação | O que fazer |
+| Situação | Para onde |
 |---|---|
-| `gh` ausente, sem autenticação, ou sem remoto | `PR-FINAL.md` **é** a entrega. Informe o caminho e siga |
-| `gh pr create` falha | registre o erro literal, aponte o arquivo, e siga — não é falha do projeto |
+| há item **resolvível** e o teto do B5 ainda permite outro ciclo | **B6 A** — a árvore continua viva |
+| `aprovado` · `aprovado_com_pendencia` · `reprovado` com o teto atingido, ou sem nada resolvível | **B6 B** — fechamento definitivo |
 
-**Nunca** rode `gh auth login`, nunca peça credencial, nunca faça merge. O PR nasce e para ali: **integrar em `<Branch principal>` é decisão humana**, e essa é a última rede antes de produção.
+### B6 A — ciclo não-final: a árvore de integração continua viva
+
+Grave o `VALIDACAO.md` daquele ciclo e volte ao fluxo de B3/B4/B5 conforme o contrato já existente: item resolvível vira feature nova, com `origem: recursao`, nascendo do `HEAD` atual de `buildx/<projeto_id>`.
+
+**E não faça nada do fechamento:**
+
+- **não** restaure a `Branch base` — as próximas features precisam continuar nascendo de `buildx/<projeto_id>`;
+- **não** gere o `PR-FINAL.md`;
+- **não** abra PR nenhum;
+- **não** marque o `PROJETO.md` como concluído.
+
+Restaurar a base aqui faria a feature do ciclo seguinte nascer da principal, sem enxergar nada do que já foi integrado — e o defeito só apareceria no diff da entrega.
+
+O que este ciclo produz é registro: a validação daquele ciclo, as pendências no `RECURSAO.md`, e o commit de estado correspondente (`chore(buildx): ciclo <n> validado`), com push normal.
+
+### B6 B — fechamento definitivo
+
+Só quando não haverá outro ciclo automático. Siga o passo 6.
+
+## Passo 6 — O fechamento definitivo, na ordem
+
+A ordem importa, e não é livre: cada passo produz o que o seguinte consome. Commitar citando um arquivo que ainda não existe é o erro clássico aqui.
+
+1. **`VALIDACAO.md` final** gravado, com o veredito e a conferência item a item.
+2. **`RELATORIO.md` final** gravado — o conteúdo está no passo 7.
+3. **`docs/projeto/PR-FINAL.md` gerado**, derivado dos dois: o que o sistema faz, as features entregues com os respectivos PRs, o que ficou de fora e por quê, as pendências que exigem decisão, e como rodar. Título derivado do `titulo` do `PROJETO.md`.
+4. **`PROJETO.md`** com a etapa final. O enum do `references/00-schema.md` termina em `concluido`, e **não se inventa valor novo**: num projeto reprovado, `etapa: concluido` significa "o buildx terminou", não "o produto está bom". Quem diz a verdade do resultado é o `veredito` do `VALIDACAO.md` e a abertura do `RELATORIO.md`, e nos dois ela aparece **sem eufemismo**.
+5. **`CONVENCOES.md`:** leia a `Branch principal` que o **B2 gravou** — não redetecte, `origin/HEAD` pode não existir mais e a sessão que fecha raramente é a que abriu — e reescreva `Branch base` com esse valor. A `Branch principal` fica como está. Sem isto, o repositório entregue manda o sprintx nascer de uma branch de montagem que ninguém vai manter: o defeito mais silencioso que este método pode deixar para trás.
+6. **`git diff --check`** e árvore coerente: só `docs/projeto/` e `docs/stack/` mudaram.
+7. **Commit**, no checkout de controle:
+   ```
+   chore(buildx): validacao, relatorio e base restaurada
+   ```
+8. **`git push origin buildx/<projeto_id>`** — push normal. Rejeitado: **pare e relate**.
+9. **Prove a sincronização:** `git rev-parse HEAD` == `git rev-parse origin/buildx/<projeto_id>`. Diferentes: pare — o PR apontaria para um estado que o servidor não tem.
+10. **Só então, o pull request final.** Este PR é do buildx, e é o único que aponta para a branch principal. Havendo `gh` instalado e autenticado (`gh auth status`):
+    ```
+    gh pr create --base <Branch principal> --head buildx/<projeto_id> \
+                 --title "<título do projeto>" --body-file docs/projeto/PR-FINAL.md
+    ```
+    | Situação | O que fazer |
+    |---|---|
+    | `gh` ausente, sem autenticação, ou sem remoto | `PR-FINAL.md` **é** a entrega. Informe o caminho e siga |
+    | `gh pr create` falha | registre o erro literal, aponte o arquivo, e siga — não é falha do projeto |
+
+    **Nunca** rode `gh auth login`, nunca peça credencial.
+11. **Nunca faça merge.** O PR nasce e para ali: **integrar em `<Branch principal>` é decisão humana**, e essa é a última rede antes de produção.
 
 ## Passo 7 — O relatório final
 
@@ -157,8 +175,10 @@ Use `assets/TEMPLATE-RELATORIO.md`.
 - toda premissa do `PREMISSAS.md` foi conferida
 - o sistema sobe numa cópia limpa **de `buildx/<projeto_id>`** e o usuário de demonstração entra
 - toda feature `entregue` do mapa está alcançável na árvore integrada; as terminalmente bloqueadas estão declaradas como fora do produto
-- a `Branch base` do `CONVENCOES.md` voltou a ser a `Branch principal` gravada no B2
+- **num ciclo não-final:** a `Branch base` continua sendo `buildx/<projeto_id>`, e nenhum `PR-FINAL.md` foi gerado
+- **no fechamento definitivo:** a `Branch base` voltou a ser a `Branch principal` gravada no B2, o `PR-FINAL.md` foi gerado **antes** do commit que o inclui, e o push foi confirmado antes de o PR ser aberto
 - o PR final existe, ou o `PR-FINAL.md` está no disco com o motivo de o PR não ter sido aberto
+- num projeto `reprovado`, o `VALIDACAO.md` e a abertura do `RELATORIO.md` dizem isso sem eufemismo — a `etapa: concluido` do `PROJETO.md` significa apenas que o buildx terminou
 - o esqueleto do P-9 responde: painel inicial, cadastro de usuários, edição de perfil e troca de senha, com a navegação da barra lateral
 - nenhuma premissa de segurança está sem código
 - `RELATORIO.md` existe, na ordem acima, com credenciais de demonstração documentadas

@@ -102,7 +102,7 @@ O usuário de demonstração (P-5) é o ambiente desse roteiro. Foi para isso qu
 
 No pacote de QA da `FT-01`, o roteiro cobre o esqueleto de aplicação (P-9) inteiro: entrar, cair no painel, cadastrar um segundo usuário pela área de Configurações, entrar com ele, editar o próprio perfil e trocar a própria senha. É um roteiro que quem não programa executa sem ajuda, e é o que prova que o sistema é operável, não apenas demonstrável.
 
-O relatório final aponta para os pacotes de QA de cada feature — que vivem na árvore daquela feature, em `docs/entregas/<slug>/QA-PACOTE.md`. É o caminho de quem quer conferir sem abrir o editor.
+O relatório final aponta para os pacotes de QA de cada feature, em `docs/entregas/<slug>/QA-PACOTE.md`. Nas features integradas eles estão no próprio checkout de controle — o fast-forward os trouxe; numa feature bloqueada, na branch dela. É o caminho de quem quer conferir sem abrir o editor.
 
 ## O modo legado não se aplica
 

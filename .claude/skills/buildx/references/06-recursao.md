@@ -21,7 +21,7 @@ Colete de todas as fontes, sem filtrar nada ainda:
 | `MAPA.md` | toda feature `bloqueada`, com o motivo |
 | `docs/sprintx/features/<slug>/00-BLOQUEIOS.md` | toda dúvida que a F6 registrou e pulou — **no worktree/branch daquela feature** |
 | `docs/sprintx/features/<slug>/00-AUDITORIA.md` | todo achado alto que mandou voltar à F3 — idem |
-| `docs/entregas/<slug>/ENTREGA.md` | `portao: bloqueado` e o que ele apontou, mais os `desvios` — **na árvore daquela feature** |
+| `docs/entregas/<slug>/ENTREGA.md` | `portao: bloqueado` e o que ele apontou, mais os `desvios`. Feature integrada: aqui mesmo. Feature bloqueada: **commitado na branch dela** (`git show feature/<slug>:…`), porque o E8 persiste o bloqueio |
 | `PREMISSAS.md` | toda premissa marcada provisória |
 | `RECURSAO.md` do ciclo anterior | toda pendência que continua aberta |
 
