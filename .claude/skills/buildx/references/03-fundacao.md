@@ -15,16 +15,43 @@ Sempre versione: `.env.example`, `.expx/expx-lock.json`, as migrations, a seed d
 
 ### 1.1 — Determinar e persistir a branch principal
 
-Antes de criar qualquer coisa, descubra qual é a branch principal **deste** repositório, nesta ordem:
+Antes de criar qualquer coisa, descubra o **nome** da branch principal **deste** repositório:
 
 ```
-git symbolic-ref refs/remotes/origin/HEAD     # sem o prefixo origin/
-git branch --show-current                     # se não houver remoto
+git symbolic-ref --short refs/remotes/origin/HEAD    # devolve: origin/main
 ```
+
+Esse comando devolve `origin/main`, não `main`. **Remova o prefixo `origin/`** e fique com o nome puro. Sem remoto, ou sem `origin/HEAD` definido:
+
+```
+git branch --show-current                            # devolve: main
+```
+
+O que é gravado é sempre o nome puro:
+
+| Grave | Nunca grave |
+|---|---|
+| `Branch principal: main` | `Branch principal: origin/main` |
+| | `Branch principal: refs/remotes/origin/main` |
 
 Esse nome vai para o `CONVENCOES.md` no Passo 6, na linha `Branch principal`. **Ele é gravado, não lembrado:** o B6 vai precisar dele para abrir o PR final, possivelmente em outra sessão, e `origin/HEAD` pode não existir mais.
 
-Commit inicial vazio na branch principal, e **nada além disso chega nela**. A partir daqui a principal não recebe commit, não recebe push e não é conferida de novo até o PR final.
+### 1.1.1 — O baseline da principal, e só ele
+
+Commit inicial vazio na branch principal. É o **baseline** do projeto: o ponto de onde a branch do projeto sai e para onde o PR final vai voltar.
+
+Havendo remoto, a principal precisa existir **no servidor** — senão o PR final do B6 não tem base:
+
+```
+git ls-remote --heads origin <principal>
+```
+
+| Resultado | O que fazer |
+|---|---|
+| A branch já existe no remoto | **Nada.** Não invente commit, não empurre |
+| Não existe | Publique **apenas o baseline**: `git push -u origin <principal>` |
+
+Depois disso a principal **congela**: nenhum commit de produto, nenhum push adicional, até o PR final ser mergeado por uma pessoa. Publicar o baseline não fere "a principal fica intocada durante o projeto" — ele é o nascimento do projeto, não trabalho dele.
 
 ### 1.2 — Criar a branch do projeto
 
@@ -36,15 +63,9 @@ O `<projeto_id>` é o mesmo do frontmatter do `PROJETO.md` (`references/00-schem
 
 **Daqui em diante essa branch é o checkout de controle**, e o checkout de controle **nunca troca de branch** durante o B3, o B4 e o B5. É nela que vivem `docs/projeto/` e `docs/stack/`, é nela que o template é commitado, e é ela que recebe cada feature entregue — a **árvore acumulada do produto**.
 
-Havendo remoto, publique-a uma vez:
+**A publicação dela não acontece agora**, e sim no Passo 7, quando a fundação inteira já estiver commitada. Publicar uma branch que ainda vai receber o template, o `docs/projeto/` e o `docs/stack/` só criaria uma janela em que local e remoto divergem — e é exatamente essa divergência que o primeiro portão do B4 barra, na `FT-01`.
 
-```
-git push -u origin buildx/<projeto_id>
-```
-
-Push normal, sempre. Nunca `--force`, nunca `--force-with-lease`. Sem remoto, siga local: a integração funciona igual, e o que deixa de existir são os pull requests.
-
-**Por que a branch nasce aqui, e não no B4.** A base de toda feature é ela; se ela só existisse na primeira integração, a `FT-01` nasceria da principal e o produto começaria desalinhado. E é ela que o `gh pr create` da mergex usa como base do PR de cada feature — precisa existir no remoto antes da primeira.
+**Por que a branch nasce aqui, e não no B4.** A base de toda feature é ela; se ela só existisse na primeira integração, a `FT-01` nasceria da principal e o produto começaria desalinhado. E é ela que a mergex usa como base do PR de cada feature — por isso precisa estar no remoto **antes da primeira feature**, o que o Passo 7 garante.
 
 As branches de feature vêm depois, uma por feature, **abertas pela F1 do sprintx no B4** a partir de `buildx/<projeto_id>`, junto com o worktree daquela feature (`../<repo>--<slug>`). O buildx não abre branch de feature e não invoca `mergex-abrir`.
 
@@ -198,16 +219,44 @@ As duas entram como **convenção estabelecida, nunca marcada `PROPOSTA`** — p
 
 **Se o repositório já trouxer uma `Branch base` observada** — projeto que não nasceu aqui —, não sobrescreva em silêncio: registre a premissa dizendo que a base do projeto passou a ser a do buildx durante a execução, e o valor anterior, para o B6 restaurar o certo.
 
-**A revisão da primeira feature.** Depois que a primeira feature do B4 for entregue, o código existe **na árvore daquela feature** — não aqui, porque o buildx não faz merge — e é lá que o `stackx-detectar` normal roda. O buildx roda, compara com o que decidiu, e converte cada regra confirmada de `decidido_pelo_buildx` para a evidência real, gravando o `CONVENCOES.md` atualizado de volta no checkout de controle. Regra que o código contradisse vira achado: ou o código se ajusta, ou a convenção estava errada e é corrigida. Este é o momento em que o projeto deixa de acreditar no buildx e passa a acreditar em si mesmo.
+**A revisão da primeira feature.** Depois que a primeira feature do B4 for **integrada**, o código real existe **aqui mesmo**, no checkout de controle — o fast-forward o trouxe. É sobre ele que o `stackx-detectar` normal roda. O buildx compara com o que decidiu e converte cada regra confirmada de `decidido_pelo_buildx` para a evidência real. Regra que o código contradisse vira achado: ou o código se ajusta, ou a convenção estava errada e é corrigida. Este é o momento em que o projeto deixa de acreditar no buildx e passa a acreditar em si mesmo.
+
+**Duas linhas ficam de fora dessa revisão, sempre:** `Branch principal` e `Branch base`.
+
+## Passo 7 — Fechar a fundação sincronizada
+
+O B2 não termina quando os arquivos existem: termina quando eles estão **commitados e publicados**. É a pré-condição do primeiro portão do B4, e o lugar mais barato de garantir.
+
+1. **Commite tudo que a fundação produziu**, na branch do projeto: o template, `docs/projeto/PROJETO.md` e `PREMISSAS.md`, `docs/stack/CONVENCOES.md`, `.expx/` versionável, `.claude/` e `.opencode/`. Por caminho explícito — nunca `git add .` para varrer o que não se conferiu.
+2. **Confirme a árvore limpa:**
+   ```
+   git status --porcelain
+   ```
+   Saída vazia. Sobrou algo versionável, commite; sobrou algo que não deve ser versionado, corrija o `.gitignore` antes de seguir.
+3. **Havendo remoto, publique — uma vez, e agora:**
+   ```
+   git push -u origin buildx/<projeto_id>
+   ```
+4. **Prove a sincronização:**
+   ```
+   git rev-parse HEAD
+   git rev-parse origin/buildx/<projeto_id>
+   ```
+   Os dois iguais. Diferentes, ou push rejeitado: **pare e relate** — sem `--force`, sem `pull`, sem reconciliar.
+
+Sem remoto: os passos 3 e 4 são `n/a`, e a fundação fecha local. A integração do B4 continua funcionando; o que deixa de existir são os pull requests.
+
+**Por que isto é um passo e não uma nota de rodapé.** Se a fundação ficar só no local, o primeiro portão do B4 (`HEAD == origin/buildx/<projeto_id>`) falha já na `FT-01`, e o projeto para antes da primeira feature — com a causa escondida três passos atrás.
 
 ## Critério de saída do B2
 
 Todos verdadeiros:
 
 - repositório inicializado, `.gitignore` correto, nada sensível versionado
-- a branch principal foi detectada e **gravada** no `CONVENCOES.md`
-- `buildx/<projeto_id>` existe, é o checkout de controle, e foi publicada no remoto quando há remoto
-- a principal não recebeu nada além do commit inicial
+- a branch principal foi detectada pelo nome puro (sem `origin/`) e **gravada** no `CONVENCOES.md`
+- a principal existe no remoto — já existia, ou o baseline foi publicado — e não recebeu nada além do baseline
+- `buildx/<projeto_id>` existe e é o checkout de controle
+- **a fundação inteira está commitada, a árvore está limpa, e `HEAD == origin/buildx/<projeto_id>`** (ou não há remoto)
 - a seção de versionamento declara `Branch principal` e `Branch base`, como convenção estabelecida
 - suíte Expx instalada, lock versionado, `.claude/` e `.opencode/` presentes
 - template copiado, com o nome do projeto ajustado e o `JWT_SECRET` gerado
