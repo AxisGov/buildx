@@ -215,39 +215,45 @@ Estamos dentro da janela fechada: `CONTROL` está em `BASE_SHA` e precisa termin
 
 Editar a cópia de `docs/projeto/PREMISSAS.md` **dentro da branch da feature** também não serve: para a mergex, ele é arquivo de produto fora da lista de qualquer task — vira desvio de escopo e reprova o portão (V9).
 
-Então a premissa nasce **feature-local**, no artefato que já é da feature e que a mergex já trata como artefato de método:
+Então a premissa nasce **feature-local**, em arquivo próprio do buildx, dentro da pasta canônica da feature — que a mergex já trata inteira como artefato de método:
 
 ```
-docs/sprintx/features/<slug>/00-DECISOES.md
+docs/sprintx/features/<slug>/BUILDX-PREMISSAS.md
 ```
 
-Numa seção de prosa estável, sem frontmatter novo e sem tocar em schema compartilhado:
+**Não é o `00-DECISOES.md`.** Aquele arquivo é da sprintx: ela define o frontmatter `kind: decisoes`, as linhas `D-NN` e `PENDENTE-NN`, e ela o regenera quando a F2 roda de novo. Guardar estado do buildx ali daria dois donos ao mesmo arquivo, e o buildx passaria a vida reparando prosa que não é dele (D-24).
+
+Formato, sem frontmatter e sem schema novo — exatamente os campos que a promoção vai precisar:
 
 ```markdown
-## Premissas pendentes do BuildX
+# Premissas pendentes do BuildX
 
-### PR-NN — <assunto>
+### PR-07 — Política de expiração da sessão
 
-- **origem:** f2_autonoma            (ou f3_autonoma, quando vier da R11 da F3)
-- **decisão:** <uma frase>
-- **justificativa:** <a fonte, ou o raciocínio que a sustenta>
-- **o que invalida:** <o fato que derruba a decisão>
-- **status:** pendente_promocao
+- origem: f2_autonoma
+- decisao: Sessao expira apos 8 horas
+- justificativa: PR-02 e CONVENCOES.md estabelecem sessao stateless
+- o_que_invalida: requisito explicito de sessao permanente
+- status: pendente_promocao
 ```
+
+`origem` é `f2_autonoma`, ou `f3_autonoma` quando vier da R11 da F3.
 
 ### Reservar o `PR-NN` antes de usar
 
 1. **determine o próximo número** lendo o `PREMISSAS.md` da `CONTROL` em `BASE_SHA` — a árvore congelada. Como só há uma feature por vez e `CONTROL` não se move dentro da janela, o número reservado **permanece estável** até a integração;
-2. **grave a premissa pendente** no `00-DECISOES.md` da feature;
-3. **só então** use essa premissa para responder à F2 (ou à F3).
+2. **confira o `BUILDX-PREMISSAS.md` da feature.** A mesma premissa já está lá: **reuse**, com o `PR-NN` que ela já tem;
+3. **senão, grave-a** no `BUILDX-PREMISSAS.md`;
+4. **só então** use essa premissa para responder à F2 (ou à F3);
+5. **grave a decisão resultante no `00-DECISOES.md`**, como sempre, com `respondido_por: buildx` e a fonte — que aqui é `BUILDX-PREMISSAS.md#PR-NN`.
 
 Várias premissas na mesma feature seguem numerando a partir dali, na ordem em que nascem.
 
-**Na retomada, reutilize.** Se a mesma premissa pendente já está escrita, ela vale: não duplique, não renumere, não reescreva o que já foi usado para responder.
+A divisão é essa, e é o que mantém cada arquivo com um dono só: **a sprintx é dona da decisão**, no `00-DECISOES.md`; **o buildx é dono da premissa** que pode virar estado global, no `BUILDX-PREMISSAS.md`. O humano abre os dois e vê a decisão e a premissa que a sustenta, cada uma no arquivo de quem a escreveu.
 
-**Depois de a F2 ou a F3 rodarem de novo no mesmo worktree, confira se a seção continua lá.** O contrato da sprintx cobre o frontmatter `kind: decisoes` e as linhas `D-NN` e `PENDENTE-NN`; ele não promete preservar uma seção que não é dele. Sumiu: reescreva com **o mesmo `PR-NN`** e o mesmo conteúdo — a premissa já foi usada para responder, e renumerar agora quebraria a promoção idempotente do passo 8. Reapareceu com conteúdo diferente do que você gravou: **pare e relate**.
+**Na retomada, preserve.** O `BUILDX-PREMISSAS.md` existente vale inteiro. Mesmo `PR-NN` com o mesmo conteúdo: reuse, é no-op. Mesmo `PR-NN` com conteúdo diferente: **pare e relate** — não escolha uma das versões.
 
-Grave também a resposta em `00-DECISOES.md` com `respondido_por: buildx` e a fonte, como sempre. O humano precisa poder abrir o arquivo depois e ver, decisão a decisão, o que foi decidido em nome dele e com base em quê.
+**A F2 e a F3 podem rodar de novo, e o `00-DECISOES.md` pode ser regenerado do zero pela sprintx.** A premissa sobrevive, porque não está lá. Quando a decisão nova voltar a usá-la, cite `BUILDX-PREMISSAS.md#PR-NN` outra vez.
 
 ### A fronteira que a F2 não atravessa
 
@@ -404,10 +410,10 @@ Depois do ff, `FEATURE_SHA` := `HEAD` de `CONTROL`. É esse SHA que vai para o m
 
 ### Promover as premissas pendentes
 
-O `00-DECISOES.md` da feature acabou de entrar na árvore pelo fast-forward. **Antes** do commit de estado, leia-o e promova:
+O `BUILDX-PREMISSAS.md` da feature acabou de entrar na árvore pelo fast-forward. **Antes** do commit de estado, leia-o e promova:
 
 ```
-docs/sprintx/features/<slug>/00-DECISOES.md   →   docs/projeto/PREMISSAS.md
+docs/sprintx/features/<slug>/BUILDX-PREMISSAS.md   →   docs/projeto/PREMISSAS.md
 ```
 
 Cada premissa com `status: pendente_promocao` vira premissa do projeto, **com o mesmo `PR-NN`**, `origem` preservada e todos os campos que o `references/00-schema.md` exige.
@@ -420,7 +426,7 @@ A idempotência é pelo próprio `PR-NN`, e não por marcação:
 | o `PR-NN` existe com o mesmo conteúdo | **no-op** — já foi promovido numa passagem anterior |
 | o `PR-NN` existe com conteúdo **diferente** | **PARE E RELATE** a inconsistência |
 
-Nada é escrito de volta no `00-DECISOES.md` para marcar a promoção: ele é artefato da sprintx, já está integrado, e editá-lo agora transformaria estado de feature em estado do projeto sem necessidade. A existência do `PR-NN` no `PREMISSAS.md` **é** a marca.
+Nada é escrito de volta no `BUILDX-PREMISSAS.md` para marcar a promoção. Ele é o registro do que aquela feature assumiu, já está integrado, e reescrevê-lo só para carimbar "promovido" criaria um segundo lugar onde a verdade pode divergir. A existência idêntica do `PR-NN` no `PREMISSAS.md` **é** a prova da promoção.
 
 **Só feature integrada promove.** Premissa de feature bloqueada ou em replanejamento continua onde está (ver a triagem, adiante).
 
@@ -464,7 +470,7 @@ O buildx devolve a feature à F3 — apagando o plano dentro do worktree dela, c
 - `MAPA.md` continua `em_andamento`;
 - `CONTROL` continua exatamente em `BASE_SHA`;
 - nenhuma outra feature começa;
-- **as premissas pendentes ficam onde estão**, no `00-DECISOES.md` da feature, e são **reutilizadas** na nova tentativa — mesmo `PR-NN`, sem duplicar e sem renumerar. Nenhuma delas vai para o `PREMISSAS.md` global: o plano ainda não virou produto.
+- **as premissas pendentes ficam onde estão**, no `BUILDX-PREMISSAS.md` da feature, e são **reutilizadas** na nova tentativa — mesmo `PR-NN`, sem duplicar e sem renumerar. **Não apague o arquivo no replanejamento:** a F2 e a F3 podem rodar de novo e o `00-DECISOES.md` pode ser regerado pela sprintx, e é justamente por a premissa não morar lá que ela sobrevive. Nenhuma delas vai para o `PREMISSAS.md` global: o plano ainda não virou produto.
 
 **É isto que mantém o fast-forward possível.** Se o buildx commitasse um "FT-NN replanejando" aqui, `CONTROL` andaria para `BASE_SHA+1`, deixaria de ser ancestral da feature, e a integração depois seria impossível — exatamente o beco que a barreira serial existe para evitar. Teto: dois replanejamentos; a terceira reprovação é bloqueio terminal.
 
@@ -472,7 +478,7 @@ O buildx devolve a feature à F3 — apagando o plano dentro do worktree dela, c
 
 `MAPA.md` para `bloqueada`, com o motivo e a pendência no `RECURSAO.md`; commit `chore(buildx): FT-NN bloqueada`; push normal. Aquela branch **nunca será integrada**, e é justamente por isso que `CONTROL` pode avançar sem risco.
 
-**As premissas pendentes dela não são promovidas.** Elas permanecem no `00-DECISOES.md` daquela feature como evidência da tentativa, e o B5 e o relatório final podem consultá-las. A premissa global representa decisão **incorporada ao produto integrado** — não plano abandonado. Promover a premissa de uma feature que nunca entrou faria o `PREMISSAS.md` afirmar uma decisão que nenhum código realiza, que é exatamente a falha mais cara deste método.
+**As premissas pendentes dela não são promovidas.** Elas permanecem no `BUILDX-PREMISSAS.md` daquela feature como evidência histórica da tentativa, e o B5 e o relatório final podem lê-las de lá — `git show feature/<slug>:docs/sprintx/features/<slug>/BUILDX-PREMISSAS.md` — quando precisarem explicar as decisões provisórias de uma feature bloqueada. A premissa global representa decisão **incorporada ao produto integrado** — não plano abandonado. Promover a premissa de uma feature que nunca entrou faria o `PREMISSAS.md` afirmar uma decisão que nenhum código realiza, que é exatamente a falha mais cara deste método.
 
 ### Isto não fere a regra 4
 

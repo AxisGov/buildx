@@ -364,3 +364,27 @@ Dois casos particulares, e os dois importam:
 **Só feature integrada promove.** Replanejamento pendente mantém as premissas na feature, para a nova tentativa reutilizar; bloqueio terminal também não promove — a premissa global representa decisão **incorporada ao produto**, não plano abandonado. Promover a premissa de uma feature que nunca entrou faria o `PREMISSAS.md` documentar uma proteção que nenhum código realiza.
 
 **O que invalida:** o fim da janela fechada — se um dia a integração deixar de exigir `CONTROL` parada e limpa, a premissa pode voltar a nascer no estado global.
+
+---
+
+## D-24 — A premissa feature-local do BuildX tem arquivo próprio
+
+*(Refina a D-23, que continua valendo inteira no que decidiu: a premissa nasce na feature e só vira global depois do fast-forward. Muda apenas **onde** ela nasce.)*
+
+**Decisão:** a premissa pendente é gravada em `docs/sprintx/features/<slug>/BUILDX-PREMISSAS.md`, arquivo **do buildx**, dentro da pasta canônica da feature. Sem frontmatter, sem `expx-schema`, sem schema novo. O `00-DECISOES.md` volta a ter um dono só — a sprintx — e recebe do buildx apenas o que a integração sempre exigiu: a decisão da F2, `respondido_por: buildx`, e a fonte, que no degrau 4 é `BUILDX-PREMISSAS.md#PR-NN`.
+
+**Por quê a D-23 precisava deste refinamento.** Ela guardava a premissa numa seção "Premissas pendentes do BuildX" dentro do `00-DECISOES.md`. O contrato da sprintx para aquele arquivo cobre o frontmatter `kind: decisoes` e as linhas `D-NN` e `PENDENTE-NN` — e a F2 reexecutada para resolver PENDENTEs pode regerá-lo. Nada ali promete preservar prosa estrangeira. O desenho só se sustentava com o buildx conferindo e **reparando** a seção depois de cada reexecução de F2 ou F3: dois donos para o mesmo arquivo, e uma regra de reparo que existe só para compensar a ausência de um contrato.
+
+**Alternativas descartadas:**
+
+1. **Obrigar a sprintx a preservar seção desconhecida.** Resolveria, mas mudando a skill irmã para servir ao buildx — e criando, no contrato dela, uma promessa sobre conteúdo que ela não entende.
+2. **Continuar reparando a seção depois de cada F2/F3.** É o desenho da D-23. Funciona enquanto o reparo é lembrado; a falha, quando vier, é silenciosa — a premissa some, a decisão que ela sustentava fica órfã, e nada acusa.
+3. **Gravar direto no `PREMISSAS.md` global durante a janela fechada.** Já descartada na D-23, e pelo mesmo motivo: suja a `CONTROL` e barra o fast-forward da própria feature que a premissa serve.
+
+**Por que o endereço novo é seguro.** A mergex trata `docs/sprintx/features/<trabalho_id>/` inteira como pasta de artefatos de método do próprio trabalho — ela commita e isenta a pasta, não um arquivo específico. Um arquivo novo lá dentro não é arquivo de produto fora do plano, não vira desvio de escopo e não reprova o V9. **Nenhuma mudança é necessária na sprintx ou na mergex.**
+
+**O que o arquivo próprio compra.** A F2 e a F3 podem rodar de novo, e o `00-DECISOES.md` pode ser regerado do zero: a premissa sobrevive porque não está lá. O replanejamento preserva o arquivo e reutiliza o mesmo `PR-NN`. A feature bloqueada o mantém como evidência histórica, legível pelo B5 e pelo relatório final. E a regra do reparo deixa de existir.
+
+**O que não muda:** "escrever antes de usar"; a reserva do `PR-NN` lendo o `PREMISSAS.md` da `CONTROL` em `BASE_SHA`; a promoção apenas depois do fast-forward, idempotente pelo próprio `PR-NN` — id ausente promove, id com mesmo conteúdo é no-op, id com conteúdo diferente para; e o fato de que só feature integrada promove. Nada é escrito de volta no `BUILDX-PREMISSAS.md` para marcar a promoção: a existência idêntica no `PREMISSAS.md` global é a prova.
+
+**O que invalida:** a sprintx passar a declarar, em contrato, que preserva conteúdo estrangeiro no `00-DECISOES.md` — aí os dois arquivos poderiam voltar a ser um. Ou a mergex deixar de tratar a pasta da feature como artefato de método, caso em que o endereço precisa mudar de novo.
