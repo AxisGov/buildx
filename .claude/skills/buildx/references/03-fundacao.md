@@ -6,16 +6,47 @@ Entrada: `docs/projeto/PROJETO.md` e `PREMISSAS.md` do B1. Saídas: repositório
 
 O B2 é a etapa mais mecânica do buildx e a que mais dá errado quando pulada. A primeira sprint do sprintx (regra 13: "a primeira sprint entrega a capacidade de testar") assume que existe um projeto onde escrever teste. O B2 é quem entrega essa suposição.
 
-## Passo 1 — Repositório
+## Passo 1 — Repositório e a branch do projeto
 
 Se não houver `.git` no diretório de trabalho nem em nenhum ancestral, inicialize aqui. O `.gitignore` vem do template, no Passo 5, e já cobre segredo, `node_modules`, o arquivo do banco e o client gerado — mas ele precisa estar no lugar **antes do primeiro commit**, para que nada sensível chegue a ter estado versionado. Se for commitar antes do Passo 5, commite vazio.
 
 Nunca versione: `.env`, `node_modules/`, o arquivo `.db` do SQLite, artefatos de build, o índice do memox.
 Sempre versione: `.env.example`, `.expx/expx-lock.json`, as migrations, a seed de demonstração.
 
-Commit inicial vazio ou com o esqueleto, na branch padrão. Este é o **checkout de controle** do projeto: é dele que o buildx conduz as seis etapas, e é nele que `docs/projeto/` e `docs/stack/` vivem.
+### 1.1 — Determinar e persistir a branch principal
 
-As branches de feature vêm depois, uma por feature, **abertas pela F1 do sprintx no B4**, junto com o worktree daquela feature (`../<repo>--<slug>`). O buildx não abre branch e não invoca `mergex-abrir`.
+Antes de criar qualquer coisa, descubra qual é a branch principal **deste** repositório, nesta ordem:
+
+```
+git symbolic-ref refs/remotes/origin/HEAD     # sem o prefixo origin/
+git branch --show-current                     # se não houver remoto
+```
+
+Esse nome vai para o `CONVENCOES.md` no Passo 6, na linha `Branch principal`. **Ele é gravado, não lembrado:** o B6 vai precisar dele para abrir o PR final, possivelmente em outra sessão, e `origin/HEAD` pode não existir mais.
+
+Commit inicial vazio na branch principal, e **nada além disso chega nela**. A partir daqui a principal não recebe commit, não recebe push e não é conferida de novo até o PR final.
+
+### 1.2 — Criar a branch do projeto
+
+```
+git switch -c buildx/<projeto_id>
+```
+
+O `<projeto_id>` é o mesmo do frontmatter do `PROJETO.md` (`references/00-schema.md`), então a branch é **derivável** a qualquer momento, em qualquer sessão, sem depender de memória.
+
+**Daqui em diante essa branch é o checkout de controle**, e o checkout de controle **nunca troca de branch** durante o B3, o B4 e o B5. É nela que vivem `docs/projeto/` e `docs/stack/`, é nela que o template é commitado, e é ela que recebe cada feature entregue — a **árvore acumulada do produto**.
+
+Havendo remoto, publique-a uma vez:
+
+```
+git push -u origin buildx/<projeto_id>
+```
+
+Push normal, sempre. Nunca `--force`, nunca `--force-with-lease`. Sem remoto, siga local: a integração funciona igual, e o que deixa de existir são os pull requests.
+
+**Por que a branch nasce aqui, e não no B4.** A base de toda feature é ela; se ela só existisse na primeira integração, a `FT-01` nasceria da principal e o produto começaria desalinhado. E é ela que o `gh pr create` da mergex usa como base do PR de cada feature — precisa existir no remoto antes da primeira.
+
+As branches de feature vêm depois, uma por feature, **abertas pela F1 do sprintx no B4** a partir de `buildx/<projeto_id>`, junto com o worktree daquela feature (`../<repo>--<slug>`). O buildx não abre branch de feature e não invoca `mergex-abrir`.
 
 ## Passo 2 — Escolher a stack
 
@@ -106,7 +137,7 @@ Depois de copiar, três ajustes — e só esses:
 |---|---|
 | nome do projeto | `package.json`, e o `<title>` em `src/app/layout.tsx` |
 | `JWT_SECRET` | gerado e gravado no `.env` local, **nunca** no `.env.example` nem em artefato |
-| primeiro commit | o template inteiro, antes de qualquer feature |
+| primeiro commit | o template inteiro, **em `buildx/<projeto_id>`**, antes de qualquer feature |
 
 Não renomeie as pastas das três camadas nem as rotas do P-9: o
 `CONVENCOES.md` do Passo 6 as registra, e o B6 as confere pelo caminho.
@@ -145,6 +176,28 @@ Então o buildx **decide** e o stackx **registra**:
 
 O `CONVENCOES.md` do B2 cobre, no mínimo: onde mora o teste e como se chama, como o banco é isolado entre testes, os comandos de teste/lint/build que funcionam de verdade, as três camadas e quem pode chamar quem, como erro é sinalizado, como configuração é lida.
 
+### A seção de versionamento — o contrato que carrega a base
+
+Além disso, e **obrigatoriamente**, a seção de versionamento declara duas linhas distintas:
+
+```
+Branch principal: <a detectada no Passo 1.1>
+Branch base: buildx/<projeto_id>
+```
+
+| Linha | Para quê | Quem lê |
+|---|---|---|
+| `Branch principal` | o destino do PR final, e o valor para o qual o B6 devolve a base no fim | só o buildx |
+| `Branch base` | **a base de onde toda feature nasce** | a F1 do sprintx (primeira precedência dela) e o E0 da mergex |
+
+As duas entram como **convenção estabelecida, nunca marcada `PROPOSTA`** — ponto marcado como proposta, por contrato das irmãs, não governa: viraria aviso, a F1 cairia em `origin/HEAD` e toda feature nasceria da principal, que é exatamente o defeito que esta seção existe para corrigir.
+
+**É assim que a base viaja, e não há outro transporte.** O buildx não passa argumento à sprintx, não cria campo no `ORQUESTRADOR.md` e não toca no `expx-schema`: ele escreve uma convenção que as duas irmãs **já leem hoje**, e que sobrevive à morte da sessão porque está no disco.
+
+**Estas duas linhas são do contrato do buildx.** A revisão de convenções da primeira feature (Passo 7 do B4) e qualquer `stackx-detectar` posterior **não as alteram** — elas não descrevem o código, descrevem como o projeto é montado. Quem as muda é o B6, uma vez, ao devolver `Branch base` ao valor de `Branch principal`.
+
+**Se o repositório já trouxer uma `Branch base` observada** — projeto que não nasceu aqui —, não sobrescreva em silêncio: registre a premissa dizendo que a base do projeto passou a ser a do buildx durante a execução, e o valor anterior, para o B6 restaurar o certo.
+
 **A revisão da primeira feature.** Depois que a primeira feature do B4 for entregue, o código existe **na árvore daquela feature** — não aqui, porque o buildx não faz merge — e é lá que o `stackx-detectar` normal roda. O buildx roda, compara com o que decidiu, e converte cada regra confirmada de `decidido_pelo_buildx` para a evidência real, gravando o `CONVENCOES.md` atualizado de volta no checkout de controle. Regra que o código contradisse vira achado: ou o código se ajusta, ou a convenção estava errada e é corrigida. Este é o momento em que o projeto deixa de acreditar no buildx e passa a acreditar em si mesmo.
 
 ## Critério de saída do B2
@@ -152,6 +205,10 @@ O `CONVENCOES.md` do B2 cobre, no mínimo: onde mora o teste e como se chama, co
 Todos verdadeiros:
 
 - repositório inicializado, `.gitignore` correto, nada sensível versionado
+- a branch principal foi detectada e **gravada** no `CONVENCOES.md`
+- `buildx/<projeto_id>` existe, é o checkout de controle, e foi publicada no remoto quando há remoto
+- a principal não recebeu nada além do commit inicial
+- a seção de versionamento declara `Branch principal` e `Branch base`, como convenção estabelecida
 - suíte Expx instalada, lock versionado, `.claude/` e `.opencode/` presentes
 - template copiado, com o nome do projeto ajustado e o `JWT_SECRET` gerado
 - numa máquina limpa: dependências instalam, build passa, teste passa, lint passa, projeto sobe
@@ -169,3 +226,6 @@ Todos verdadeiros:
 - **Aceitar esqueleto que "quase" sobe.** Quatro verificações binárias; três não bastam.
 - **Gravar convenção sem marcar a origem.** Uma regra `decidido_pelo_buildx` lida como se fosse detectada faz o projeto acreditar que tem evidência onde só tem opinião.
 - **Versionar `.env` ou o arquivo do banco.** Uma vez versionado, sai do histórico com muito mais trabalho do que custou não colocar.
+- **Construir o projeto na branch principal.** Ela recebe o commit inicial e nada mais. Template, `docs/projeto/`, `docs/stack/` e todas as features vivem em `buildx/<projeto_id>` — é isso que mantém a principal intocada até o PR final.
+- **Marcar a `Branch base` como `PROPOSTA`.** Proposta não governa: a F1 a ignora, cai em `origin/HEAD`, e as features voltam a nascer da principal sem que nada acuse o erro.
+- **Esquecer de gravar a `Branch principal`.** O B6 precisa dela para o PR final, e `origin/HEAD` pode não existir na sessão que fechar o projeto.
