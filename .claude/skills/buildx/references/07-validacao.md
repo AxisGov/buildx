@@ -177,7 +177,7 @@ Use `assets/TEMPLATE-RELATORIO.md`.
 - toda feature `entregue` do mapa está alcançável na árvore integrada; as terminalmente bloqueadas estão declaradas como fora do produto
 - **num ciclo não-final:** a `Branch base` continua sendo `buildx/<projeto_id>`, e nenhum `PR-FINAL.md` foi gerado
 - **no fechamento definitivo:** a `Branch base` voltou a ser a `Branch principal` gravada no B2, o `PR-FINAL.md` foi gerado **antes** do commit que o inclui, e o push foi confirmado antes de o PR ser aberto
-- o PR final existe, ou o `PR-FINAL.md` está no disco com o motivo de o PR não ter sido aberto
+- **no fechamento definitivo:** o PR final existe, ou o `PR-FINAL.md` está no disco com o motivo de o PR não ter sido aberto
 - num projeto `reprovado`, o `VALIDACAO.md` e a abertura do `RELATORIO.md` dizem isso sem eufemismo — a `etapa: concluido` do `PROJETO.md` significa apenas que o buildx terminou
 - o esqueleto do P-9 responde: painel inicial, cadastro de usuários, edição de perfil e troca de senha, com a navegação da barra lateral
 - nenhuma premissa de segurança está sem código
