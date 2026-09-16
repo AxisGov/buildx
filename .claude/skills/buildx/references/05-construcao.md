@@ -9,52 +9,129 @@ O B4 é longo mas é a etapa mais simples do buildx: ele quase não decide nada.
 ## O ciclo de uma feature
 
 ```
-checkout de controle (MAPA.md, PROJETO.md, PREMISSAS.md)
+CONTROL = checkout de controle = buildx/<projeto_id>
+          (docs/projeto/, docs/stack/ — e o produto acumulado)
   │
-  1. marca a feature em_andamento no MAPA.md
+  0. GATES:  HEAD de CONTROL == origin/buildx/<projeto_id>
+  │          cada FT em depende_de integrada e alcançável
   │
-  2. sprintx F1 ─── cria ou retoma ───► worktree ../<repo>--<slug>
-  │                                     branch  feature/<slug>
-  │                                          │
-  │                                          ├─ 3. sprintx F2  descoberta, RESPONDIDA PELO BUILDX
-  │                                          ├─ 4. sprintx F3  plano de sprints, fases e tasks
-  │                                          ├─ 5. sprintx F4  ORQUESTRADOR.md
-  │                                          ├─ 6. sprintx F5  auditoria do plano
-  │                                          └─ 7. sprintx F6  execução TDD — e a entrega inteira:
-  │                                                 ├─ mergex E0        no início
-  │                                                 ├─ mergex E1        a cada task concluída
-  │                                                 ├─ FECHAMENTO.md
-  │                                                 └─ mergex E2 → E8   portão, PR, QA, registro
-  │                                          │
-  ◄──────────── volta ao checkout de controle ┘
-  8. LÊ o resultado da entrega (ENTREGA.md + FECHAMENTO.md)
-  9. atualiza o MAPA.md  →  próxima feature
+  1. MAPA: FT-NN → em_andamento
+  2. commit   chore(buildx): FT-NN em andamento
+  3. push origin buildx/<projeto_id>
+  4. BASE_SHA := HEAD de CONTROL
+  │
+  5. sprintx F1 ── nasce de BASE_SHA ──► worktree ../<repo>--<slug>
+  │                                      branch  feature/<slug>
+  │                                           │
+  │   ┌─ JANELA FECHADA ─────────────┐        ├─ F2 → F5   plano e auditoria
+  │   │ CONTROL não recebe commit    │        └─ F6        execução sob TDD
+  │   │ nenhum enquanto isto roda    │                     + entrega inteira:
+  │   └──────────────────────────────┘                     E0 · E1 por task ·
+  │                                           │            FECHAMENTO.md · E2→E8
+  ◄──────── volta ao checkout de controle ────┘
+  6. lê ENTREGA.md + FECHAMENTO.md
+  7. PROVAS: HEAD == BASE_SHA == origin · BASE_SHA ancestral da feature · árvore limpa
+  8. git merge --ff-only feature/<slug>
+  9. MAPA: entregue + Integrada em <FEATURE_SHA>
+ 10. commit   chore(buildx): FT-NN entregue
+ 11. push origin buildx/<projeto_id>          →  próxima feature
 ```
 
 Nenhuma etapa é pulada, e o sprintx nunca é invocado fora de ordem — a máquina de estados dele detecta a fase pelo disco de `docs/sprintx/features/<slug>/`, então basta invocar a skill **de dentro da área de trabalho certa** e ela continua de onde parou.
 
-## O checkout de controle e o worktree da feature
+## Três níveis, e nenhum se confunde com o outro
 
-São duas árvores diferentes, e confundi-las é o erro mais caro desta etapa.
+```
+main                        intocada do B2 até o PR final
+  └─ buildx/<projeto_id>    CONTROL: estado do projeto + produto acumulado
+       └─ feature/<slug>    worktree temporário de uma feature
+```
 
 | Árvore | O que mora nela | Quem escreve |
 |---|---|---|
-| **checkout de controle** — onde o buildx roda | `docs/projeto/PROJETO.md`, `PREMISSAS.md`, `MAPA.md`, `RECURSAO.md`, `VALIDACAO.md`, `RELATORIO.md`, e `docs/stack/CONVENCOES.md` | o buildx |
-| **worktree da feature** — `../<repo>--<slug>`, branch `feature/<slug>` | `docs/sprintx/features/<slug>/` (base, decisões, plano, orquestrador, auditoria, bloqueios, fechamento) e **o código da feature** | o sprintx e a mergex |
+| **branch principal** | o commit inicial do B2, e mais nada | ninguém, até o merge humano do PR final |
+| **`buildx/<projeto_id>`** = checkout de controle | `docs/projeto/*`, `docs/stack/CONVENCOES.md`, e **cada feature já integrada** | o buildx (só o próprio estado) e o fast-forward das features |
+| **worktree da feature** — `../<repo>--<slug>` | `docs/sprintx/features/<slug>/`, `docs/entregas/<slug>/` e o código daquela feature | o sprintx e a mergex |
 
-O worktree é criado pela **F1 do sprintx** (regra 21 dele: uma feature por árvore de trabalho). O buildx **não cria branch e não cria worktree** — ele entra no que a F1 abriu, trabalha lá do F2 ao PR, e volta.
+O worktree é criado pela **F1 do sprintx** (regra 21 dele), a partir de `buildx/<projeto_id>` — é isso que faz a `FT-02` nascer enxergando a `FT-01`. O buildx **não cria branch de feature e não cria worktree**: ele entra no que a F1 abriu, acompanha até a F6, e volta.
 
-**O checkout de controle não recebe o código das features.** O buildx não faz merge (regra 8), então nunca presuma que o plano, os artefatos ou o código de uma feature estão visíveis na árvore de controle: eles estão no worktree e na branch daquela feature.
+## A invariante que sustenta tudo
 
-## Passo 1 — Marcar a feature e chamar a F1
+> **Entre o nascimento de `feature/<slug>` e a integração dela, `buildx/<projeto_id>` não recebe nenhum commit que não venha dessa própria feature.**
 
-Marque a feature como `em_andamento` no `MAPA.md` **agora**, no checkout de controle, não no fim. Se a sessão morrer no meio, o `/buildx-retomar` precisa saber onde estava.
+O `git merge --ff-only` do passo 8 não é apenas o mecanismo de integração: ele é o **teste** dessa invariante. Se o fast-forward falhar, ele está dizendo que alguma coisa avançou `CONTROL` no meio do caminho — e a resposta certa é **parar e relatar**, nunca trocar de mecanismo.
 
-**Não invoque `mergex-abrir`.** A branch e o worktree são da F1, e a mergex entra depois: quem aciona o E0 dela é a própria F6 do sprintx, já dentro do worktree, quando o `ORQUESTRADOR.md` existe. Chamar `mergex-abrir` antes da F1 tenta abrir uma segunda área de trabalho para a mesma feature — na melhor hipótese ela é recusada, na pior o trabalho se divide em duas árvores.
+Nunca substitua o ff-only por `merge --no-ff`, `rebase`, `cherry-pick`, `update-ref`, `reset`, `stash` ou qualquer forma de `--force`. Cada um deles faz o sintoma sumir e o problema ficar.
+
+## Passo 1 — Os dois portões, e o commit que fixa a base
+
+Nada começa antes destes dois portões. Os dois são binários, e os dois param o laço quando falham — parar aqui é barato; descobrir depois que a feature nasceu da árvore errada, não.
+
+### Portão 1 — local e remoto no mesmo ponto
+
+Havendo remoto:
+
+```
+git fetch origin
+git rev-parse HEAD
+git rev-parse origin/buildx/<projeto_id>
+```
+
+Exija **igualdade estrita**. Local à frente, local atrás ou divergente: **pare e relate**.
+
+Não é preciosismo. Se o local estiver **à frente**, a base remota está velha, e o PR que a mergex abrir para esta feature vai calcular o diff contra um SHA antigo — o PR passaria a mostrar também o trabalho da feature anterior. Se estiver **atrás**, alguém moveu o remoto e o push do fim seria rejeitado.
+
+**Nunca** resolva sozinho: sem `pull`, sem merge do remoto, sem `rebase`, sem `--force`. Sem remoto configurado, este portão é `n/a`.
+
+### Portão 2 — as dependências estão integradas
+
+Para cada `FT-XX` em `depende_de` (`references/04-decomposicao.md`), duas condições, as duas obrigatórias:
+
+1. o `MAPA.md` traz `**Integrada em:** <sha>` para a `FT-XX`;
+2. o SHA está na árvore:
+
+```
+git merge-base --is-ancestor <sha> buildx/<projeto_id>
+```
+
+**`status: entregue` no `MAPA.md` não basta** — ele diz o que o buildx achou que fez; só o Git diz o que está na árvore.
+
+**Mapa dizendo `entregue` sem SHA é inconsistência de estado.** A única rederivação automática permitida é a evidência que só existe se o conteúdo entrou de fato:
+
+```
+git cat-file -e buildx/<projeto_id>:docs/entregas/<slug>/ENTREGA.md
+```
+
+com aquele arquivo, **na árvore integrada**, declarando `estado: entregue`. Então derive e repare o mapa:
+
+```
+git rev-list -1 buildx/<projeto_id> -- docs/entregas/<slug>/ENTREGA.md
+```
+
+Sem essa evidência, a dependente **não inicia**: marque `bloqueada` com o motivo `dependencia_nao_integrada` e siga para a próxima feature. **A existência de `feature/<slug>` não é prova de nada** — a branch pode ter sido removida, reaberta ou reutilizada.
+
+### Marcar, commitar, publicar, fixar a base
+
+Passados os dois portões:
+
+1. `MAPA.md`: a feature vira `em_andamento` — **agora**, não no fim, porque é disso que o `/buildx-retomar` depende;
+2. commit do estado: `chore(buildx): FT-NN em andamento`;
+3. `git push origin buildx/<projeto_id>` — push normal; rejeitado, **pare e relate**;
+4. **`BASE_SHA` := `HEAD` de `CONTROL`.** É este SHA — igual no local, no remoto e na base que a F1 vai usar — que fecha a janela.
+
+**Não invoque `mergex-abrir`.** A branch e o worktree são da F1, e a mergex entra depois: quem aciona o E0 dela é a própria F6 do sprintx, já dentro do worktree. Chamar `mergex-abrir` antes da F1 tenta abrir uma segunda área de trabalho para a mesma feature.
 
 ## Passo 2 — A F1, com o briefing do buildx
 
 **A F1 abre a área de trabalho e monta a base de conhecimento** — nessa ordem. Antes do scaffold, ela cria ou retoma o worktree `../<repo>--<slug>` na branch `feature/<slug>`; a partir daí, tudo da feature acontece lá dentro. Se a F1 anunciar a área de trabalho e encerrar (é o comportamento dela quando o harness não troca de árvore sozinho), **continue de dentro do diretório que ela indicou** — não recomece a fase na árvore de controle.
+
+**A base vem do `CONVENCOES.md`, e o buildx confere.** A F1 resolve a base sozinha, e a primeira precedência dela é a seção de versionamento — onde o B2 gravou `Branch base: buildx/<projeto_id>`. Depois que a F1 abrir a área de trabalho, confirme:
+
+```
+git merge-base --is-ancestor <BASE_SHA> feature/<slug>
+```
+
+Falhou? A feature nasceu de outro lugar — `CONVENCOES.md` alterado, seção marcada `PROPOSTA`, branch reaproveitada de uma execução anterior. **Pare e relate.** Integrar depois seria impossível, e seguir seria construir sobre a árvore errada.
 
 Sem git, ou com worktree recusado, a F1 segue na árvore atual e nada aqui muda: o buildx continua não abrindo branch.
 
@@ -98,7 +175,11 @@ Se a F2 levantar uma questão de **regra de negócio** que nenhum dos três arqu
 
 Nesse caso: registre em `00-BLOQUEIOS.md`, registre como pendência `decisao_humana` no `RECURSAO.md`, e **siga com a decisão mais reversível possível**, marcada como provisória no código e na premissa. O relatório final lista todas essas — são a primeira coisa que o humano precisa olhar.
 
-## Passo 4 — F3 a F5
+## Passo 4 — F3 a F5, dentro da janela fechada
+
+**Da F1 até a integração, `CONTROL` não recebe commit nenhum.** Nem do buildx, nem de ninguém: nenhuma atualização de `MAPA.md`, `PREMISSAS.md` ou `CONVENCOES.md` é commitada enquanto a feature roda. Premissa nova da F2 é gravada no arquivo e **commitada junto com o fechamento da feature** (passo 7), nunca no meio.
+
+É só isso que garante o fast-forward — e é a regra mais fácil de quebrar sem perceber, porque o impulso natural é "registrar agora que está fresco".
 
 Rodam sem intervenção do buildx. Três pontos de atenção:
 
@@ -159,13 +240,85 @@ Nesse caso: marque a feature `bloqueada` com o motivo `incompatibilidade_de_vers
 
 **O merge não acontece.** O buildx nunca invoca `mergex-revisar`, nunca oferece, nunca sugere no fim — e a F6 também não o encadeia. Integrar código é decisão humana e essa é a última rede antes de produção. A entrega do buildx é um conjunto de features entregues e descritas, cada uma com o portão verde e, quando a ferramenta do serviço existiu, um PR aberto.
 
-## Passo 7 — Fechar a feature
+## Passo 7 — Integrar a feature na árvore do projeto
 
-**Volte ao checkout de controle** e atualize o `MAPA.md`: `status` para `entregue` ou `bloqueada`, e os contadores do frontmatter. O `MAPA.md` é do projeto, não da feature: ele nunca é editado dentro do worktree, senão a atualização fica presa na branch daquela feature e a próxima nasce de um mapa desatualizado.
+Só chega aqui a feature cujo `ENTREGA.md` diz `estado: entregue` **e** `portao: pronto`. Qualquer outra coisa vai para a triagem, mais abaixo.
 
-O worktree da feature **fica onde está** ao fim do ciclo. Ele é a única cópia dos artefatos e do código daquela feature até o humano fazer o merge do PR — o B5 e o B6 ainda vão lê-lo, e removê-lo apagaria trabalho que ninguém integrou.
+### As quatro provas, antes de tocar em qualquer coisa
 
-**Depois da primeira feature entregue**, rode a revisão de convenções do B2 **na árvore daquela feature** — é lá que o código real existe; o checkout de controle ainda só tem o template do B2. Converta cada regra de `decidido_pelo_buildx` para a evidência encontrada, citando o arquivo e a linha como eles aparecem naquela branch; regra contradita pelo código vira achado a resolver. O `CONVENCOES.md` atualizado é do projeto: grave-o **no checkout de controle**, como todo artefato de `docs/stack/`. É quando o projeto passa a acreditar em si mesmo em vez de no buildx.
+Havendo remoto, `git fetch origin` primeiro. Então:
+
+| # | Prova | Comando |
+|---|---|---|
+| 1 | `CONTROL` continua onde a feature nasceu | `git rev-parse HEAD` == `BASE_SHA` |
+| 2 | o remoto continua no mesmo ponto | `git rev-parse origin/buildx/<projeto_id>` == `BASE_SHA` |
+| 3 | a feature descende daquela base | `git merge-base --is-ancestor <BASE_SHA> feature/<slug>` |
+| 4 | a árvore de controle está limpa | `git status --porcelain` vazio |
+
+**Falhou qualquer uma: pare e relate.** Não tente entender, não tente consertar, não escolha outro caminho — as provas 1 e 3 falhando significam que a invariante foi violada, e a 2 significa que outra sessão ou outra pessoa mexeu no remoto. Nos dois casos quem decide é gente.
+
+### O fast-forward
+
+```
+git merge --ff-only feature/<slug>
+```
+
+É a única forma de integrar. Ele **não cria commit**, não reescreve nada, não resolve conflito e não pode trazer conteúdo que não esteja na feature. Repetir é inofensivo: numa feature já integrada ele responde `Already up to date`, e é isso que torna a retomada segura.
+
+**Se ele falhar, pare.** Não use `--no-ff` (mascararia a divergência mesclando o que deveria travar), não use `rebase` (reescreveria commits que já têm PR aberto, e o hook da sprintx o barra), não use `cherry-pick` (duplicaria commits e destruiria a ancestralidade de que o portão de dependência depende), não use `update-ref` (faria o mesmo sem nenhuma verificação), não use `reset`, `stash` nem `--force`.
+
+Depois do ff, `FEATURE_SHA` := `HEAD` de `CONTROL`. É esse SHA que vai para o mapa.
+
+## Passo 8 — Fechar a feature
+
+**Só agora — depois do fast-forward — `CONTROL` volta a receber commit.** No `MAPA.md`, no checkout de controle:
+
+- `status` para `entregue`, e os contadores do frontmatter;
+- `**Integrada em:** <FEATURE_SHA>` no bloco daquela feature;
+- o PR (ou o caminho do `PR.md`), os testes de `testes_adicionados` e o `risco_residual` do `FECHAMENTO.md`.
+
+Junto vai o que a feature produziu de estado do projeto e ficou represado pela janela fechada — premissas novas da F2, por exemplo. Então:
+
+```
+commit   chore(buildx): FT-NN entregue
+git push origin buildx/<projeto_id>
+```
+
+Push normal. **Rejeitado: pare e relate** — nunca `--force`, nunca `--force-with-lease`, nunca um `pull` para "resolver".
+
+O `MAPA.md` é do projeto, não da feature: ele nunca é editado dentro do worktree, senão a atualização fica presa na branch daquela feature e a próxima nasce de um mapa desatualizado.
+
+O worktree da feature **fica onde está**, e o buildx **nunca o remove sozinho**. O conteúdo já está na árvore do projeto, mas a branch continua sendo a referência do PR daquela feature até o merge humano do PR final. Quando o relatório final listar árvores que podem ser removidas, quem remove é a pessoa.
+
+**Depois da primeira feature integrada**, rode a revisão de convenções do B2 — e agora ela roda **no próprio checkout de controle**, porque o código real acabou de entrar nele. Converta cada regra de `decidido_pelo_buildx` para a evidência encontrada; regra contradita pelo código vira achado a resolver. **Duas linhas ficam de fora, sempre:** `Branch principal` e `Branch base` da seção de versionamento pertencem ao contrato do buildx, não descrevem o código, e só o B6 as altera.
+
+## A triagem imediata — a barreira serial
+
+Feature que não integrou exige uma decisão **na hora**, antes de qualquer outra feature começar. É uma pergunta binária: **isto se resolve replanejando agora?**
+
+| Situação | Classe | O que fazer |
+|---|---|---|
+| achado alto da F5, portão reprovando cobertura, plano inadequado | **replanejável** | replaneje **agora**, na mesma branch e no mesmo worktree |
+| regra de negócio não declarada, credencial ausente, acesso que falta | **terminal** (`decisao_humana`, `recurso_externo`) | marque `bloqueada` e siga |
+| terceira reprovação do mesmo plano | **terminal** (teto atingido) | marque `bloqueada` e siga |
+
+### Replanejável: `CONTROL` não se mexe
+
+O buildx devolve a feature à F3 — apagando o plano dentro do worktree dela, como o B5 já descreve — e **não commita estado nenhum**:
+
+- `MAPA.md` continua `em_andamento`;
+- `CONTROL` continua exatamente em `BASE_SHA`;
+- nenhuma outra feature começa.
+
+**É isto que mantém o fast-forward possível.** Se o buildx commitasse um "FT-NN replanejando" aqui, `CONTROL` andaria para `BASE_SHA+1`, deixaria de ser ancestral da feature, e a integração depois seria impossível — exatamente o beco que a barreira serial existe para evitar. Teto: dois replanejamentos; a terceira reprovação é bloqueio terminal.
+
+### Terminal: aí sim o laço segue
+
+`MAPA.md` para `bloqueada`, com o motivo e a pendência no `RECURSAO.md`; commit `chore(buildx): FT-NN bloqueada`; push normal. Aquela branch **nunca será integrada**, e é justamente por isso que `CONTROL` pode avançar sem risco.
+
+### Isto não fere a regra 4
+
+"Bloqueio nunca para o laço" proíbe **parar e esperar humano** — e aqui nada espera humano: ou o buildx faz o trabalho de replanejar agora, ou classifica como terminal e segue. O que muda é a **ordem** do trabalho, não a autonomia. Nenhuma pergunta chega ao usuário.
 
 ## O relato de progresso
 
@@ -181,7 +334,11 @@ Nunca peça confirmação para seguir. Nunca ofereça parar. O usuário fechou o
 ## Critério de saída do B4
 
 - toda feature do `MAPA.md` está `entregue` ou `bloqueada` — nenhuma `pendente` ou `em_andamento`
+- toda feature `entregue` tem `**Integrada em:** <sha>` no mapa, e o SHA é alcançável em `buildx/<projeto_id>`
 - cada feature trabalhada tem worktree e branch próprios, abertos pela F1 — nenhuma segunda branch foi criada para a mesma feature
+- nenhuma feature começou com dependência não integrada
+- `CONTROL` recebeu, por feature, no máximo dois commits do buildx: um antes da F1, outro depois da integração (ou o de bloqueio terminal)
+- toda integração foi fast-forward; nenhuma usou `--no-ff`, rebase, cherry-pick, `update-ref` ou força
 - o `MAPA.md` foi atualizado no checkout de controle, não dentro de um worktree
 - toda feature entregue tem `ENTREGA.md` com `estado: entregue` e `portao: pronto` — com o PR aberto, ou com a descrição em `PR.md` quando a ferramenta do serviço não estava disponível
 - nenhuma etapa da mergex foi executada pelo buildx depois da F6
@@ -191,6 +348,11 @@ Nunca peça confirmação para seguir. Nunca ofereça parar. O usuário fechou o
 
 ## Erros que esta etapa comete
 
+- **Commitar estado no meio da janela.** Uma premissa nova registrada "enquanto está fresco", entre a F1 e a integração, move `CONTROL` e mata o fast-forward. Ela espera o passo 8 — o arquivo é gravado, o commit é que aguarda.
+- **Começar outra feature com um replanejamento pendente.** É a barreira serial. A árvore não pode avançar enquanto uma feature ainda vai voltar para dentro dela.
+- **Trocar o mecanismo quando o ff falha.** O ff falhando é informação, não obstáculo: ele está dizendo que a invariante quebrou. `--no-ff` esconde; `rebase` e `cherry-pick` destroem a ancestralidade de que os portões dependem.
+- **Aceitar `entregue` no mapa como prova de integração.** Só `git merge-base --is-ancestor` prova. O mapa diz o que o buildx achou que fez.
+- **Resolver divergência de remoto sozinho.** `pull`, merge do remoto, rebase ou força: nenhum. Divergência é decisão humana.
 - **Rodar `mergex-check`, `mergex-pr` ou `mergex-qa` depois da F6.** É o fluxo antigo, e hoje duplica o que a F6 acabou de conduzir. Depois da F6 o buildx **lê** o resultado; não o produz de novo.
 - **Completar à mão uma entrega que não aconteceu.** Artefato ausente com a mergex instalada é incompatibilidade de versão da sprintx: registra, bloqueia a feature, segue. Terminar o ciclo por fora cria dois donos para a mesma entrega.
 - **Chamar `mergex-abrir` antes da F1.** É o fluxo antigo. A branch e o worktree são da F1; abrir branch antes dela cria uma segunda área de trabalho para a mesma feature, ou falha — e nos dois casos o trabalho se perde de vista.
