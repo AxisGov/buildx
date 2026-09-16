@@ -245,6 +245,8 @@ Várias premissas na mesma feature seguem numerando a partir dali, na ordem em q
 
 **Na retomada, reutilize.** Se a mesma premissa pendente já está escrita, ela vale: não duplique, não renumere, não reescreva o que já foi usado para responder.
 
+**Depois de a F2 ou a F3 rodarem de novo no mesmo worktree, confira se a seção continua lá.** O contrato da sprintx cobre o frontmatter `kind: decisoes` e as linhas `D-NN` e `PENDENTE-NN`; ele não promete preservar uma seção que não é dele. Sumiu: reescreva com **o mesmo `PR-NN`** e o mesmo conteúdo — a premissa já foi usada para responder, e renumerar agora quebraria a promoção idempotente do passo 8. Reapareceu com conteúdo diferente do que você gravou: **pare e relate**.
+
 Grave também a resposta em `00-DECISOES.md` com `respondido_por: buildx` e a fonte, como sempre. O humano precisa poder abrir o arquivo depois e ver, decisão a decisão, o que foi decidido em nome dele e com base em quê.
 
 ### A fronteira que a F2 não atravessa
@@ -516,7 +518,7 @@ Nunca peça confirmação para seguir. Nunca ofereça parar. O usuário fechou o
 - **Completar à mão uma entrega que não aconteceu.** Artefato ausente com a mergex instalada é incompatibilidade de versão da sprintx: registra, bloqueia a feature, segue. Terminar o ciclo por fora cria dois donos para a mesma entrega.
 - **Chamar `mergex-abrir` antes da F1.** É o fluxo antigo. A branch e o worktree são da F1; abrir branch antes dela cria uma segunda área de trabalho para a mesma feature, ou falha — e nos dois casos o trabalho se perde de vista.
 - **Trabalhar a feature na árvore de controle.** Da F2 até o fim da F6, tudo acontece dentro do worktree que a F1 abriu. A árvore de controle só guarda o estado do projeto.
-- **Procurar o artefato da feature no checkout de controle.** Ele não está lá: o buildx não faz merge. Está no worktree e na branch daquela feature.
+- **Procurar o artefato de uma feature ainda não integrada no checkout de controle.** Antes do fast-forward ele não está lá — está no worktree e na branch daquela feature. Depois, está aqui, porque o ff o trouxe. Feature bloqueada nunca chega: leia da branch dela.
 - **Parar no primeiro bloqueio.** O laço não para: registra, marca, segue. Uma feature bloqueada com dez entregues é um bom dia; dez pendentes porque a primeira travou não é.
 - **Responder a F2 com invenção.** Os quatro degraus existem para isso. Sem premissa registrada, a resposta não é auditável e o `00-DECISOES.md` vira ficção.
 - **Decidir regra de negócio.** A fronteira é dura: o buildx decide como o sistema se protege, não o que ele faz.

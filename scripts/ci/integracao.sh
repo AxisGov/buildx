@@ -59,7 +59,8 @@ gate_dependencia() { # <sha-do-mapa-ou-vazio> <slug>
   [ -n "$(git rev-list -1 HEAD -- "docs/entregas/$slug/ENTREGA.md")" ]
 }
 
-# Passo 7: as quatro provas, antes de tocar em qualquer coisa.
+# Passo 7, provas A–D: árvore de controle limpa, `CONTROL` em `BASE_SHA`, remoto
+# no mesmo ponto, e a feature descendendo daquela base.
 provas_pre_ff() { # <base_sha> <branch-da-feature> <branch-do-projeto>
   [ -z "$(git status --porcelain)" ] || return 1                       # árvore limpa
   [ "$(git rev-parse HEAD)" = "$1" ] || return 1                       # CONTROL onde a feature nasceu
