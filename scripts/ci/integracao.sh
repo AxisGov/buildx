@@ -190,6 +190,42 @@ premissa_estado() { # <arquivo> <PR-NN> <arquivo-com-o-bloco-desejado> -> ausent
   fi
 }
 
+# O item de decisão do `kind: decisoes` da sprintx aceita seis chaves, e só.
+# O buildx responde no formato que ela já entende: proveniência em `motivo`.
+CHAVES_DECISAO="id decisao alternativa_descartada motivo status bloqueante"
+
+chaves_do_item() { # <00-DECISOES.md> -> chaves usadas nos itens, sem repetir
+  awk '{ sub(/\r$/, "") }
+       /^decisoes:/ { dentro = 1; next }
+       dentro && /^[^ ]/ { dentro = 0 }
+       dentro {
+         linha = $0
+         sub(/^ *- /, "", linha); sub(/^ +/, "", linha)
+         if (match(linha, /^[a-z_]+:/)) print substr(linha, 1, RLENGTH - 1)
+       }' "$1" | sort -u
+}
+
+chave_extra() { # <00-DECISOES.md> -> chaves fora do contrato da sprintx
+  local k
+  for k in $(chaves_do_item "$1"); do
+    case " $CHAVES_DECISAO " in *" $k "*) ;; *) printf '%s\n' "$k" ;; esac
+  done
+}
+
+motivo_yaml() { # <00-DECISOES.md> <D-NN>
+  awk -v id="$2" '{ sub(/\r$/, "") }
+       $0 ~ ("^ *- id: " id "$") { achou = 1; next }
+       achou && /^ *- id:/ { achou = 0 }
+       achou && /^ *motivo: / { sub(/^ *motivo: /, ""); print; achou = 0 }' "$1"
+}
+
+motivo_prosa() { # <00-DECISOES.md> <D-NN>
+  awk -F' \\| ' -v id="$2" '{ sub(/\r$/, "") } $1 == id { print $4 }' "$1"
+}
+
+# A sprintx declara: decisão SEM o marcador é lida como confirmada pelo usuário.
+eh_hipotese() { case "$1" in "(HIPOTESE)"*) return 0 ;; *) return 1 ;; esac; }
+
 # Para a mergex, a pasta da feature inteira é artefato de método; o
 # PREMISSAS.md do projeto seria arquivo de produto fora do plano (V9).
 artefato_de_metodo() { # <caminho> <slug>
@@ -522,7 +558,7 @@ REL="docs/sprintx/features/ft-01/BUILDX-PREMISSAS.md"
 escreve_premissa "$WT/$REL" PR-07 "Sessao expira apos 8 horas"
 # A decisão resultante vai para o arquivo da sprintx, citando a fonte.
 mkdir -p "$WT/docs/sprintx/features/ft-01" "$WT/docs/entregas/ft-01" "$WT/src"
-printf -- '---\nkind: decisoes\n---\n\nD-01 | sessao de 8h | sessao permanente | respondido_por: buildx, fonte BUILDX-PREMISSAS.md#PR-07\n' \
+printf -- '---\nkind: decisoes\n---\n\nD-01 | sessao de 8h | sessao permanente | (HIPOTESE) fonte: BUILDX-PREMISSAS.md#PR-07\n' \
   > "$WT/docs/sprintx/features/ft-01/00-DECISOES.md"
 printf 'codigo\n' > "$WT/src/ft-01.ts"
 printf 'estado: entregue\nportao: pronto\n' > "$WT/docs/entregas/ft-01/ENTREGA.md"
@@ -530,7 +566,7 @@ git -C "$WT" add -A; git -C "$WT" -c user.email=t@t -c user.name=t commit -q -m 
 
 caso "39. a premissa nasce no arquivo do buildx" sim "$(sim_nao test -f "$WT/$REL")"
 caso "39. e nao no arquivo da sprintx"           nao \
-  "$(sim_nao grep -q 'PR-07 —' "$WT/docs/sprintx/features/ft-01/00-DECISOES.md")"
+  "$(sim_nao grep -q '^### PR-07 ' "$WT/docs/sprintx/features/ft-01/00-DECISOES.md")"
 caso "39. o global nao e tocado na janela"       nao "$(sim_nao grep -q 'PR-07' docs/projeto/PREMISSAS.md)"
 caso "39. e o CONTROL segue limpo"               sim "$(sim_nao test -z "$(git status --porcelain)")"
 
@@ -621,13 +657,99 @@ caso "49. e o fechamento termina sincronizado" sim "$(sim_nao b2_fechada buildx/
 echo
 echo "o contrato vivo não pede nada às skills irmãs"
 
-VIVOS="$REPO/.claude/skills/buildx/SKILL.md $REPO/.claude/skills/buildx/references $REPO/.claude/commands $REPO/.opencode/commands"
+VIVOS="$REPO/.claude/skills/buildx/SKILL.md $REPO/.claude/skills/buildx/references $REPO/.claude/commands $REPO/.opencode/commands $REPO/AGENTS.md $REPO/README.md"
 caso "50. nenhuma regra viva guarda estado do buildx no 00-DECISOES" nao \
   "$(sim_nao grep -rqE '00-DECISOES[^|]*pendente_promocao|pendente_promocao[^|]*00-DECISOES' $VIVOS)"
 caso "50. nem manda reparar secao que a sprintx apagou" nao \
   "$(sim_nao grep -rqiE 'reescreva.{0,80}(secao|seção)|(secao|seção).{0,40}sumiu' $VIVOS)"
 caso "51. nenhuma regra viva exige mudar a sprintx ou a mergex" nao \
   "$(sim_nao grep -rqiE '(altere|mude|ajuste|modifique) (a |o )?(sprintx|mergex)' $VIVOS)"
+caso "52. nenhuma regra viva manda gravar respondido_por" nao \
+  "$(sim_nao grep -rqi 'respondido_por' $VIVOS)"
+
+echo
+echo 'proveniência da decisão — no campo motivo, dentro do schema da sprintx'
+
+DEC="$TMP_RAIZ/00-DECISOES.md"
+cat > "$DEC" <<'FIM'
+---
+expx_schema: 1
+expx_tool: sprintx
+kind: decisoes
+trabalho_id: ft-01
+origem_buildx: loja-online
+feature_id: FT-01
+decisoes:
+  - id: D-01
+    decisao: Sessao expira apos 8 horas
+    alternativa_descartada: Sessao permanente
+    motivo: (HIPOTESE) fonte: BUILDX-PREMISSAS.md#PR-07 — convencao escolhida pelo BuildX para manter a execucao reversivel
+    status: fechada
+    bloqueante: false
+  - id: D-02
+    decisao: Prefixo do pedido e SEQ-
+    alternativa_descartada: Prefixo ID-
+    motivo: Fonte: PROJETO.md#descricao-original — declarado pelo usuario no briefing BuildX
+    status: fechada
+    bloqueante: false
+  - id: D-03
+    decisao: Camada de servico entre rota e repositorio
+    alternativa_descartada: Rota chamando o repositorio
+    motivo: (HIPOTESE) fonte: CONVENCOES.md#camadas — decidido_pelo_buildx no B2
+    status: fechada
+    bloqueante: false
+  - id: D-04
+    decisao: Sessao guardada em cookie httpOnly
+    alternativa_descartada: localStorage
+    motivo: (HIPOTESE) fonte: docs/projeto/PREMISSAS.md#PR-03 — premissa tecnica registrada no B1
+    status: fechada
+    bloqueante: false
+---
+
+D-01 | Sessao expira apos 8 horas | Sessao permanente | (HIPOTESE) fonte: BUILDX-PREMISSAS.md#PR-07 — convencao escolhida pelo BuildX para manter a execucao reversivel
+D-02 | Prefixo do pedido e SEQ- | Prefixo ID- | Fonte: PROJETO.md#descricao-original — declarado pelo usuario no briefing BuildX
+D-03 | Camada de servico entre rota e repositorio | Rota chamando o repositorio | (HIPOTESE) fonte: CONVENCOES.md#camadas — decidido_pelo_buildx no B2
+D-04 | Sessao guardada em cookie httpOnly | localStorage | (HIPOTESE) fonte: docs/projeto/PREMISSAS.md#PR-03 — premissa tecnica registrada no B1
+FIM
+
+caso "53. a decisao do buildx cabe no schema, sem chave extra" "" "$(chave_extra "$DEC")"
+caso "53. e usa as seis chaves do contrato" \
+  "alternativa_descartada bloqueante decisao id motivo status" "$(chaves_do_item "$DEC" | tr '\n' ' ' | sed 's/ $//')"
+caso "53. respondido_por nao aparece"        nao "$(sim_nao grep -q 'respondido_por' "$DEC")"
+
+# CASO B — premissa assumida pelo buildx, feature-local e global.
+caso "54. premissa feature-local: cita o PR-NN"  sim \
+  "$(sim_nao grep -q 'BUILDX-PREMISSAS.md#PR-07' <<< "$(motivo_yaml "$DEC" D-01)")"
+caso "54. e e hipotese"                          sim "$(sim_nao eh_hipotese "$(motivo_yaml "$DEC" D-01)")"
+caso "55. premissa global: cita o PR-NN"         sim \
+  "$(sim_nao grep -q 'PREMISSAS.md#PR-03' <<< "$(motivo_yaml "$DEC" D-04)")"
+caso "55. e e hipotese"                          sim "$(sim_nao eh_hipotese "$(motivo_yaml "$DEC" D-04)")"
+
+# CASO A — declaração direta do usuário: houve confirmação humana.
+caso "56. declaracao do usuario nao e hipotese"  nao "$(sim_nao eh_hipotese "$(motivo_yaml "$DEC" D-02)")"
+caso "56. mas cita a fonte nominalmente"         sim \
+  "$(sim_nao grep -q 'PROJETO.md#descricao-original' <<< "$(motivo_yaml "$DEC" D-02)")"
+
+# CASO C — convenção que o próprio buildx decidiu no B2.
+caso "57. convencao decidida pelo buildx e hipotese" sim "$(sim_nao eh_hipotese "$(motivo_yaml "$DEC" D-03)")"
+caso "57. e cita a regra do CONVENCOES"              sim \
+  "$(sim_nao grep -q 'CONVENCOES.md#camadas' <<< "$(motivo_yaml "$DEC" D-03)")"
+
+for d in D-01 D-02 D-03 D-04; do
+  caso "58. YAML e prosa dizem o mesmo motivo em $d" \
+    "$(motivo_yaml "$DEC" "$d")" "$(motivo_prosa "$DEC" "$d")"
+done
+
+caso "59. a ponte origem_buildx continua no frontmatter" sim "$(sim_nao grep -q '^origem_buildx: ' "$DEC")"
+caso "59. e feature_id tambem"                           sim "$(sim_nao grep -q '^feature_id: ' "$DEC")"
+
+# Replanejamento: a sprintx regera o arquivo e o buildx o reescreve no mesmo
+# formato. Nenhum campo estrangeiro reaparece.
+sed -i 's/^    decisao: Sessao expira apos 8 horas$/    decisao: Sessao expira apos 4 horas/' "$DEC"
+caso "60. arquivo regerado nao reintroduz respondido_por" nao "$(sim_nao grep -q 'respondido_por' "$DEC")"
+caso "60. nem qualquer outra chave extra"                 ""  "$(chave_extra "$DEC")"
+caso "60. e a fonte continua citada"                      sim \
+  "$(sim_nao grep -q 'BUILDX-PREMISSAS.md#PR-07' <<< "$(motivo_yaml "$DEC" D-01)")"
 
 echo
 echo "---------------------------------------------"
