@@ -20,29 +20,41 @@ Uma execução do buildx é longa e pode ser interrompida a qualquer momento. To
 
 ## 2. Se havia feature em andamento
 
-Não recomece a feature — e **não rode `mergex-abrir` para retomar**. Cada feature tem uma árvore de trabalho própria, aberta pela F1 do sprintx, e retomar é voltar para dentro dela.
+Não recomece a feature — e **não rode `mergex-abrir` para retomar**. Cada feature tem uma árvore de trabalho própria, aberta pela F1 do sprintx.
 
-1. **Leia o `slug`** daquela `FT-NN` no `MAPA.md` (checkout de controle). A branch é `feature/<slug>`.
-2. **Procure a árvore de trabalho:**
-   ```
-   git worktree list --porcelain
-   ```
-   Ele lista, para cada árvore, o `worktree <caminho>` e o `branch refs/heads/<nome>`.
-3. **Branch associada a um worktree:** retome **de dentro daquele diretório**. Se a sessão atual está em outra árvore, anuncie o caminho e continue de lá — nunca trabalhe a feature a partir do checkout de controle.
-4. **Branch existe, sem worktree associado:** reabra a árvore sobre a branch que já existe, sem criar outra e sem trocar a branch do checkout de controle:
-   ```
-   git worktree add ../<repo>--<slug> feature/<slug>
-   ```
-   Se `git` recusar (a branch está em uso por outra árvore, ou o diretório já existe), **pare e relate** — nunca force, nunca remova worktree de ninguém, nunca crie uma segunda branch para a mesma feature.
-5. **Nem branch nem worktree:** a F1 não chegou a rodar. Invoque o sprintx normalmente com o briefing da feature: é ela que abre a área de trabalho.
+### Primeiro, situe-se
 
-**Só dentro da área certa** deixe a máquina de estados do sprintx detectar a fase, que ela lê do disco de `docs/sprintx/features/<slug>/` — invoque a skill e ela continua de onde parou.
+```
+git rev-parse --abbrev-ref HEAD        # deve ser buildx/<projeto_id>
+git fetch origin                        # havendo remoto
+git rev-parse HEAD  e  git rev-parse origin/buildx/<projeto_id>
+git worktree list --porcelain
+git log --oneline -3
+```
 
-**Se a F6 já terminou**, a entrega também já aconteceu: a F6 conduz a mergex de E0 a E8. Confira `docs/entregas/<slug>/ENTREGA.md` antes de invocar qualquer coisa — com `estado: entregue` ou `bloqueado`, não há o que retomar naquela feature: **leia o resultado**, atualize o `MAPA.md` no checkout de controle e siga para a próxima. Nunca reexecute portão, PR ou pacote de QA para "confirmar".
+Se este comando foi chamado **de dentro de um worktree de feature**, o estado do projeto está no checkout de controle, não aqui: leia-o de lá antes de decidir.
 
-A existência da branch **não** diz onde continuar: ela não prova que a árvore existe, nem em que fase a feature está. Quem responde isso é o worktree mais o disco daquela feature.
+**O Git é a verdade; o `MAPA.md` é derivado.** Onde os dois discordarem, o Git ganha — e o mapa é corrigido.
 
-Se este comando foi chamado **de dentro de um worktree de feature**, o estado do projeto (`docs/projeto/MAPA.md`) está no checkout de controle, não aqui: leia-o de lá (`git worktree list --porcelain` mostra qual é a árvore principal) antes de decidir a etapa.
+### A matriz
+
+Leia o `slug` da `FT-NN` `em_andamento` no `MAPA.md`. `CONTROL` = `buildx/<projeto_id>`. `INTEGRADA` significa `git merge-base --is-ancestor feature/<slug> CONTROL` responder sim.
+
+| # | O que você encontra | Onde a sessão morreu | O que fazer |
+|---|---|---|---|
+| **A** | `CONTROL == origin`, sem branch `feature/<slug>` | depois do commit `em andamento`, antes da F1 | `BASE_SHA := HEAD`; invoque a F1 com o briefing |
+| **B** | branch e worktree existem, disco em F1–F5 | no meio do plano | entre no worktree e invoque o sprintx: a máquina de estados dele continua de onde parou |
+| **C** | `ENTREGA.md` com `estado: entregue` e `portao: pronto`, **não** `INTEGRADA` | depois da entrega, antes do fast-forward | rode as quatro provas do B4 e integre. **Não reexecute portão, PR ou QA** |
+| **D** | `INTEGRADA`, mapa ainda `em_andamento` | depois do ff, antes do mapa | só atualize o mapa (`entregue` + `Integrada em <sha>`) e commite |
+| **E** | local à frente do remoto **apenas** pelos commits de estado esperados | depois do commit do mapa, antes do push | `git push origin buildx/<projeto_id>`, push normal |
+| **F** | `CONTROL != origin` de qualquer outra forma | o remoto mudou durante a parada | **PARE E RELATE.** Sem `pull`, sem merge do remoto, sem `rebase`, sem força |
+| **G** | branch da feature não descende do `HEAD` de `CONTROL` | replanejamento cuja base envelheceu | **PARE E RELATE.** A barreira serial foi violada; o caminho é feature nova, não integração forçada |
+
+No caso **A**, se a branch não existir mas o worktree sim — ou o contrário —, resolva antes: worktree órfão se reabre sobre a branch existente (`git worktree add ../<repo>--<slug> feature/<slug>`); `git` recusando, **pare e relate**. Nunca crie uma segunda branch para a mesma feature.
+
+### O que nenhuma retomada faz
+
+Integrar duas vezes — o fast-forward repetido é no-op, e é por isso que **C** é seguro. Mover `CONTROL` para um SHA que ninguém esperava. Sobrescrever o remoto. Recriar branch existente. `stash`, `reset` destrutivo, `--force`, `pull` automático, ou resolver divergência sozinha.
 
 ## 3. Confirme o modo
 

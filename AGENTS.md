@@ -42,7 +42,7 @@ B1 CONCEPÇÃO → B2 FUNDAÇÃO → B3 DECOMPOSIÇÃO → B4 CONSTRUÇÃO → B
 | B1 | mapeia o escopo, varre lacunas, registra premissas | prodx (modo greenfield) |
 | B2 | escolhe a stack, instala a suíte, monta o esqueleto testável | stackx (invertido) |
 | B3 | **quebra o projeto em features** | só o buildx |
-| B4 | o laço: por feature, sprintx F1–F6 no worktree que a F1 abre; a F6 conduz a entrega (mergex E0→E8) e o buildx lê o resultado | sprintx, mergex |
+| B4 | o laço: por feature, sprintx F1–F6 no worktree que a F1 abre; a F6 conduz a entrega (mergex E0→E8), e o buildx lê o resultado e integra a feature na árvore do projeto por fast-forward | sprintx, mergex |
 | B5 | classifica pendências e devolve ao laço | buildx |
 | B6 | confere o construído contra o mapa, e relata | prodx (como auditor) |
 
@@ -112,7 +112,15 @@ O que o buildx assume quando o usuário não diz nada. Detalhe em `references/02
 
 ## Estrutura em disco de um projeto do buildx
 
-No **checkout de controle**, onde o buildx roda:
+Três níveis, e nenhum se confunde com o outro:
+
+```
+main                        intocada do B2 até o PR final
+  └─ buildx/<projeto_id>    checkout de controle + produto acumulado
+       └─ feature/<slug>    worktree temporário de uma feature
+```
+
+No **checkout de controle** — a branch `buildx/<projeto_id>`, criada no B2, onde o buildx roda e para onde cada feature entregue volta por `git merge --ff-only`:
 
 ```
 docs/

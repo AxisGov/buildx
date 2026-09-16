@@ -90,7 +90,7 @@ B1 CONCEPÇÃO → B2 FUNDAÇÃO → B3 DECOMPOSIÇÃO → B4 CONSTRUÇÃO → B
 | **B1** | Concepção | mapeia o escopo e **varre o que você não pediu** — autenticação, LGPD, auditoria, backup, observabilidade. Cada lacuna vira premissa registrada | `prodx` |
 | **B2** | Fundação | escolhe a stack, instala a suíte Expx, monta o esqueleto que instala, sobe e testa | `stackx` |
 | **B3** | Decomposição | **quebra o projeto em features**, com ordem de dependência | só o buildx |
-| **B4** | Construção | o laço: por feature, área de trabalho própria → plano → auditoria → execução TDD → PR | `sprintx`, `mergex` |
+| **B4** | Construção | o laço: por feature, área de trabalho própria → plano → auditoria → execução TDD → entrega → **integração na árvore do projeto** | `sprintx`, `mergex` |
 | **B5** | Recursão | classifica o que ficou pelo caminho e devolve ao laço o que a máquina resolve | buildx |
 | **B6** | Validação | confere o construído contra o mapa, item a item, e relata | `prodx` |
 
@@ -155,9 +155,9 @@ Regra de negócio que você não declarou nunca é chutada. Ela vira pendência,
 
 ## E o merge é seu
 
-O buildx entrega PRs abertos, verdes e descritos — com o pacote de teste manual de cada feature, executável por quem não programa.
+Cada feature entregue entra numa branch de montagem, `buildx/<projeto_id>`, para que a seguinte nasça enxergando a anterior — e é essa árvore acumulada que vira **um único pull request** para a sua branch principal, com o pacote de teste manual de cada feature, executável por quem não programa. Os PRs por feature ficam no histórico, apontando para a branch de montagem, para quem quiser revisar em pedaços.
 
-Ele não faz merge, não oferece, não sugere que faria. Todas as outras coisas que ele faz sozinho são reversíveis: uma premissa errada se corrige, um plano ruim se replaneja. Merge é onde o trabalho vira o sistema, e é a última rede antes de produção.
+Ele não faz merge na sua principal, não oferece, não sugere que faria. Todas as outras coisas que ele faz sozinho são reversíveis: uma premissa errada se corrige, um plano ruim se replaneja, e a branch de montagem só recebe trabalho que já passou pelo portão. Merge na principal é onde o trabalho vira o sistema, e é a última rede antes de produção.
 
 Um buildx que faz merge sozinho não é mais autônomo — é irreversível. São coisas diferentes.
 

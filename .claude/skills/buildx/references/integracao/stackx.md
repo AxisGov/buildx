@@ -52,6 +52,8 @@ Depois da primeira feature entregue (B4, passo 7), existe código real — **na 
 4. **regra contradita pelo código** → achado. Ou o código se ajusta à convenção, ou a convenção estava errada e é corrigida
 5. **convenção que emergiu e o B2 não previu** → acrescente, com evidência
 
+**Duas linhas ficam fora desta revisão, sempre:** `Branch principal` e `Branch base`, da seção de versionamento. Elas não descrevem o código — descrevem como o projeto é montado, e são contrato do buildx: a `Branch base` é o que faz cada feature nascer da árvore acumulada, e a `Branch principal` é o destino do PR final. Um `stackx-detectar` que as "corrigisse" para o que o repositório parece fazer faria a próxima feature nascer da principal, silenciosamente. Quem altera a `Branch base` é o B6, uma vez, ao devolvê-la ao valor da `Branch principal`.
+
 O passo 4 é uma decisão de verdade, e a regra é: **na dúvida, o código ganha.** Se a feature inteira foi planejada, auditada, testada e entregue de um jeito que contraria a convenção do B2, o mais provável é que a convenção estivesse errada — ela foi escrita antes de existir código, por um método que admite ter suposto.
 
 Exceção: convenção que realiza premissa de segurança. Aí a convenção ganha e o código se ajusta, sempre.

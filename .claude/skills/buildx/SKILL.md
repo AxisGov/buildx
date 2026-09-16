@@ -131,7 +131,15 @@ sprintx F6        → execução sob TDD E A ENTREGA INTEIRA:
 buildx            → LÊ o resultado em ENTREGA.md e FECHAMENTO.md, atualiza o MAPA.md
 ```
 
-**Duas árvores, e não se confundem.** O buildx roda no **checkout de controle**, que guarda o estado do projeto (`docs/projeto/`, `docs/stack/`). Cada feature vive no **worktree que a F1 do sprintx abre** — `../<repo>--<slug>`, branch `feature/<slug>` —, e é lá que ficam `docs/sprintx/features/<slug>/` e o código. Da F2 até o fim da F6 o buildx trabalha de dentro desse worktree; depois volta ao controle e atualiza o `MAPA.md`.
+**Três níveis, e nenhum se confunde com o outro.**
+
+```
+main                        intocada do B2 até o PR final
+  └─ buildx/<projeto_id>    checkout de controle + produto acumulado
+       └─ feature/<slug>    worktree temporário de uma feature
+```
+
+O buildx roda **sempre** em `buildx/<projeto_id>`, criada no B2, e nunca troca de branch. Cada feature nasce dela — é assim que a `FT-02` enxerga a `FT-01` — vive no worktree que a F1 abre, e volta para ela por `git merge --ff-only` quando o portão fecha verde. **A invariante:** entre o nascimento de uma feature e a integração dela, a branch do projeto não recebe commit que não venha dessa feature. O fast-forward é o teste disso; falhou, para.
 
 **O buildx não invoca a mergex — em etapa nenhuma.** A área de trabalho é da F1, e a entrega é conduzida pela F6: E0, E1 por task e E2 → E8 depois do `FECHAMENTO.md`. Quando a F6 devolve o controle, a entrega já aconteceu; o buildx **lê** `ENTREGA.md` e `FECHAMENTO.md` e atualiza o `MAPA.md`. Repetir `mergex-check`, `mergex-pr` ou `mergex-qa` aqui duplicaria o ciclo. Como não há merge automático, o código de uma feature **não** está visível na árvore de controle.
 
@@ -201,7 +209,7 @@ O modo autônomo viola regras que existem por bons motivos nas camadas irmãs. C
 
 ## Estrutura em disco
 
-No **checkout de controle**, onde o buildx roda:
+No **checkout de controle** — a branch `buildx/<projeto_id>`, onde o buildx roda e onde o produto se acumula:
 
 ```
 docs/

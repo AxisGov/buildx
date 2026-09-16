@@ -40,7 +40,8 @@ achado da F5, ou o que a F6 não conseguiu resolver>
 **Pendência:** <o item correspondente no RECURSAO.md>
 
 <Se entregue:>
-**PR:** <#numero>
+**PR:** <#numero — da feature, contra buildx/<projeto_id> | caminho do PR.md>
+**Integrada em:** <sha do commit em buildx/<projeto_id> depois do fast-forward>
 **Sprints:** <n>
 **Testes:** <n>
 

@@ -28,7 +28,9 @@ Conferência do construído contra o `PROJETO.md`. **Confere, não conserta.**
 
 ## O sistema de pé
 
-<A verificação que nenhum artefato prova. Numa cópia limpa:>
+<A verificação que nenhum artefato prova. Numa cópia limpa **de
+`buildx/<projeto_id>`** — o produto integrado, com todas as features
+entregues na mesma árvore:>
 
 | Verificação | Resultado |
 |---|---|
@@ -75,9 +77,12 @@ proteção que não existe — e alguém vai confiar nela.>
 
 ## Conferência — features
 
-| ID | PR (ou `PR.md`) | Suíte | Portão (`ENTREGA.md`) | Conclusão |
-|---|---|---|---|---|
-| FT-NN | <#n \| —> | <verde \| vermelha> | <pronto \| bloqueado> | <conclusão> |
+| ID | PR (ou `PR.md`) | Suíte | Portão (`ENTREGA.md`) | Integrada em | Conclusão |
+|---|---|---|---|---|---|
+| FT-NN | <#n \| —> | <verde \| vermelha> | <pronto \| bloqueado> | <sha \| — não integrada> | <conclusão> |
+
+<Feature sem `Integrada em` não faz parte do produto que vai ao PR final.
+Diga isso aqui e na seção 5 do relatório, com o motivo.>
 
 ---
 

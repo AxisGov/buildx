@@ -34,6 +34,19 @@ Regra, no B4 (`references/05-construcao.md`, passo 6):
 
 **`pr_url: null` não é falha.** O contrato da mergex diz isso literalmente: sem a ferramenta do serviço, a descrição fica em `docs/entregas/<slug>/PR.md` e a entrega continua válida. Quem decide é o `portao`.
 
+## Os dois tipos de pull request
+
+| | PR da feature | PR final |
+|---|---|---|
+| Quem abre | a mergex, no E7, dentro da F6 | **o buildx**, no B6 |
+| De → para | `feature/<slug>` → `buildx/<projeto_id>` | `buildx/<projeto_id>` → branch principal |
+| Estado | rascunho | aberto |
+| Para quê | diff granular, faixas de atenção, pacote de QA, rastreabilidade | a entrega do projeto inteiro |
+
+O PR da feature aponta para a base que o `CONVENCOES.md` declara, e por isso cai naturalmente na branch do projeto — o buildx não configura nada para isso acontecer. Ele só garante, antes de a feature começar, que o remoto da branch do projeto está no mesmo SHA que a feature vai usar como base; senão o diff do PR mostraria trabalho alheio.
+
+**Quando o buildx integra a feature e publica a branch do projeto, o GitHub pode marcar o PR daquela feature como `merged`.** Isso é verdade e é inofensivo: o código *foi* integrado **naquela branch**. **Não é merge na principal**, não é decisão humana tomada pela máquina, e a D-03 segue intacta — a principal só é alcançada pelo PR final, e só por mão humana.
+
 ## Nunca complete o ciclo à mão
 
 Se os artefatos não aparecerem, **não rode as etapas que faltaram**. Uma entrega conduzida pela metade por cada lado produz commit sem portão, PR sem pacote de QA, ou entrega registrada duas vezes — e nenhuma dessas falhas aparece até alguém abrir o repositório.

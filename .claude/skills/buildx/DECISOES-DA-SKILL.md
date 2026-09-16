@@ -303,3 +303,44 @@ Há um terceiro efeito, mais silencioso: um esqueleto gerado tem, no melhor caso
 **O que esta decisão NÃO resolve:** a integração acumulativa entre features, a árvore `buildx/<projeto_id>`, a base dinâmica e o PR final único seguem reservados à frente `fix/p0-buildx-integration`.
 
 **O que invalida:** a sprintx deixar de acionar E2→E8 na F6 — aí o buildx voltaria a precisar conduzir a entrega, e esta decisão teria de ser revista junto com o contrato dela.
+
+---
+
+## D-21 — Integração interna não é o merge que a D-03 protege
+
+**Decisão:** avançar `buildx/<projeto_id>` com `git merge --ff-only feature/<slug>`, para uma feature já entregue e com `portao: pronto`, é **integração interna** e é permitida. O merge que a D-03 protege — o de `buildx/<projeto_id>` para a branch principal — continua exclusivamente humano, e `mergex-revisar` continua nunca sendo invocado nem encadeado.
+
+**Alternativa descartada:** ler a D-03 como proibição de qualquer avanço automático de branch, o que obrigaria o humano a integrar feature por feature à mão antes que a próxima pudesse nascer da árvore certa — e faria o modo autônomo parar a cada feature.
+
+**Por quê a distinção é real, e não uma flexibilização:**
+
+- **a branch principal não é tocada** — nem por commit, nem por push, e os hooks de segurança da mergex barram as duas coisas;
+- **nada consome `buildx/<projeto_id>`**: não há deploy, release, tag ou publicação a partir dela. Ela é a montagem do que o humano vai revisar como um pull request;
+- **correção se faz para a frente**: qualquer ajuste antes do PR final entra como commit novo — feature nova ou replanejamento —, nunca reescrevendo o que já entrou;
+- **nenhuma reescrita de histórico remoto é necessária em nenhum momento do fluxo.** Uma vez publicada, `buildx/<projeto_id>` não é repontada, forçada nem reescrita; se algo precisar ser desfeito, é por commit de reversão, como em qualquer branch compartilhada.
+
+O fast-forward é, aliás, a operação de integração mais conservadora que existe: não cria commit, não resolve conflito, não pode trazer conteúdo que não esteja na feature, e falha em vez de adivinhar quando a árvore divergiu.
+
+**O que invalida:** alguém passar a consumir `buildx/<projeto_id>` como entrega — deploy, release, tag de produção. Aí ela deixa de ser interna, e a D-03 volta a valer inteira sobre ela.
+
+---
+
+## D-22 — O buildx versiona o próprio estado, fora da janela da feature
+
+**Decisão:** o buildx commita `docs/projeto/**` e `docs/stack/**` em `buildx/<projeto_id>`, e **só isso**. Por feature, em no máximo dois momentos:
+
+1. **antes da F1** — `MAPA.md` com a feature `em_andamento`. O `HEAD` resultante é o `BASE_SHA` de que a feature nasce;
+2. **depois do fast-forward** — `entregue` e o SHA integrado.
+
+**Entre esses dois momentos, `buildx/<projeto_id>` não recebe commit nenhum.** Premissa nova da F2 é gravada no arquivo na hora, mas o commit dela espera o fechamento da feature. É essa janela fechada que torna o fast-forward possível.
+
+Dois casos particulares, e os dois importam:
+
+- **feature com replanejamento pendente não gera commit de estado.** O mapa fica `em_andamento` e a árvore fica em `BASE_SHA`. Commitar ali moveria `CONTROL` para `BASE_SHA+1`, e a integração depois seria impossível;
+- **feature com bloqueio terminal gera o commit de `bloqueada`**, porque aquela branch nunca será integrada e a árvore pode avançar sem risco.
+
+**Alternativa descartada:** deixar `docs/projeto/` fora do versionamento, como estado solto na árvore. Ela quebra três coisas: o PR final não conteria o mapa, as premissas nem a validação; a árvore de controle viveria suja, e árvore suja bloqueia integração; e a retomada perderia a única fonte durável de estado.
+
+**Por quê não viola a regra 3.** "O buildx não implementa, não planeja e não testa" é sobre o **produto**: código, plano e teste continuam sendo das irmãs. Commitar o próprio registro de orquestração é escrituração, não implementação — o mesmo movimento que a mergex formalizou para os artefatos de método dela. O buildx nunca commita código de produto nem artefato interno de feature: esses chegam por fast-forward.
+
+**O que invalida:** o estado do projeto passar a viver fora do repositório (um painel externo, um serviço) — aí não haveria o que commitar, e a janela fechada deixaria de ser necessária.

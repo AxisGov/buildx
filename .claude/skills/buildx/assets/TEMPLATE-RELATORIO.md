@@ -135,9 +135,14 @@ demonstração.
 1. **Revise as decisões da seção 1**, se houver. São o que pode ter sido
    decidido diferente do que você faria.
 2. **Confira as premissas da seção 3** pelo campo *o que invalida*.
-3. **Revise os PRs e faça o merge.** Eles estão abertos, verdes e descritos
-   — mas **integrar código é decisão sua**, e é a última rede antes de
-   produção. Não fiz merge de nada, e não vou fazer.
+3. **Revise o pull request final e faça o merge.** É um só, de
+   `buildx/<projeto_id>` para `<branch principal>`, e traz o produto inteiro:
+   cada feature entregue já está dentro dele. Os PRs por feature continuam
+   abertos no histórico e servem para revisar em pedaços — eles apontam para
+   a branch de montagem, **não** para a principal, e o GitHub pode tê-los
+   marcado como merged quando a montagem avançou. **Integrar na principal é
+   decisão sua**, e é a última rede antes de produção. Não fiz merge de nada,
+   e não vou fazer.
 
 ---
 

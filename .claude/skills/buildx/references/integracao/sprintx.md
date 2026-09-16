@@ -28,6 +28,18 @@ A regra 21 do sprintx — **uma feature por árvore de trabalho** — é anterio
 
 O buildx **não abre branch, não abre worktree e não invoca `mergex-abrir`**. Se a F1 anunciar a área de trabalho e encerrar a fase — o comportamento dela quando o harness não troca de árvore sozinho —, continue de dentro do diretório indicado.
 
+### De onde a feature nasce
+
+A F1 resolve a base sozinha, e a **primeira precedência dela é a seção de versionamento do `CONVENCOES.md`**. É exatamente por isso que o B2 grava ali:
+
+```
+Branch base: buildx/<projeto_id>
+```
+
+como convenção estabelecida — nunca `PROPOSTA`, que por contrato não governa. Sem argumento novo, sem campo no `ORQUESTRADOR.md`, sem tocar no `expx-schema`: o buildx escreve uma convenção que a sprintx **já lê hoje**, e que sobrevive à morte da sessão porque está no disco.
+
+Depois que a F1 abrir a área de trabalho, o buildx confere que a base foi mesmo essa (`git merge-base --is-ancestor <BASE_SHA> feature/<slug>`). Não foi: **para e relata** — integrar depois seria impossível.
+
 Sem git, ou com "sem worktree" explícito, a F1 trabalha na árvore atual (`worktree: null` no `ORQUESTRADOR.md`) e nada disso muda para o buildx.
 
 **O que o buildx guarda de cada feature** é só o que cabe no `MAPA.md` — id, slug, status, PR. O detalhe fica no worktree dela, e o buildx o lê de lá; como não há merge automático, ele **não** aparece no checkout de controle.
