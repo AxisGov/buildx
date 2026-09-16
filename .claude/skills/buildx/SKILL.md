@@ -143,7 +143,7 @@ O buildx roda **sempre** em `buildx/<projeto_id>`, criada no B2, e nunca troca d
 
 **O buildx não invoca a mergex — em etapa nenhuma.** A área de trabalho é da F1, e a entrega é conduzida pela F6: E0, E1 por task e E2 → E8 depois do `FECHAMENTO.md`. Quando a F6 devolve o controle, a entrega já aconteceu; o buildx **lê** `ENTREGA.md` e `FECHAMENTO.md` e atualiza o `MAPA.md`. Repetir `mergex-check`, `mergex-pr` ou `mergex-qa` aqui duplicaria o ciclo. Antes do fast-forward, o código de uma feature **não** está visível na árvore de controle; depois dele, está.
 
-**A F2 no modo autônomo.** A regra 10 do sprintx obriga a F2 a entrevistar o humano. No buildx o humano já falou — na descrição e, no modo briefing, na rodada única. Então o buildx **responde a F2 no lugar dele**, derivando cada resposta do `PROJETO.md`, do `PREMISSAS.md` e do `CONVENCOES.md`, e gravando em `00-DECISOES.md` com `respondido_por: buildx`. Nenhuma resposta é inventada: o que não estiver derivável de um desses três arquivos vira **premissa nova, registrada antes de ser usada** — em `docs/sprintx/features/<slug>/BUILDX-PREMISSAS.md`, arquivo do buildx dentro da pasta da feature, e promovida ao `PREMISSAS.md` do projeto depois que a feature é integrada. A decisão que resulta dela vai para o `00-DECISOES.md`, que é da sprintx, citando `BUILDX-PREMISSAS.md#PR-NN` como fonte. Escrever direto no estado global sujaria a árvore de controle dentro da janela fechada e barraria o fast-forward.
+**A F2 no modo autônomo.** A regra 10 do sprintx obriga a F2 a entrevistar o humano. No buildx o humano já falou — na descrição e, no modo briefing, na rodada única. Então o buildx **responde a F2 no lugar dele**, derivando cada resposta do `PROJETO.md`, do `PREMISSAS.md` e do `CONVENCOES.md`, e gravando em `00-DECISOES.md` no schema da sprintx, **sem chave nova**: a proveniência vai no `motivo`, com `(HIPOTESE)` quando o buildx assumiu e sem marcador quando o usuário declarou. Nenhuma resposta é inventada: o que não estiver derivável de um desses três arquivos vira **premissa nova, registrada antes de ser usada** — em `docs/sprintx/features/<slug>/BUILDX-PREMISSAS.md`, arquivo do buildx dentro da pasta da feature, e promovida ao `PREMISSAS.md` do projeto depois que a feature é integrada. A decisão que resulta dela vai para o `00-DECISOES.md`, que é da sprintx, citando `BUILDX-PREMISSAS.md#PR-NN` como fonte. Escrever direto no estado global sujaria a árvore de controle dentro da janela fechada e barraria o fast-forward.
 
 **Bloqueio nunca para o laço.** Feature bloqueada é marcada `bloqueada` no `MAPA.md`, com o motivo, e o laço segue para a próxima. É o B5 que decide o que fazer com ela.
 
@@ -182,7 +182,7 @@ O modo autônomo viola regras que existem por bons motivos nas camadas irmãs. C
 |---|---|---|
 | "a skill não decide, humano assina" | prodx R1 | o buildx assina, com `provisorio: true` e `aprovado_por: buildx (modo autonomo)` |
 | "nada vai ao sprintx sem veredito assinado" | prodx R2 | a auto-assinatura do buildx satisfaz o portão |
-| "a F2 é obrigada a perguntar ao humano" | sprintx R10 | o buildx responde, tudo em `00-DECISOES.md` com `respondido_por: buildx` |
+| "a F2 é obrigada a perguntar ao humano" | sprintx R10 | o buildx responde, tudo em `00-DECISOES.md`, com a proveniência no `motivo` e `(HIPOTESE)` no que foi assumido |
 | "convenção só se registra com evidência no código" | stackx | no B2 a origem é `decidido_pelo_buildx`, não um arquivo |
 
 **O que o buildx nunca quebra:**

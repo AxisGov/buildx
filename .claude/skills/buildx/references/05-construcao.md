@@ -245,15 +245,31 @@ Formato, sem frontmatter e sem schema novo — exatamente os campos que a promo�
 2. **confira o `BUILDX-PREMISSAS.md` da feature.** A mesma premissa já está lá: **reuse**, com o `PR-NN` que ela já tem;
 3. **senão, grave-a** no `BUILDX-PREMISSAS.md`;
 4. **só então** use essa premissa para responder à F2 (ou à F3);
-5. **grave a decisão resultante no `00-DECISOES.md`**, como sempre, com `respondido_por: buildx` e a fonte — que aqui é `BUILDX-PREMISSAS.md#PR-NN`.
+5. **grave a decisão resultante no `00-DECISOES.md`**, no schema da sprintx, citando a fonte em `motivo` — que aqui é `BUILDX-PREMISSAS.md#PR-NN`.
 
 Várias premissas na mesma feature seguem numerando a partir dali, na ordem em que nascem.
 
 A divisão é essa, e é o que mantém cada arquivo com um dono só: **a sprintx é dona da decisão**, no `00-DECISOES.md`; **o buildx é dono da premissa** que pode virar estado global, no `BUILDX-PREMISSAS.md`. O humano abre os dois e vê a decisão e a premissa que a sustenta, cada uma no arquivo de quem a escreveu.
 
+### A proveniência mora em `motivo`, e o schema não muda
+
+O item de decisão do `kind: decisoes` aceita seis chaves — `id`, `decisao`, `alternativa_descartada`, `motivo`, `status`, `bloqueante` — e só. **Não acrescente chave nenhuma** — nem uma para registrar quem respondeu —, não crie frontmatter paralelo, não abra bloco privado do buildx ali. Um campo fora do contrato passa despercebido em revisão e só aparece quando a cadeia roda inteira, que foi exatamente como este foi encontrado (D-25). O `00-DECISOES.md` é da sprintx; o buildx responde no formato que ela já entende.
+
+A rastreabilidade continua inteira, em `motivo`: uma linha de texto que diz **de onde a resposta veio**, nominalmente. E o marcador `(HIPOTESE)` não é enfeite — a sprintx define que decisão **sem** ele é lida como confirmada pelo usuário, em qualquer modo. Então classifique a origem antes de escrever:
+
+| Caso | De onde a resposta veio | `(HIPOTESE)`? | `motivo` |
+|---|---|---|---|
+| **A** | declaração direta do usuário, no pedido ou no briefing | **não** | `Fonte: PROJETO.md#descricao-original — declarado pelo usuario no briefing BuildX` |
+| **B** | premissa assumida pelo buildx (`BUILDX-PREMISSAS.md` ou `PREMISSAS.md`) | **sim** | `(HIPOTESE) fonte: BUILDX-PREMISSAS.md#PR-07 — convencao escolhida pelo BuildX para manter a execucao reversivel` |
+| **C** | convenção do `CONVENCOES.md` | **depende** | confirmada pelo usuário: factual, como no A. Decidida pelo buildx ou detectada pelo stackx: `(HIPOTESE) fonte: CONVENCOES.md#<regra> — decidido_pelo_buildx no B2` |
+
+**O caso C é onde se erra.** "Está estabelecida no arquivo" não é "o usuário confirmou": a maior parte do `CONVENCOES.md` de um projeto novo nasce marcada `decidido_pelo_buildx`, e uma decisão derivada dela sem `(HIPOTESE)` afirma ao leitor uma confirmação humana que nunca houve. Na dúvida, marque — hipótese declarada se confirma depois; confirmação inventada não se desfaz.
+
+**Prosa e YAML dizem a mesma coisa.** A linha `D-NN | decisão | alternativa descartada | motivo` da prosa usa **o mesmo `motivo`** do frontmatter. Sem coluna nova, sem campo extra, sem apêndice.
+
 **Na retomada, preserve.** O `BUILDX-PREMISSAS.md` existente vale inteiro. Mesmo `PR-NN` com o mesmo conteúdo: reuse, é no-op. Mesmo `PR-NN` com conteúdo diferente: **pare e relate** — não escolha uma das versões.
 
-**A F2 e a F3 podem rodar de novo, e o `00-DECISOES.md` pode ser regenerado do zero pela sprintx.** A premissa sobrevive, porque não está lá. Quando a decisão nova voltar a usá-la, cite `BUILDX-PREMISSAS.md#PR-NN` outra vez.
+**A F2 e a F3 podem rodar de novo, e o `00-DECISOES.md` pode ser regenerado do zero pela sprintx.** A premissa sobrevive, porque não está lá. Quando a decisão nova voltar a usá-la, cite `BUILDX-PREMISSAS.md#PR-NN` outra vez, em `motivo`, com `(HIPOTESE)` como da primeira vez. O buildx **não preserva campo estrangeiro** no arquivo regenerado — não há campo do buildx ali para preservar.
 
 ### A fronteira que a F2 não atravessa
 

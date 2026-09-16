@@ -67,7 +67,7 @@ B1 CONCEPÇÃO → B2 FUNDAÇÃO → B3 DECOMPOSIÇÃO → B4 CONSTRUÇÃO → B
 |---|---|---|
 | "a skill não decide, humano assina" | prodx R1 | o buildx assina, `provisorio: true` |
 | "nada vai ao sprintx sem veredito assinado" | prodx R2 | a auto-assinatura satisfaz o portão |
-| "a F2 é obrigada a perguntar ao humano" | sprintx R10 | o buildx responde, em quatro degraus, tudo em `00-DECISOES.md` |
+| "a F2 é obrigada a perguntar ao humano" | sprintx R10 | o buildx responde, em quatro degraus, tudo em `00-DECISOES.md` — no schema da sprintx, com a proveniência no `motivo` |
 | "convenção só se registra com evidência" | stackx | no B2 a origem é `decidido_pelo_buildx` |
 
 Cada violação é restrita ao modo e registrada no artefato que toca.

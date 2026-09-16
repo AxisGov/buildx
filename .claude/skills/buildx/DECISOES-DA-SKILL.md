@@ -388,3 +388,33 @@ Dois casos particulares, e os dois importam:
 **O que não muda:** "escrever antes de usar"; a reserva do `PR-NN` lendo o `PREMISSAS.md` da `CONTROL` em `BASE_SHA`; a promoção apenas depois do fast-forward, idempotente pelo próprio `PR-NN` — id ausente promove, id com mesmo conteúdo é no-op, id com conteúdo diferente para; e o fato de que só feature integrada promove. Nada é escrito de volta no `BUILDX-PREMISSAS.md` para marcar a promoção: a existência idêntica no `PREMISSAS.md` global é a prova.
 
 **O que invalida:** a sprintx passar a declarar, em contrato, que preserva conteúdo estrangeiro no `00-DECISOES.md` — aí os dois arquivos poderiam voltar a ser um. Ou a mergex deixar de tratar a pasta da feature como artefato de método, caso em que o endereço precisa mudar de novo.
+
+---
+
+## D-25 — O buildx não estende o `kind: decisoes` da sprintx
+
+*(Corrige um ponto da D-24, que continua valendo no que decidiu — a premissa em arquivo próprio, o `00-DECISOES.md` com um dono só. Onde ela diz `respondido_por: buildx`, leia "a proveniência no `motivo`". Nenhuma instrução viva manda gravar aquele campo.)*
+
+**Decisão:** o buildx grava a decisão da F2 no `00-DECISOES.md` **no schema da sprintx, sem acrescentar chave nenhuma**. A proveniência — quem fechou, com base em quê — vai no campo `motivo`, que já existe, em uma linha de texto que nomeia a fonte. O marcador `(HIPOTESE)` segue a semântica da sprintx: ela declara que decisão **sem** o marcador é lida como confirmada pelo usuário, em qualquer modo.
+
+**De onde veio.** O primeiro E2E real BuildX → SprintX → MergeX. A F2 da FT-01 escreveu as decisões seguindo o contrato do buildx, que mandava registrar `respondido_por: buildx` por decisão. O item de decisão do `kind: decisoes` aceita seis chaves — `id`, `decisao`, `alternativa_descartada`, `motivo`, `status`, `bloqueante` — e aquela não é uma delas. A validação apontou a extensão fora de contrato. Não foi a causa do bloqueio no E2, e é exatamente por isso que merece registro: passou despercebida em revisão de contrato e só apareceu quando a cadeia rodou de ponta a ponta.
+
+**Alternativa descartada:** acrescentar `respondido_por` ao `kind: decisoes` da sprintx.
+
+**Por quê ela perde.** Criaria acoplamento de schema entre as duas skills para uma informação que já cabe num campo existente. O `motivo` foi feito para isto — a própria sprintx o usa para carregar `(HIPOTESE)` e a evidência quando a F2 fecha uma decisão por pesquisa. Um campo novo obrigaria toda instalação da sprintx a conhecer o buildx para validar o arquivo, e a cadeia inteira a subir de versão junto.
+
+**Os três casos de proveniência**, porque a classificação é onde se erra:
+
+| | origem | marcador |
+|---|---|---|
+| **A** | declaração direta do usuário, no pedido ou no briefing | **sem** `(HIPOTESE)` — houve confirmação humana |
+| **B** | premissa assumida pelo buildx, no `BUILDX-PREMISSAS.md` ou no `PREMISSAS.md` | **com** `(HIPOTESE)`, citando o `PR-NN` |
+| **C** | convenção do `CONVENCOES.md` | **com** `(HIPOTESE)` quando foi o buildx ou o stackx que a escolheu; **sem**, quando o usuário a confirmou |
+
+"Estabelecida no arquivo" não é "confirmada pelo usuário": num projeto novo a maior parte do `CONVENCOES.md` nasce marcada `decidido_pelo_buildx`, e uma decisão derivada dela sem o marcador afirmaria uma confirmação humana que nunca houve.
+
+**`origem_buildx` e `feature_id` não são afetadas.** Elas não estendem o `kind: decisoes`: são a ponte entre o nível do projeto e o nível do trabalho, declarada no `references/00-schema.md` como chaves que a cadeia acrescenta ao frontmatter de **todo** artefato da feature. Continuam obrigatórias.
+
+**O que não muda:** o `BUILDX-PREMISSAS.md` e tudo que a D-24 decidiu; a reserva do `PR-NN`; a promoção pós-ff, idempotente pelo `PR-NN`; e a regra de escrever antes de usar. Muda só a representação da decisão dentro do arquivo da sprintx.
+
+**O que invalida:** a sprintx acrescentar, por conta dela, um campo de proveniência ao `kind: decisoes` — aí o buildx passa a usá-lo, em vez de carregar tudo no `motivo`.

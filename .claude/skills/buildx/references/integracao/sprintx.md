@@ -80,7 +80,9 @@ O degrau 4 grava **na feature**, nunca no `PREMISSAS.md` do projeto: estamos den
 
 O degrau 4 é o que separa decisão auditável de invenção. Nunca responda com algo que não esteja escrito em um dos três — se não estiver, escreva antes.
 
-**Cada arquivo tem um dono só.** O `00-DECISOES.md` é da sprintx: o buildx grava ali a **decisão**, com `respondido_por: buildx` e a fonte — que, no degrau 4, é `BUILDX-PREMISSAS.md#PR-NN`. O `BUILDX-PREMISSAS.md` é do buildx: guarda a **premissa** que pode virar estado do projeto. O registro de decisões da feature continua sendo o da sprintx; muda apenas quem decidiu, e isso fica à vista.
+**Cada arquivo tem um dono só.** O `00-DECISOES.md` é da sprintx: o buildx grava ali a **decisão**, no schema `kind: decisoes` **sem acrescentar chave nenhuma**, e a proveniência vai no `motivo` — que, no degrau 4, cita `BUILDX-PREMISSAS.md#PR-NN` e começa com `(HIPOTESE)`, porque a premissa foi assumida, não confirmada. O `BUILDX-PREMISSAS.md` é do buildx: guarda a **premissa** que pode virar estado do projeto. O registro de decisões da feature continua sendo o da sprintx; muda apenas quem decidiu, e isso fica à vista — no campo que ela já tem (D-25).
+
+**O marcador segue a semântica da sprintx, não a do buildx.** Ela declara que decisão **sem** `(HIPOTESE)` é lida como confirmada pelo usuário, em qualquer modo. Então: declaração direta do usuário no pedido ou no briefing vai sem marcador, com a fonte nomeada; premissa assumida pelo buildx e convenção que o próprio buildx decidiu no B2 vão **com** marcador. Os três casos estão em `references/05-construcao.md`, passo 3.
 
 É por isso que a premissa não mora numa seção do `00-DECISOES.md`: o contrato da sprintx cobre o frontmatter `kind: decisoes` e as linhas `D-NN` e `PENDENTE-NN`, e a F2 reexecutada pode regerar o arquivo. Uma seção estrangeira ali obrigaria o buildx a reparar, depois de cada reexecução, prosa que não é dele (D-24).
 
