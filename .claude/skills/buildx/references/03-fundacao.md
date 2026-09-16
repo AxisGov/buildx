@@ -194,7 +194,7 @@ As duas entram como **convenção estabelecida, nunca marcada `PROPOSTA`** — p
 
 **É assim que a base viaja, e não há outro transporte.** O buildx não passa argumento à sprintx, não cria campo no `ORQUESTRADOR.md` e não toca no `expx-schema`: ele escreve uma convenção que as duas irmãs **já leem hoje**, e que sobrevive à morte da sessão porque está no disco.
 
-**Estas duas linhas são do contrato do buildx.** A revisão de convenções da primeira feature (Passo 7 do B4) e qualquer `stackx-detectar` posterior **não as alteram** — elas não descrevem o código, descrevem como o projeto é montado. Quem as muda é o B6, uma vez, ao devolver `Branch base` ao valor de `Branch principal`.
+**Estas duas linhas são do contrato do buildx.** A revisão de convenções da primeira feature (Passo 8 do B4) e qualquer `stackx-detectar` posterior **não as alteram** — elas não descrevem o código, descrevem como o projeto é montado. Quem as muda é o B6, uma vez, ao devolver `Branch base` ao valor de `Branch principal`.
 
 **Se o repositório já trouxer uma `Branch base` observada** — projeto que não nasceu aqui —, não sobrescreva em silêncio: registre a premissa dizendo que a base do projeto passou a ser a do buildx durante a execução, e o valor anterior, para o B6 restaurar o certo.
 

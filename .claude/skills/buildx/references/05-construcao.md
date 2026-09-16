@@ -59,7 +59,7 @@ O worktree é criado pela **F1 do sprintx** (regra 21 dele), a partir de `buildx
 
 > **Entre o nascimento de `feature/<slug>` e a integração dela, `buildx/<projeto_id>` não recebe nenhum commit que não venha dessa própria feature.**
 
-O `git merge --ff-only` do passo 8 não é apenas o mecanismo de integração: ele é o **teste** dessa invariante. Se o fast-forward falhar, ele está dizendo que alguma coisa avançou `CONTROL` no meio do caminho — e a resposta certa é **parar e relatar**, nunca trocar de mecanismo.
+O `git merge --ff-only` do passo 7 não é apenas o mecanismo de integração: ele é o **teste** dessa invariante. Se o fast-forward falhar, ele está dizendo que alguma coisa avançou `CONTROL` no meio do caminho — e a resposta certa é **parar e relatar**, nunca trocar de mecanismo.
 
 Nunca substitua o ff-only por `merge --no-ff`, `rebase`, `cherry-pick`, `update-ref`, `reset`, `stash` ou qualquer forma de `--force`. Cada um deles faz o sintoma sumir e o problema ficar.
 
@@ -177,7 +177,7 @@ Nesse caso: registre em `00-BLOQUEIOS.md`, registre como pendência `decisao_hum
 
 ## Passo 4 — F3 a F5, dentro da janela fechada
 
-**Da F1 até a integração, `CONTROL` não recebe commit nenhum.** Nem do buildx, nem de ninguém: nenhuma atualização de `MAPA.md`, `PREMISSAS.md` ou `CONVENCOES.md` é commitada enquanto a feature roda. Premissa nova da F2 é gravada no arquivo e **commitada junto com o fechamento da feature** (passo 7), nunca no meio.
+**Da F1 até a integração, `CONTROL` não recebe commit nenhum.** Nem do buildx, nem de ninguém: nenhuma atualização de `MAPA.md`, `PREMISSAS.md` ou `CONVENCOES.md` é commitada enquanto a feature roda. Premissa nova da F2 é gravada no arquivo e **commitada junto com o fechamento da feature** (passo 8), nunca no meio.
 
 É só isso que garante o fast-forward — e é a regra mais fácil de quebrar sem perceber, porque o impulso natural é "registrar agora que está fresco".
 
