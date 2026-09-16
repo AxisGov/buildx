@@ -203,11 +203,49 @@ Como responder, na ordem, sem pular degrau:
 1. **Derivável do `PROJETO.md`?** Use, e cite a seção na justificativa.
 2. **Derivável do `PREMISSAS.md`?** Use, e cite o `PR-NN`.
 3. **Derivável do `CONVENCOES.md`?** Use, e cite a regra.
-4. **Nenhum dos três responde?** → **crie uma premissa nova** em `PREMISSAS.md`, com `origem: f2_autonoma`, e só então responda com ela.
+4. **Nenhum dos três responde?** → **crie uma premissa nova**, e só então responda com ela.
 
-O degrau 4 é o que separa decisão auditável de invenção. Nunca responda a F2 com algo que não esteja escrito em um dos três arquivos — se não estiver, escreva primeiro, com o `o_que_invalida` preenchido, e responda depois.
+O degrau 4 é o que separa decisão auditável de invenção. Nunca responda a F2 com algo que não esteja escrito — se não estiver, escreva primeiro, com o `o_que_invalida` preenchido, e responda depois. Essa ordem **não muda**.
 
-Grave em `00-DECISOES.md` com `respondido_por: buildx`, e a fonte de cada resposta. O humano precisa poder abrir o arquivo depois e ver, decisão a decisão, o que foi decidido em nome dele e com base em quê.
+O que muda é **onde** se escreve.
+
+### A premissa nasce na feature, não no estado global
+
+Estamos dentro da janela fechada: `CONTROL` está em `BASE_SHA` e precisa terminar limpa para o fast-forward. Editar `CONTROL/docs/projeto/PREMISSAS.md` durante a F2 sujaria a árvore de controle, e o portão pré-ff barraria a própria feature que a premissa serve.
+
+Editar a cópia de `docs/projeto/PREMISSAS.md` **dentro da branch da feature** também não serve: para a mergex, ele é arquivo de produto fora da lista de qualquer task — vira desvio de escopo e reprova o portão (V9).
+
+Então a premissa nasce **feature-local**, no artefato que já é da feature e que a mergex já trata como artefato de método:
+
+```
+docs/sprintx/features/<slug>/00-DECISOES.md
+```
+
+Numa seção de prosa estável, sem frontmatter novo e sem tocar em schema compartilhado:
+
+```markdown
+## Premissas pendentes do BuildX
+
+### PR-NN — <assunto>
+
+- **origem:** f2_autonoma            (ou f3_autonoma, quando vier da R11 da F3)
+- **decisão:** <uma frase>
+- **justificativa:** <a fonte, ou o raciocínio que a sustenta>
+- **o que invalida:** <o fato que derruba a decisão>
+- **status:** pendente_promocao
+```
+
+### Reservar o `PR-NN` antes de usar
+
+1. **determine o próximo número** lendo o `PREMISSAS.md` da `CONTROL` em `BASE_SHA` — a árvore congelada. Como só há uma feature por vez e `CONTROL` não se move dentro da janela, o número reservado **permanece estável** até a integração;
+2. **grave a premissa pendente** no `00-DECISOES.md` da feature;
+3. **só então** use essa premissa para responder à F2 (ou à F3).
+
+Várias premissas na mesma feature seguem numerando a partir dali, na ordem em que nascem.
+
+**Na retomada, reutilize.** Se a mesma premissa pendente já está escrita, ela vale: não duplique, não renumere, não reescreva o que já foi usado para responder.
+
+Grave também a resposta em `00-DECISOES.md` com `respondido_por: buildx` e a fonte, como sempre. O humano precisa poder abrir o arquivo depois e ver, decisão a decisão, o que foi decidido em nome dele e com base em quê.
 
 ### A fronteira que a F2 não atravessa
 
@@ -217,9 +255,9 @@ Nesse caso: registre em `00-BLOQUEIOS.md`, registre como pendência `decisao_hum
 
 ## Passo 4 — F3 a F5, dentro da janela fechada
 
-**Da F1 até a integração, `CONTROL` não recebe commit nenhum.** Nem do buildx, nem de ninguém: nenhuma atualização de `MAPA.md`, `PREMISSAS.md` ou `CONVENCOES.md` é commitada enquanto a feature roda. Premissa nova da F2 é gravada no arquivo e **commitada junto com o fechamento da feature** (passo 8), nunca no meio.
+**Da F1 até a integração, `CONTROL` não recebe commit nenhum — e nem sequer fica suja.** Nem do buildx, nem de ninguém: `MAPA.md`, `PREMISSAS.md` e `CONVENCOES.md` não são editados enquanto a feature roda. Premissa nova nasce **feature-local** (passo 3) e só vira estado global depois da integração (passo 8).
 
-É só isso que garante o fast-forward — e é a regra mais fácil de quebrar sem perceber, porque o impulso natural é "registrar agora que está fresco".
+É só isso que garante o fast-forward — e é a regra mais fácil de quebrar sem perceber, porque o impulso natural é "registrar agora que está fresco". O registro acontece agora; o que espera é a **promoção**.
 
 Rodam sem intervenção do buildx. Três pontos de atenção:
 
@@ -360,13 +398,39 @@ Depois do ff, `FEATURE_SHA` := `HEAD` de `CONTROL`. É esse SHA que vai para o m
 
 ## Passo 8 — Fechar a feature
 
-**Só agora — depois do fast-forward — `CONTROL` volta a receber commit.** No `MAPA.md`, no checkout de controle:
+**Só agora — depois do fast-forward — `CONTROL` volta a receber commit.**
+
+### Promover as premissas pendentes
+
+O `00-DECISOES.md` da feature acabou de entrar na árvore pelo fast-forward. **Antes** do commit de estado, leia-o e promova:
+
+```
+docs/sprintx/features/<slug>/00-DECISOES.md   →   docs/projeto/PREMISSAS.md
+```
+
+Cada premissa com `status: pendente_promocao` vira premissa do projeto, **com o mesmo `PR-NN`**, `origem` preservada e todos os campos que o `references/00-schema.md` exige.
+
+A idempotência é pelo próprio `PR-NN`, e não por marcação:
+
+| O que você encontra no `PREMISSAS.md` | O que fazer |
+|---|---|
+| o `PR-NN` não existe | promova |
+| o `PR-NN` existe com o mesmo conteúdo | **no-op** — já foi promovido numa passagem anterior |
+| o `PR-NN` existe com conteúdo **diferente** | **PARE E RELATE** a inconsistência |
+
+Nada é escrito de volta no `00-DECISOES.md` para marcar a promoção: ele é artefato da sprintx, já está integrado, e editá-lo agora transformaria estado de feature em estado do projeto sem necessidade. A existência do `PR-NN` no `PREMISSAS.md` **é** a marca.
+
+**Só feature integrada promove.** Premissa de feature bloqueada ou em replanejamento continua onde está (ver a triagem, adiante).
+
+### Atualizar o mapa
+
+No `MAPA.md`, no checkout de controle:
 
 - `status` para `entregue`, e os contadores do frontmatter;
 - `**Integrada em:** <FEATURE_SHA>` no bloco daquela feature;
 - o PR (ou o caminho do `PR.md`), os testes de `testes_adicionados` e o `risco_residual` do `FECHAMENTO.md`.
 
-Junto vai o que a feature produziu de estado do projeto e ficou represado pela janela fechada — premissas novas da F2, por exemplo. Então:
+Junto vai o `PREMISSAS.md` com as premissas recém-promovidas, e o mais que estiver represado. Então:
 
 ```
 commit   chore(buildx): FT-NN entregue
@@ -397,13 +461,16 @@ O buildx devolve a feature à F3 — apagando o plano dentro do worktree dela, c
 
 - `MAPA.md` continua `em_andamento`;
 - `CONTROL` continua exatamente em `BASE_SHA`;
-- nenhuma outra feature começa.
+- nenhuma outra feature começa;
+- **as premissas pendentes ficam onde estão**, no `00-DECISOES.md` da feature, e são **reutilizadas** na nova tentativa — mesmo `PR-NN`, sem duplicar e sem renumerar. Nenhuma delas vai para o `PREMISSAS.md` global: o plano ainda não virou produto.
 
 **É isto que mantém o fast-forward possível.** Se o buildx commitasse um "FT-NN replanejando" aqui, `CONTROL` andaria para `BASE_SHA+1`, deixaria de ser ancestral da feature, e a integração depois seria impossível — exatamente o beco que a barreira serial existe para evitar. Teto: dois replanejamentos; a terceira reprovação é bloqueio terminal.
 
 ### Terminal: aí sim o laço segue
 
 `MAPA.md` para `bloqueada`, com o motivo e a pendência no `RECURSAO.md`; commit `chore(buildx): FT-NN bloqueada`; push normal. Aquela branch **nunca será integrada**, e é justamente por isso que `CONTROL` pode avançar sem risco.
+
+**As premissas pendentes dela não são promovidas.** Elas permanecem no `00-DECISOES.md` daquela feature como evidência da tentativa, e o B5 e o relatório final podem consultá-las. A premissa global representa decisão **incorporada ao produto integrado** — não plano abandonado. Promover a premissa de uma feature que nunca entrou faria o `PREMISSAS.md` afirmar uma decisão que nenhum código realiza, que é exatamente a falha mais cara deste método.
 
 ### Isto não fere a regra 4
 

@@ -344,3 +344,23 @@ Dois casos particulares, e os dois importam:
 **Por quê não viola a regra 3.** "O buildx não implementa, não planeja e não testa" é sobre o **produto**: código, plano e teste continuam sendo das irmãs. Commitar o próprio registro de orquestração é escrituração, não implementação — o mesmo movimento que a mergex formalizou para os artefatos de método dela. O buildx nunca commita código de produto nem artefato interno de feature: esses chegam por fast-forward.
 
 **O que invalida:** o estado do projeto passar a viver fora do repositório (um painel externo, um serviço) — aí não haveria o que commitar, e a janela fechada deixaria de ser necessária.
+
+---
+
+## D-23 — Premissa autônoma nasce na feature e só vira global depois da integração
+
+**Decisão:** a premissa que o buildx cria para responder à F2 (ou à R11 da F3) é gravada **primeiro no artefato feature-local** — a seção "Premissas pendentes do BuildX" do `docs/sprintx/features/<slug>/00-DECISOES.md`, com `status: pendente_promocao` e o `PR-NN` já reservado — e **promovida ao `docs/projeto/PREMISSAS.md` somente depois do fast-forward**, no mesmo commit que marca a feature como entregue.
+
+**Alternativa descartada:** editar `docs/projeto/PREMISSAS.md` da `CONTROL` durante a F2, que era o que o contrato mandava até aqui.
+
+**Por quê a alternativa perde.** Ela quebra a janela fechada. Entre a F1 e a integração, a árvore de controle precisa estar em `BASE_SHA` **e limpa** — é isso que o fast-forward exige e que a prova D do passo 7 verifica. Escrever no `PREMISSAS.md` da `CONTROL` no meio da F2 suja a árvore, e o portão pré-ff barra justamente a feature que a premissa existe para servir. O defeito não aparece na hora: aparece no fim, depois do trabalho todo feito.
+
+**A alternativa simétrica também perde:** gravar no `docs/projeto/PREMISSAS.md` **dentro da branch da feature**. Para a mergex, esse arquivo não está na lista `arquivos` de nenhuma task — é arquivo de produto fora do plano, vira desvio de escopo e reprova o portão (V9). O `00-DECISOES.md`, não: ele é artefato de método do próprio trabalho, que a mergex commita e isenta por contrato.
+
+**A regra "escrever antes de usar" continua inteira.** Só muda o endereço: reserva o `PR-NN` lendo o `PREMISSAS.md` da `CONTROL` congelada, grava a premissa pendente, e só então responde com ela. Como há uma feature por vez e `CONTROL` não se move dentro da janela, o número reservado é estável.
+
+**A promoção é idempotente pelo próprio `PR-NN`**, sem marcação de volta no artefato da sprintx: mesmo id com mesmo conteúdo é no-op; mesmo id com conteúdo diferente é inconsistência e para. Isso evita editar, depois da integração, um artefato que pertence a outra skill só para registrar que ele já foi lido.
+
+**Só feature integrada promove.** Replanejamento pendente mantém as premissas na feature, para a nova tentativa reutilizar; bloqueio terminal também não promove — a premissa global representa decisão **incorporada ao produto**, não plano abandonado. Promover a premissa de uma feature que nunca entrou faria o `PREMISSAS.md` documentar uma proteção que nenhum código realiza.
+
+**O que invalida:** o fim da janela fechada — se um dia a integração deixar de exigir `CONTROL` parada e limpa, a premissa pode voltar a nascer no estado global.

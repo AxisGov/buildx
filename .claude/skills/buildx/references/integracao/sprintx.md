@@ -74,7 +74,9 @@ Então o buildx responde. O procedimento tem quatro degraus, na ordem, sem pular
 | 1 | `PROJETO.md` | a seção que responde |
 | 2 | `PREMISSAS.md` | o `PR-NN` |
 | 3 | `CONVENCOES.md` | a regra |
-| 4 | nenhuma responde | **crie a premissa primeiro**, com `origem: f2_autonoma`, e responda com ela |
+| 4 | nenhuma responde | **crie a premissa primeiro** — feature-local, na seção "Premissas pendentes do BuildX" do `00-DECISOES.md` daquela feature, com `origem: f2_autonoma` e `status: pendente_promocao` — e só então responda com ela |
+
+O degrau 4 grava **na feature**, nunca no `PREMISSAS.md` do projeto: estamos dentro da janela fechada, e sujar a árvore de controle ali barraria o fast-forward da própria feature. A promoção ao estado global acontece depois da integração (`references/05-construcao.md`, passo 8).
 
 O degrau 4 é o que separa decisão auditável de invenção. Nunca responda com algo que não esteja escrito em um dos três — se não estiver, escreva antes.
 
