@@ -22,8 +22,9 @@ A regra 21 do sprintx — **uma feature por árvore de trabalho** — é anterio
 | Quem | Faz |
 |---|---|
 | sprintx F1 | cria ou retoma o worktree e a branch `feature/<slug>` |
-| buildx | entra no worktree que a F1 abriu, conduz F2 → F6 e a mergex, e volta ao checkout de controle |
-| mergex E0 | acionado **pela F6**, de dentro do worktree, quando o `ORQUESTRADOR.md` já existe: adota a branch que a F1 abriu |
+| buildx | entra no worktree que a F1 abriu, conduz F2 → F6, **lê o resultado da entrega** e volta ao checkout de controle |
+| sprintx F6 | conduz a entrega inteira: aciona a mergex no E0, no E1 de cada task e em E2 → E8 depois do `FECHAMENTO.md` |
+| mergex | acionada **sempre pela sprintx**, nunca pelo buildx; no E0 apenas adota a branch que a F1 abriu |
 
 O buildx **não abre branch, não abre worktree e não invoca `mergex-abrir`**. Se a F1 anunciar a área de trabalho e encerrar a fase — o comportamento dela quando o harness não troca de árvore sozinho —, continue de dentro do diretório indicado.
 
@@ -97,7 +98,7 @@ A R8 merece nota: ela já foi escrita pensando em execução autônoma, e é o q
 | F3.5 estimativa | **opcional.** Não há prazo a negociar; rode se for barata |
 | F4 orquestrador | normal |
 | F5 auditoria | normal, e obedecida. Reprovado três vezes: a feature vira `bloqueada` |
-| F6 execução | normal. É ela que aciona a mergex (E0 no início, E1 a cada task). O acabamento visual acontece nas tasks de interface, sobre os tokens do design system (P-6, P-7) |
+| F6 execução | normal. É ela que aciona a mergex de ponta a ponta: **E0** no início, **E1** a cada task concluída e, depois do `FECHAMENTO.md`, **E2 → E8**. Quando devolve o controle, a entrega já aconteceu — o buildx lê o resultado, não o refaz. O acabamento visual acontece nas tasks de interface, sobre os tokens do design system (P-6, P-7) |
 
 ## O laço F3 ↔ F5
 

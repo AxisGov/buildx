@@ -1,8 +1,8 @@
 # B4 — Construção
 
-O laço. Percorrer o `MAPA.md` em ordem de dependência e, para cada feature, conduzir sprintx e mergex de ponta a ponta.
+O laço. Percorrer o `MAPA.md` em ordem de dependência e, para cada feature, conduzir o sprintx de ponta a ponta — a entrega vem junto, porque a F6 a conduz.
 
-Entrada: `MAPA.md`. Saída: uma área de trabalho própria, um plano, um PR aberto e verde por feature; o `MAPA.md` atualizado no checkout de controle.
+Entrada: `MAPA.md`. Saída: uma área de trabalho própria, um plano e uma entrega registrada por feature — com o portão verde e o PR aberto, quando a ferramenta do serviço existiu; o `MAPA.md` atualizado no checkout de controle.
 
 O B4 é longo mas é a etapa mais simples do buildx: ele quase não decide nada. A competência está no sprintx e na mergex; o trabalho aqui é invocar na ordem certa, com a entrada certa, e não parar quando algo falha.
 
@@ -20,13 +20,15 @@ checkout de controle (MAPA.md, PROJETO.md, PREMISSAS.md)
   │                                          ├─ 4. sprintx F3  plano de sprints, fases e tasks
   │                                          ├─ 5. sprintx F4  ORQUESTRADOR.md
   │                                          ├─ 6. sprintx F5  auditoria do plano
-  │                                          ├─ 7. sprintx F6  execução TDD — e é ela que aciona a mergex E0
-  │                                          ├─ 8. mergex-check  portão de prontidão
-  │                                          ├─ 9. mergex-pr     descrição, push, PR aberto
-  │                                          └─ 10. mergex-qa    pacote de teste manual
+  │                                          └─ 7. sprintx F6  execução TDD — e a entrega inteira:
+  │                                                 ├─ mergex E0        no início
+  │                                                 ├─ mergex E1        a cada task concluída
+  │                                                 ├─ FECHAMENTO.md
+  │                                                 └─ mergex E2 → E8   portão, PR, QA, registro
   │                                          │
   ◄──────────── volta ao checkout de controle ┘
-  11. atualiza o MAPA.md  →  próxima feature
+  8. LÊ o resultado da entrega (ENTREGA.md + FECHAMENTO.md)
+  9. atualiza o MAPA.md  →  próxima feature
 ```
 
 Nenhuma etapa é pulada, e o sprintx nunca é invocado fora de ordem — a máquina de estados dele detecta a fase pelo disco de `docs/sprintx/features/<slug>/`, então basta invocar a skill **de dentro da área de trabalho certa** e ela continua de onde parou.
@@ -110,6 +112,10 @@ Rodam sem intervenção do buildx. Três pontos de atenção:
 
 A F6 executa o plano auditado sob TDD estrito. O buildx não interfere: a regra 8 do sprintx já diz o que fazer com dúvida nova — registra em `00-BLOQUEIOS.md`, pula a task, segue para a próxima paralelizável, nunca para e espera.
 
+**A F6 conduz a entrega inteira**, e é aqui que o buildx mais precisa ficar de fora. Dentro dela, a sprintx aciona a mergex três vezes, nesta ordem: **E0** no início, **E1** a cada task que fecha, e — depois de gravar o `FECHAMENTO.md` — **E2 a E8**: portão de prontidão, classificação da atenção, descrição do PR, pacote de QA, push, abertura do PR e registro da entrega.
+
+Quando a F6 devolve o controle, **a entrega da feature já aconteceu**. O buildx não a refaz: ele lê o resultado (passo 6).
+
 **O acabamento visual acontece aqui**, dentro das tasks de interface, não numa passada depois. Todo componente é construído sobre os tokens do design system (P-6, detalhado em `08-design-system.md`) — nenhum valor de cor literal entra em componente. Se a skill de frontend design estiver disponível (P-7), ela trabalha dentro desse vocabulário, não escolhe outro.
 
 Toda tela entregue tem as duas variantes de tema, os três estados obrigatórios (vazio, carregando, erro) e funciona em tela de celular.
@@ -120,19 +126,38 @@ Toda tela entregue tem as duas variantes de tema, os três estados obrigatórios
 - task só é concluída com os dois testes passando; não existe "concluída com ressalva"
 - nenhum segredo real em código, artefato ou commit
 
-## Passo 6 — O portão e o PR
+## Passo 6 — Ler o resultado da entrega
 
-As três chamadas da mergex rodam **de dentro do worktree da feature**, onde estão os commits, o plano e o `docs/entregas/<slug>/`. Rodá-las da árvore de controle olharia para a branch errada.
+**O buildx não executa etapa nenhuma da mergex aqui.** A F6 já conduziu E0, E1 e E2 a E8 dentro do worktree. Rodar `mergex-check`, `mergex-pr` ou `mergex-qa` agora repetiria o que acabou de acontecer — dois donos para o mesmo ciclo, dois PRs possíveis para a mesma branch, e um portão avaliado duas vezes sobre estados diferentes.
 
-A branch já existe desde a F1, e a entrega já foi registrada pelo E0 que a **F6 acionou**. O buildx não abre branch aqui — nem antes, nem agora. Se a versão do sprintx instalada não acionar o E0, a `mergex-check` dirá que falta o registro da entrega: nesse caso rode `/mergex-abrir` **de dentro do worktree**, onde o E0 adota a branch que já existe. Nunca antes da F1, e nunca para retomar.
+O que o buildx faz é **ler dois artefatos**, na árvore da feature:
 
-`mergex-check` roda as dez verificações. Devolveu **BLOQUEADO**: não force o PR. Trate como bloqueio da feature — marque `bloqueada` no `MAPA.md` com o motivo que a mergex deu, e siga para a próxima feature. O B5 decide o que fazer.
+| Arquivo | Quem grava | O que o buildx lê |
+|---|---|---|
+| `docs/entregas/<slug>/ENTREGA.md` | mergex, no E8 | `estado`, `portao`, `pr_url`, `pr_estado`, `push_feito`, `desvios`, `entregue_em` |
+| `docs/sprintx/features/<slug>/FECHAMENTO.md` | sprintx, ao fim da F6 | `fechado_em`, `resumo`, `risco_residual`, `testes_adicionados` |
 
-Devolveu **PRONTO**: `mergex-pr` monta a descrição, sobe a branch e abre o PR. A descrição referencia o `projeto_id` e o `FT-NN`.
+Nenhum campo além desses é inventado: são os que os contratos das duas skills declaram.
 
-`mergex-qa` gera o pacote de teste manual. Vale a pena mesmo no modo autônomo: é o que permite a uma pessoa validar a feature sem ler código, e o usuário de demonstração (P-5) é o ambiente desse roteiro.
+### A regra de decisão
 
-**O merge não acontece.** O buildx nunca invoca `mergex-revisar`, nunca oferece, nunca sugere no fim. Integrar código é decisão humana e essa é a última rede antes de produção. A entrega do buildx é um conjunto de PRs abertos, verdes e descritos.
+| O que o `ENTREGA.md` diz | `MAPA.md` | O que registrar |
+|---|---|---|
+| `estado: entregue` e `portao: pronto` | **`entregue`** | `pr_url` quando houver, os testes de `testes_adicionados`, e o `risco_residual` do fechamento |
+| `portao: bloqueado` (com `estado: bloqueado`) | **`bloqueada`** | o motivo que o portão registrou, e os `desvios`, se houver |
+| `estado: aberto` depois de a F6 ter devolvido o controle | **`bloqueada`** | entrega interrompida no meio; o motivo é o que a F6 relatou |
+
+**`pr_url: null` não reprova a feature.** O contrato da mergex é explícito: PR não aberto — porque a ferramenta do serviço não estava disponível ou autenticada — não é falha, e a descrição fica em `docs/entregas/<slug>/PR.md`. O que decide é o portão, não a existência da URL. Registre no `MAPA.md` que a descrição está em arquivo, para o relatório final apontar para lá.
+
+### Quando os artefatos não estão lá
+
+Com a mergex instalada — e ela é obrigatória —, a ausência de `ENTREGA.md` depois da F6 significa que **a sprintx instalada não tem o contrato E0/E1/E2→E8**. Isso é incompatibilidade de versão, não trabalho pendente.
+
+Nesse caso: marque a feature `bloqueada` com o motivo `incompatibilidade_de_versao`, registre a pendência no `RECURSAO.md` dizendo qual artefato faltou, e **siga para a próxima feature**.
+
+**Não complete o fluxo à mão.** Não rode `mergex-check`, `mergex-pr`, `mergex-qa` nem `mergex-abrir` para "terminar o que faltou": um ciclo de entrega conduzido pela metade por cada lado produz commit sem portão, PR sem pacote de QA, ou entrega registrada duas vezes. Falha explícita de versão é melhor que execução dupla — e o B5 classifica a pendência depois.
+
+**O merge não acontece.** O buildx nunca invoca `mergex-revisar`, nunca oferece, nunca sugere no fim — e a F6 também não o encadeia. Integrar código é decisão humana e essa é a última rede antes de produção. A entrega do buildx é um conjunto de features entregues e descritas, cada uma com o portão verde e, quando a ferramenta do serviço existiu, um PR aberto.
 
 ## Passo 7 — Fechar a feature
 
@@ -158,15 +183,18 @@ Nunca peça confirmação para seguir. Nunca ofereça parar. O usuário fechou o
 - toda feature do `MAPA.md` está `entregue` ou `bloqueada` — nenhuma `pendente` ou `em_andamento`
 - cada feature trabalhada tem worktree e branch próprios, abertos pela F1 — nenhuma segunda branch foi criada para a mesma feature
 - o `MAPA.md` foi atualizado no checkout de controle, não dentro de um worktree
-- toda feature entregue tem PR aberto, com a suíte verde
+- toda feature entregue tem `ENTREGA.md` com `estado: entregue` e `portao: pronto` — com o PR aberto, ou com a descrição em `PR.md` quando a ferramenta do serviço não estava disponível
+- nenhuma etapa da mergex foi executada pelo buildx depois da F6
 - toda feature bloqueada tem o motivo registrado no `MAPA.md` e a pendência no `RECURSAO.md`
 - as convenções foram revisadas contra o código real depois da primeira entrega
 - nenhuma pergunta chegou ao usuário
 
 ## Erros que esta etapa comete
 
+- **Rodar `mergex-check`, `mergex-pr` ou `mergex-qa` depois da F6.** É o fluxo antigo, e hoje duplica o que a F6 acabou de conduzir. Depois da F6 o buildx **lê** o resultado; não o produz de novo.
+- **Completar à mão uma entrega que não aconteceu.** Artefato ausente com a mergex instalada é incompatibilidade de versão da sprintx: registra, bloqueia a feature, segue. Terminar o ciclo por fora cria dois donos para a mesma entrega.
 - **Chamar `mergex-abrir` antes da F1.** É o fluxo antigo. A branch e o worktree são da F1; abrir branch antes dela cria uma segunda área de trabalho para a mesma feature, ou falha — e nos dois casos o trabalho se perde de vista.
-- **Trabalhar a feature na árvore de controle.** Do F2 ao PR, tudo acontece dentro do worktree que a F1 abriu. A árvore de controle só guarda o estado do projeto.
+- **Trabalhar a feature na árvore de controle.** Da F2 até o fim da F6, tudo acontece dentro do worktree que a F1 abriu. A árvore de controle só guarda o estado do projeto.
 - **Procurar o artefato da feature no checkout de controle.** Ele não está lá: o buildx não faz merge. Está no worktree e na branch daquela feature.
 - **Parar no primeiro bloqueio.** O laço não para: registra, marca, segue. Uma feature bloqueada com dez entregues é um bom dia; dez pendentes porque a primeira travou não é.
 - **Responder a F2 com invenção.** Os quatro degraus existem para isso. Sem premissa registrada, a resposta não é auditável e o `00-DECISOES.md` vira ficção.

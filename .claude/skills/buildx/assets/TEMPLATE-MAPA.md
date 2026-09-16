@@ -35,7 +35,7 @@ Verificável, sem adjetivo, numa frase.>
 **Status:** <pendente | em_andamento | entregue | bloqueada>
 
 <Se bloqueada:>
-**Bloqueada por:** <o motivo exato — o que a mergex-check reprovou, o
+**Bloqueada por:** <o motivo exato — o que o portão registrou em `ENTREGA.md`, o
 achado da F5, ou o que a F6 não conseguiu resolver>
 **Pendência:** <o item correspondente no RECURSAO.md>
 

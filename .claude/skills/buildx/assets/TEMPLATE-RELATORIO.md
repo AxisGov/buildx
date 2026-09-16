@@ -75,10 +75,12 @@ siga em frente.
 |---|---|---|---|
 | <titulo> | <a entrega, na linguagem de quem usa> | <#n> | <n> |
 
-<Cada PR está aberto, com a suíte verde e a descrição montada. O pacote de
-teste manual de cada feature está em `docs/entregas/<slug>/QA-PACOTE.md`, na
-branch `feature/<slug>` daquela feature — é o caminho para conferir sem abrir
-o editor.>
+<Cada feature passou pelo portão de prontidão e está descrita. Onde a
+ferramenta do serviço estava disponível, o PR está aberto; onde não estava, a
+descrição ficou em `docs/entregas/<slug>/PR.md`. O pacote de teste manual de
+cada feature está em `docs/entregas/<slug>/QA-PACOTE.md`, na branch
+`feature/<slug>` daquela feature — é o caminho para conferir sem abrir o
+editor.>
 
 ---
 

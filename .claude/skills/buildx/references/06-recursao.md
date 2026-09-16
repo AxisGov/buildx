@@ -2,7 +2,7 @@
 
 Varrer tudo que ficou pelo caminho no B4, classificar cada pendência, e devolver ao laço o que a máquina ainda consegue resolver.
 
-Entrada: `MAPA.md`, os `00-BLOQUEIOS.md` de todas as features, os achados da F5 e os relatórios da `mergex-check`. Saída: `docs/projeto/RECURSAO.md` atualizado no checkout de controle, e possivelmente features novas no `MAPA.md`.
+Entrada: `MAPA.md`, os `00-BLOQUEIOS.md` de todas as features, os achados da F5 e o portão que a mergex registrou no `ENTREGA.md` de cada feature. Saída: `docs/projeto/RECURSAO.md` atualizado no checkout de controle, e possivelmente features novas no `MAPA.md`.
 
 **Os artefatos das features não estão na árvore de controle.** Cada feature tem worktree e branch próprios (`../<repo>--<slug>`, `feature/<slug>`), e o buildx não faz merge. Antes de varrer, localize a árvore de cada feature com `git worktree list --porcelain`; quando o worktree não existir mais, leia da branch sem trocar de árvore (`git show feature/<slug>:docs/sprintx/features/<slug>/00-BLOQUEIOS.md`).
 
@@ -19,7 +19,7 @@ Colete de todas as fontes, sem filtrar nada ainda:
 | `MAPA.md` | toda feature `bloqueada`, com o motivo |
 | `docs/sprintx/features/<slug>/00-BLOQUEIOS.md` | toda dúvida que a F6 registrou e pulou — **no worktree/branch daquela feature** |
 | `docs/sprintx/features/<slug>/00-AUDITORIA.md` | todo achado alto que mandou voltar à F3 — idem |
-| relatório da `mergex-check` | toda verificação que devolveu BLOQUEADO |
+| `docs/entregas/<slug>/ENTREGA.md` | `portao: bloqueado` e o que ele apontou, mais os `desvios` — **na árvore daquela feature** |
 | `PREMISSAS.md` | toda premissa marcada provisória |
 | `RECURSAO.md` do ciclo anterior | toda pendência que continua aberta |
 
@@ -39,7 +39,7 @@ Exemplos: a exclusão de conta pela LGPD não coube em nenhuma feature; a rota d
 
 ### `replanejamento` — a feature volta à F3
 
-A feature existe, foi planejada, e o plano é que estava errado. Costuma vir de achado alto da F5, ou de `mergex-check` reprovando cobertura.
+A feature existe, foi planejada, e o plano é que estava errado. Costuma vir de achado alto da F5, ou do portão reprovando cobertura.
 
 **Destino:** **dentro do worktree original daquela feature**, apague o plano (`sprint-*/`, `ORQUESTRADOR.md`, `00-AUDITORIA.md` em `docs/sprintx/features/<slug>/`), preserve a base e as decisões da F1 e F2, e devolva a feature ao B4 — a máquina de estados do sprintx a encontra na F3.
 
@@ -111,5 +111,6 @@ Se não sobrou nada resolvível, ou o teto foi atingido: siga para o B6.
 - **Classificar `decisao_humana` como `trabalho_novo`.** É o erro caro: o buildx decide regra de negócio no lugar do usuário e constrói, com esmero, a coisa errada.
 - **Classificar `trabalho_novo` como `decisao_humana`.** O erro preguiçoso: joga para o humano o que a máquina resolveria, e esvazia a promessa do modo autônomo.
 - **Ignorar o teto por otimismo.** "Mais um ciclo e sai" é como se gasta o orçamento inteiro sem entregar.
-- **Perder pendência que a `mergex-check` reprovou.** A verificação bloqueada é pendência como qualquer outra; feature sem PR não é feature entregue.
+- **Perder pendência que o portão reprovou.** A verificação bloqueada é pendência como qualquer outra; feature com `portao: bloqueado` não é feature entregue.
+- **Tentar destravar reexecutando a entrega.** Rodar de novo o portão, o PR ou o pacote de QA não é recursão: é duplicar o ciclo que a F6 conduziu. O que volta ao B4 é a feature, pela porta da F3 ou como feature nova.
 - **Deixar premissa provisória fora do relatório.** Ela é exatamente o que o humano precisa revisar, e é a mais fácil de esquecer porque não quebrou nada.

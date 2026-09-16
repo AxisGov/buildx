@@ -20,7 +20,7 @@ O buildx **não implementa nada, não planeja nada e não escreve teste nenhum.*
 | `prodx` | mapeia o escopo, varre lacunas, emite o veredito e o briefing (B1); valida no fim (B6) |
 | `stackx` | grava as convenções técnicas do projeto (B2) |
 | `sprintx` | abre a área de trabalho da feature (worktree + branch) e planeja e executa cada uma, F1 a F6 (B4) |
-| `mergex` | verifica prontidão, monta PR e pacote de QA (B4); a branch ela adota, não cria |
+| `mergex` | versiona e entrega a feature (portão, PR, pacote de QA, registro) — **acionada pela F6 do sprintx**, nunca pelo buildx; a branch ela adota, não cria |
 | `legadox` | não participa: projeto novo não tem legado |
 | `memox` | indexa o que a cadeia produziu; consultado no B5 |
 
@@ -125,15 +125,15 @@ O laço. Para cada feature do `MAPA.md` em ordem de dependência:
 sprintx F1        → worktree ../<repo>--<slug> + branch feature/<slug> + base
 sprintx F2        → descoberta: RESPONDIDA PELO BUILDX (ver abaixo)
 sprintx F3 → F5   → plano, orquestrador, auditoria
-sprintx F6        → execução autônoma sob TDD (a sprintx aciona a mergex E0)
-mergex-check      → portão de prontidão
-mergex-pr         → descrição, push, PR aberto
-mergex-qa         → pacote de teste manual
+sprintx F6        → execução sob TDD E A ENTREGA INTEIRA:
+                    mergex E0 no início · E1 a cada task · FECHAMENTO.md ·
+                    E2 → E8 (portão, PR, pacote de QA, registro)
+buildx            → LÊ o resultado em ENTREGA.md e FECHAMENTO.md, atualiza o MAPA.md
 ```
 
-**Duas árvores, e não se confundem.** O buildx roda no **checkout de controle**, que guarda o estado do projeto (`docs/projeto/`, `docs/stack/`). Cada feature vive no **worktree que a F1 do sprintx abre** — `../<repo>--<slug>`, branch `feature/<slug>` —, e é lá que ficam `docs/sprintx/features/<slug>/` e o código. Do F2 ao PR o buildx trabalha de dentro desse worktree; depois volta ao controle e atualiza o `MAPA.md`.
+**Duas árvores, e não se confundem.** O buildx roda no **checkout de controle**, que guarda o estado do projeto (`docs/projeto/`, `docs/stack/`). Cada feature vive no **worktree que a F1 do sprintx abre** — `../<repo>--<slug>`, branch `feature/<slug>` —, e é lá que ficam `docs/sprintx/features/<slug>/` e o código. Da F2 até o fim da F6 o buildx trabalha de dentro desse worktree; depois volta ao controle e atualiza o `MAPA.md`.
 
-**O buildx não abre branch nem worktree, e não invoca `mergex-abrir`.** A área de trabalho é da F1; a mergex entra pela F6, que aciona o E0 dela de dentro do worktree. Como não há merge automático, o código de uma feature **não** está visível na árvore de controle.
+**O buildx não invoca a mergex — em etapa nenhuma.** A área de trabalho é da F1, e a entrega é conduzida pela F6: E0, E1 por task e E2 → E8 depois do `FECHAMENTO.md`. Quando a F6 devolve o controle, a entrega já aconteceu; o buildx **lê** `ENTREGA.md` e `FECHAMENTO.md` e atualiza o `MAPA.md`. Repetir `mergex-check`, `mergex-pr` ou `mergex-qa` aqui duplicaria o ciclo. Como não há merge automático, o código de uma feature **não** está visível na árvore de controle.
 
 **A F2 no modo autônomo.** A regra 10 do sprintx obriga a F2 a entrevistar o humano. No buildx o humano já falou — na descrição e, no modo briefing, na rodada única. Então o buildx **responde a F2 no lugar dele**, derivando cada resposta do `PROJETO.md`, do `PREMISSAS.md` e do `CONVENCOES.md`, e gravando em `00-DECISOES.md` com `respondido_por: buildx`. Nenhuma resposta é inventada: o que não estiver derivável de um desses três arquivos vira premissa nova em `PREMISSAS.md`, registrada antes de ser usada.
 
@@ -158,7 +158,7 @@ Roteiro: `references/06-recursao.md`.
 
 ### B6 — Validação
 
-O prodx volta, agora como auditor. Confere, item a item, o `PROJETO.md` e o `PREMISSAS.md` contra o que existe de fato no repositório: feature entregue tem PR aberto e verde, cada critério de aceite de negócio tem teste que o cobre, cada premissa de segurança virou código.
+O prodx volta, agora como auditor. Confere, item a item, o `PROJETO.md` e o `PREMISSAS.md` contra o que existe de fato no repositório: feature entregue tem `ENTREGA.md` com `estado: entregue` e `portao: pronto`, cada critério de aceite de negócio tem teste que o cobre, cada premissa de segurança virou código.
 
 Item não atendido e resolvível volta ao B3 como feature nova. Item não atendido e não resolvível entra no relatório final como pendência declarada.
 

@@ -4,7 +4,7 @@ Conferir, item a item, o que foi construído contra o que o B1 disse que seria c
 
 Entrada: `PROJETO.md`, `PREMISSAS.md`, `MAPA.md`, `RECURSAO.md`, e o repositório. Saídas: `docs/projeto/VALIDACAO.md` e `docs/projeto/RELATORIO.md`.
 
-O B6 fecha o arco: o prodx que abriu o projeto volta, agora como auditor. É o mesmo movimento da F5 do sprintx e do `mergex-check` — **quem valida não é quem construiu**, e o valor da conferência vem exatamente daí.
+O B6 fecha o arco: o prodx que abriu o projeto volta, agora como auditor. É o mesmo movimento da F5 do sprintx e do portão de prontidão da mergex — **quem valida não é quem construiu**, e o valor da conferência vem exatamente daí.
 
 ## A regra que governa a etapa
 
@@ -41,7 +41,7 @@ Para cada linha, o buildx procura a evidência e registra uma de quatro conclus�
 
 - **funcionalidade** → o arquivo que a implementa **e** o teste que a verifica. Código sem teste é `parcial`, nunca `atendido`.
 - **premissa de segurança** → o código que a realiza, e o teste que prova que a proteção funciona. Uma verificação de permissão sem teste que tente violá-la não é evidência.
-- **feature** → PR aberto, suíte verde, `mergex-check` PRONTO.
+- **feature** → `ENTREGA.md` com `estado: entregue` e `portao: pronto`, e o `FECHAMENTO.md` da feature. O PR, quando a ferramenta do serviço existiu; sem ela, a descrição em `PR.md` — `pr_url: null` não é falha.
 - **premissa de interface** → as duas variantes de tema completas, os três estados de tela tratados, responsivo, e os componentes sobre os tokens do design system — nenhuma cor literal. Aqui vale abrir a aplicação e olhar.
 
 **Nunca aceite como evidência:** o `MAPA.md` dizer `entregue`; a task estar `concluida`; o plano prever a coisa; o nome de um arquivo sugerir o conteúdo.

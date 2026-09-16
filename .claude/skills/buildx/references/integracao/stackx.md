@@ -60,7 +60,7 @@ Exceção: convenção que realiza premissa de segurança. Aí a convenção gan
 
 Depois da primeira revisão, o stackx volta ao papel normal. O `stackx-check` pode entrar no B4 como verificação extra por feature, se for barato — ele aponta violação de convenção, não corrige, e o achado vira pendência `replanejamento` no B5.
 
-Não é obrigatório: a `mergex-check` já cobre o essencial. Vale em projeto grande, onde a deriva entre features é maior.
+Não é obrigatório: o portão de prontidão (E2), que a F6 roda em toda feature, já cobre o essencial. Vale em projeto grande, onde a deriva entre features é maior.
 
 ## Comportamento sem stackx
 

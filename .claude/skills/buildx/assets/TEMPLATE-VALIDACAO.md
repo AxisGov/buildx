@@ -75,7 +75,7 @@ proteção que não existe — e alguém vai confiar nela.>
 
 ## Conferência — features
 
-| ID | PR | Suíte | mergex-check | Conclusão |
+| ID | PR (ou `PR.md`) | Suíte | Portão (`ENTREGA.md`) | Conclusão |
 |---|---|---|---|---|
 | FT-NN | <#n \| —> | <verde \| vermelha> | <pronto \| bloqueado> | <conclusão> |
 
@@ -97,7 +97,9 @@ O QUE CONTA COMO EVIDÊNCIA
   premissa de     → o código que a realiza, e o teste que prova que a
   segurança         proteção funciona. Verificação de permissão sem teste
                     que tente violá-la não é evidência.
-  feature         → PR aberto, suíte verde, mergex-check PRONTO.
+  feature         → ENTREGA.md com estado: entregue e portao: pronto,
+                    mais o FECHAMENTO.md. PR quando houve ferramenta;
+                    pr_url: null não é falha.
   interface       → as duas variantes completas, os tres estados de tela
                     tratados, responsivo, e nenhuma cor literal em componente.
                     Aqui vale abrir a aplicacao e olhar.

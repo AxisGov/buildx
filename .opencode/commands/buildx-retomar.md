@@ -38,6 +38,8 @@ Não recomece a feature — e **não rode `mergex-abrir` para retomar**. Cada fe
 
 **Só dentro da área certa** deixe a máquina de estados do sprintx detectar a fase, que ela lê do disco de `docs/sprintx/features/<slug>/` — invoque a skill e ela continua de onde parou.
 
+**Se a F6 já terminou**, a entrega também já aconteceu: a F6 conduz a mergex de E0 a E8. Confira `docs/entregas/<slug>/ENTREGA.md` antes de invocar qualquer coisa — com `estado: entregue` ou `bloqueado`, não há o que retomar naquela feature: **leia o resultado**, atualize o `MAPA.md` no checkout de controle e siga para a próxima. Nunca reexecute portão, PR ou pacote de QA para "confirmar".
+
 A existência da branch **não** diz onde continuar: ela não prova que a árvore existe, nem em que fase a feature está. Quem responde isso é o worktree mais o disco daquela feature.
 
 Se este comando foi chamado **de dentro de um worktree de feature**, o estado do projeto (`docs/projeto/MAPA.md`) está no checkout de controle, não aqui: leia-o de lá (`git worktree list --porcelain` mostra qual é a árvore principal) antes de decidir a etapa.

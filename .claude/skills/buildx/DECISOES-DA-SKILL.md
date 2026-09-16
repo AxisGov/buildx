@@ -272,3 +272,34 @@ Há um terceiro efeito, mais silencioso: um esqueleto gerado tem, no melhor caso
 **O que esta decisão NÃO resolve:** features dependentes continuam nascendo de árvores que não contêm as dependências já entregues, porque não há integração entre elas. Isso é problema declarado e tratado em frente própria (`fix/p0-buildx-integration`), não aqui.
 
 **O que invalida:** o sprintx deixar de abrir worktree na F1 (aí o buildx volta a precisar de alguém que abra a branch antes da execução); o projeto não usar git, caso em que a F1 já trabalha na árvore atual e a distinção entre as duas árvores desaparece.
+
+---
+
+## D-20 — A F6 do sprintx é dona do ciclo da mergex; o buildx lê o resultado
+
+*(Refina a D-19, que estabeleceu a posse da área de trabalho. Aqui a questão é outra: quem conduz a entrega.)*
+
+**Decisão:** a **F6 do sprintx** aciona a mergex de ponta a ponta — **E0** no início, **E1** a cada task concluída e, depois de gravar o `FECHAMENTO.md`, **E2 a E8** (portão, atenção, descrição do PR, pacote de QA, push, abertura do PR e registro). Quando a F6 devolve o controle, a entrega da feature **já aconteceu**. O buildx não invoca nenhuma etapa da mergex: ele **lê** `docs/entregas/<slug>/ENTREGA.md` e `docs/sprintx/features/<slug>/FECHAMENTO.md` e atualiza o `MAPA.md`.
+
+**Alternativa descartada:** manter o buildx chamando `mergex-check`, `mergex-pr` e `mergex-qa` depois da F6 — o fluxo anterior, escrito quando a F6 terminava com o código escrito e nada mais.
+
+**Por quê a alternativa perde.** Ela deixou de ser uma escolha e passou a ser duplicação: a sprintx atual conduz E2 a E8 antes de devolver o controle, então o buildx rodaria de novo o que acabou de acontecer. O custo não é só de tokens — é de correção. O portão seria avaliado duas vezes sobre estados diferentes (a segunda vez já com os artefatos da primeira na árvore), o `mergex-pr` tentaria abrir um segundo pull request para a mesma branch, e o `ENTREGA.md` seria reescrito por um segundo dono. Um ciclo de entrega com dois donos não falha alto: ele produz resultado plausível e errado.
+
+**Como o buildx decide, e com que campos.** Só os que os contratos das duas skills declaram — nenhum inventado:
+
+| Sinal | Destino no `MAPA.md` |
+|---|---|
+| `estado: entregue` e `portao: pronto` no `ENTREGA.md` | `entregue`, com o `pr_url` quando houver e os `testes_adicionados` do `FECHAMENTO.md` |
+| `portao: bloqueado` | `bloqueada`, com o motivo que o portão registrou e os `desvios` |
+| `estado: aberto` depois de a F6 devolver o controle | `bloqueada`: a entrega parou no meio |
+| `ENTREGA.md` ausente, com a mergex instalada | `bloqueada` por **incompatibilidade de versão** da sprintx |
+
+`pr_url: null` **não reprova**: o contrato da mergex declara que PR não aberto não é falha, e a descrição fica em `PR.md`. Quem decide é o `portao`.
+
+**Sem fallback, de propósito.** O buildx não completa à mão o que não encontrou. Executar as etapas que faltaram recriaria os dois donos que esta decisão existe para eliminar — e o faria justamente no caso em que o contrato instalado já está fora de sincronia, que é quando o dano é mais difícil de enxergar. Falha explícita de versão é melhor que execução dupla.
+
+**O que não muda:** nenhuma das 12 regras invioláveis. A F1 continua dona da branch e do worktree (D-19); o buildx continua orquestrando sem implementar; a F2 autônoma continua em quatro degraus; o TDD continua intocado; `mergex-revisar` continua nunca sendo invocado nem encadeado — nem pelo buildx, nem pela F6 — e o merge continua humano.
+
+**O que esta decisão NÃO resolve:** a integração acumulativa entre features, a árvore `buildx/<projeto_id>`, a base dinâmica e o PR final único seguem reservados à frente `fix/p0-buildx-integration`.
+
+**O que invalida:** a sprintx deixar de acionar E2→E8 na F6 — aí o buildx voltaria a precisar conduzir a entrega, e esta decisão teria de ser revista junto com o contrato dela.

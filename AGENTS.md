@@ -42,7 +42,7 @@ B1 CONCEPÇÃO → B2 FUNDAÇÃO → B3 DECOMPOSIÇÃO → B4 CONSTRUÇÃO → B
 | B1 | mapeia o escopo, varre lacunas, registra premissas | prodx (modo greenfield) |
 | B2 | escolhe a stack, instala a suíte, monta o esqueleto testável | stackx (invertido) |
 | B3 | **quebra o projeto em features** | só o buildx |
-| B4 | o laço: por feature, sprintx F1–F6 + mergex, dentro do worktree que a F1 abre | sprintx, mergex |
+| B4 | o laço: por feature, sprintx F1–F6 no worktree que a F1 abre; a F6 conduz a entrega (mergex E0→E8) e o buildx lê o resultado | sprintx, mergex |
 | B5 | classifica pendências e devolve ao laço | buildx |
 | B6 | confere o construído contra o mapa, e relata | prodx (como auditor) |
 
