@@ -1912,6 +1912,32 @@ caso "P01.40 o enum vivo de classe tem so as tres" sim \
   "$(sim_nao grep -q '^| `classe` (pendência) | `trabalho_novo` · `decisao_humana` · `recurso_externo` ' "$REPO/.claude/skills/buildx/references/00-schema.md")"
 fi  # vivos
 
+if bloco decisoes; then
+echo
+echo "P0.1 — decisões append-only, D-26 em diante"
+
+DEC_SKILL="$REPO/.claude/skills/buildx/DECISOES-DA-SKILL.md"
+IDS="$(tr -d '\r' < "$DEC_SKILL" | sed -n 's/^## \(D-[0-9][0-9]*\) — .*/\1/p')"
+caso "P01.36 nenhum D-NN repetido" "$(printf '%s\n' "$IDS" | wc -l | tr -d ' ')" "$(printf '%s\n' "$IDS" | sort -u | wc -l | tr -d ' ')"
+FALTA=""
+for n in $(seq 1 33); do
+  printf '%s\n' "$IDS" | grep -qx "$(printf 'D-%02d' "$n")" || FALTA="$FALTA D-$n"
+done
+caso "P01.36 D-01 a D-33 presentes" "" "$FALTA"
+caso "P01.36 as decisoes P0.1 vem depois da D-25, em ordem" "D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33" \
+  "$(printf '%s\n' "$IDS" | tail -9 | tr '\n' ' ' | sed 's/ $//')"
+for t in 'O orçamento da F5 é do caller; a contagem é da sprintx' \
+         'Checkpoint da sprintx é estado legítimo da feature' \
+         'Terminal pré-F6 só move a CONTROL com evidência commitada' \
+         'Replanejamento sai do B5' \
+         'Trabalho resolvível depois de um bloqueio vira feature sucessora' \
+         'A pendência tem estado' \
+         'PR-NN de feature que não integrou continuam reservados' \
+         'O buildx nunca comita artefato da sprintx'; do
+  caso "P01.36 decisao registrada: $t" sim "$(sim_nao grep -qF "$t" "$DEC_SKILL")"
+done
+fi  # decisoes
+
 if bloco contrato; then
 echo
 echo "P0.1 — o contrato vivo diz o que o harness prova"

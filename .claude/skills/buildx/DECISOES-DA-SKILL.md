@@ -418,3 +418,109 @@ Dois casos particulares, e os dois importam:
 **O que não muda:** o `BUILDX-PREMISSAS.md` e tudo que a D-24 decidiu; a reserva do `PR-NN`; a promoção pós-ff, idempotente pelo `PR-NN`; e a regra de escrever antes de usar. Muda só a representação da decisão dentro do arquivo da sprintx.
 
 **O que invalida:** a sprintx acrescentar, por conta dela, um campo de proveniência ao `kind: decisoes` — aí o buildx passa a usá-lo, em vez de carregar tudo no `motivo`.
+
+---
+
+## D-26 — O orçamento da F5 é do caller; a contagem é da sprintx
+
+*(Contexto das D-26 a D-33: o piloto brownfield real do Conselho Municipal. A F1 foi correta, a feature nasceu exatamente em `BASE_SHA`, F2/F3/F4 foram corretas, a F5 reprovou três vezes, o buildx aplicou o teto e a F6 nunca começou — mas os artefatos da sprintx existiam só no worktree, o B4 marcou a feature `bloqueada` sem evidência commitada, e a execução precisou inventar uma seção "Aberto — aguardando classificação do B5" que o `TEMPLATE-RECURSAO.md` não previa. A sprintx P0.1 (`a4f5495`) fechou o lado dela: planejamento durável, checkpoints, orçamento declarado pelo caller, `orcamento_esgotado`, `CHECKPOINT` pendente. Estas decisões fazem o buildx consumir esse contrato. Nenhuma decisão anterior foi reescrita.)*
+
+**Decisão:** o briefing de toda feature declara `max_reprovacoes_f5: 3` e `orcamento_declarado_por: buildx`. A F1 da sprintx os repassa a `planejamento.sh criar <slug> 3 buildx`, que os grava no `00-PLANEJAMENTO.md`. Dali em diante **a sprintx é a única dona da contagem**: o buildx não incrementa contador, não interpreta "rodada 1/2/3" de prosa, não soma linhas `VEREDITO:`, não sobe o teto e não o reinicia numa retomada. Ele decide só pela saída de `planejamento.sh fase`, e confere o orçamento no `00-PLANEJAMENTO.md` **commitado** depois do primeiro checkpoint.
+
+**Alternativa descartada:** o buildx continuar contando as voltas F3 ↔ F5 — "duas voltas; a terceira reprovação bloqueia" — pela própria sessão.
+
+**Por quê:** a contagem pela sessão morre com a sessão. Uma retomada sem a transcrição recomeçava o laço, ou parava por um número que ninguém conseguia provar. O `historico` do `00-PLANEJAMENTO.md` é append-only, gravado por script e checkpointado: qualquer sessão, de qualquer harness, chega à mesma contagem. O limite continua sendo o do buildx — três reprovações —, porque quem declara o orçamento é quem sabe o custo de girar; só a contagem muda de dono. E a forma de passagem é a que a sprintx já oferece (`criar <slug> [max] [por]`): nenhum campo novo em artefato cujo schema não o aceita.
+
+**O que invalida:** a sprintx deixar de aceitar orçamento do caller, ou passar a recebê-lo por outro canal — aí o briefing muda de forma, e a posse da contagem continua dela.
+
+---
+
+## D-27 — Checkpoint da sprintx é estado legítimo da feature, e não é entrega
+
+*(Refina a D-22, que continua valendo: a `CONTROL` não recebe commit dentro da janela. Muda a leitura do que acontece na branch da feature.)*
+
+**Decisão:** a `feature/<slug>` pode avançar dentro da janela por **checkpoints de planejamento da sprintx** (trailer `Planejamento: checkpoint`, só `docs/sprintx/features/<slug>/**`), por commits E1 e por commits de entrega. Nada disso quebra a janela. Na F1 o tip continua **exatamente** `BASE_SHA` — o primeiro checkpoint só vem no fim da F2. Na retomada vale a ancestralidade, nunca a igualdade, e nunca se recria a branch: worktree perdido se reabre sobre a mesma branch. `fase=CHECKPOINT` com `persistencia=pendente` **não decide nada**: o buildx não bloqueia, não avança o mapa, não roda B5 e não começa outra feature; pede à sprintx o checkpoint. Checkpoint não é task concluída, não é E1, não é entrega, não é push e não é PR.
+
+**Alternativa descartada:** manter a leitura antiga — "os commits à frente de `BASE_SHA` são do E1" — e tratar qualquer commit antes da F6 como anomalia.
+
+**Por quê:** com a sprintx P0.1, uma feature em F3 já tem commits: tratá-los como anomalia pararia toda retomada legítima; tratá-los como E1 faria o buildx acreditar que houve execução. E o estado gravado no disco e ainda não persistido é exatamente o caso do piloto: parecia durável e não era. Deixar esse estado decidir um bloqueio, ou uma F6, seria repetir o defeito do outro lado da fronteira.
+
+**O que invalida:** a sprintx deixar de checkpointar o planejamento, ou passar a checkpointar fora da pasta da feature — aí a prova de "só checkpoints" precisa mudar junto.
+
+---
+
+## D-28 — Terminal pré-F6 só move a CONTROL com evidência commitada
+
+**Decisão:** `orcamento_esgotado` só é terminal com `fase=PARAR`, `estado=orcamento_esgotado` e `persistencia=duravel`, e mesmo assim a `CONTROL` só avança depois do **portão terminal pré-F6**, A a I: `CONTROL` e remoto em `BASE_SHA`, feature descendendo da base, as duas árvores limpas, o `00-PLANEJAMENTO.md` com `orcamento_esgotado` **no `HEAD`** da feature, a sprintx fora de `CHECKPOINT`, **nenhum produto** no histórico `BASE_SHA..feature/<slug>` (todo path na pasta da feature e todo commit com o trailer de checkpoint), e o `00-AUDITORIA.md` da rodada terminal commitado no commit que registrou o terminal. Falhou qualquer prova: pare e relate, nada é escrito. A mesma regra vale para todo bloqueio: `ENTREGA.md` commitado para portão bloqueado ou entrega interrompida, ausência comprovada para incompatibilidade. `persistencia_falhou` para a orquestração da feature e **não** vira `orcamento_esgotado`, `bloqueada` nem `decisao_humana`.
+
+**Alternativa descartada:** marcar `bloqueada` a partir do relato da sessão ("a F5 reprovou três vezes"), que foi o que o piloto fez.
+
+**Por quê:** o bloqueio é o único commit de estado que a `CONTROL` recebe sem fast-forward — e é irreversível na prática, porque a feature nunca volta. Sem a evidência no Git, um checkpoint recusado, uma auditoria sobrescrita no worktree ou um arquivo de produto commitado antes da hora ficariam escondidos atrás de "plano esgotado". Falha de persistência não é conclusão sobre o plano: confundi-las transformaria um hook recusando commit num veredito metodológico.
+
+**O que invalida:** o terminal passar a ser publicado fora do Git (um serviço de estado), caso em que a prova muda de fonte, não de exigência.
+
+---
+
+## D-29 — Replanejamento sai do B5
+
+*(Supera a classe `replanejamento` do `06-recursao.md` e do `TEMPLATE-RECURSAO.md` anteriores. O texto antigo já dizia que ela "quase nunca chega aqui"; agora não chega.)*
+
+**Decisão:** as classes do B5 são três — `trabalho_novo`, `decisao_humana`, `recurso_externo` — e `resolvida` é estado, não classe. Replanejar a mesma feature existe **só** no B4, pela sprintx (`estado: replanejar`), enquanto o orçamento da F5 não acabou. Um `RECURSAO.md` antigo com a classe antiga de replanejamento é **lido** como `trabalho_novo` e nunca reescrito com ela.
+
+**Alternativa descartada:** manter a classe de replanejamento no B5, com teto próprio.
+
+**Por quê:** quando uma pendência chega ao B5, a tentativa acabou: o orçamento se esgotou, ou o portão bloqueou, e a `CONTROL` já avançou. Voltar à F3 na branch antiga produziria uma branch que não descende mais da árvore — o fast-forward seria impossível, e o único jeito de integrá-la seria `rebase` ou `merge`, que o contrato proíbe. Uma classe cujo único destino correto é outra classe só existe para ser classificada errado.
+
+**O que invalida:** o buildx passar a permitir integração por outro mecanismo que não o fast-forward — o que a D-21 e a invariante da janela proíbem hoje.
+
+---
+
+## D-30 — Trabalho resolvível depois de um bloqueio vira feature sucessora
+
+**Decisão:** pendência classificada `trabalho_novo` cria uma **feature sucessora** — `FT-NN` novo, **slug novo**, `origem: recursao`, `**Sucede:** FT-XX` —, que nasce do `HEAD` atual da `CONTROL`, com F1 nova, worktree novo e branch nova. A feature bloqueada fica `bloqueada` para sempre. A pendência vai a `em_resolucao` com `destino: FT-NN`, e a `resolvida` quando a sucessora integra. Sucessora que bloqueia pelo **mesmo gatilho e pela mesma cláusula central** da raiz manda a raiz para `decisao_humana` (`laco_detectado`). O ciclo é B4 → B5 → sucessoras → B4, com teto de 3; atingido o teto, o que seria resolvível vai para `decisao_humana` com `teto_de_ciclos_atingido`. A classificação é uma tabela gatilho → classe; para `orcamento_f5_esgotado`, lê a última `00-AUDITORIA.md` commitada: qualquer `ALTA` `[item 7]` → `decisao_humana`; senão qualquer `ALTA` `[item 8]` → `recurso_externo`; senão → `trabalho_novo`.
+
+**Alternativas descartadas:** (1) voltar a feature bloqueada a `pendente` e rodá-la de novo; (2) reaproveitar o slug da bloqueada numa branch nova; (3) classificar por julgamento do modelo sobre "vale tentar de novo".
+
+**Por quê:** (1) a branch antiga não integra mais, e o plano dela esgotou o orçamento — é recomeçar pelo lado que falhou. (2) o slug nomeia a pasta, a branch e o worktree; reaproveitá-lo colide com a branch preservada e mistura dois históricos no mesmo endereço. (3) o piloto mostrou que o mesmo texto recebe juízos diferentes em rodadas diferentes; os prefixos `[item N]` da sprintx P0.1 tornam a causa verificável, e o `[item 7]` vence a mistura porque nenhuma sucessora produz uma decisão humana. O detector compara gatilho e cláusula, não prosa: a mesma classe de defeito voltando é o sinal de que trabalho novo não resolve.
+
+**O que invalida:** a sprintx mudar a numeração dos itens da F5 ou deixar de prefixar os achados — aí a tabela precisa acompanhar.
+
+---
+
+## D-31 — A pendência tem estado, e o RECURSAO.md tem cinco seções fixas
+
+**Decisão:** toda pendência é um bloco `### PEND-NN` com campos fixos (`id`, `estado`, `gatilho`, `classe`, `origem`, `ciclo`, `evidencia`, `causa`, `clausula_central`, `raiz`, `detectada_em`, `classificada_em`, `regra_aplicada`, `destino`, `pr_reservadas`, `resolvida_em`, `nota`) e vive numa máquina de cinco estados, cada um com a sua seção: `aguardando_classificacao` → "Aguardando classificação do B5" (`classe: null`), `em_resolucao` → "Em resolução pela máquina", `decisao_humana` → "Aberto — decisão humana", `recurso_externo` → "Aberto — recurso externo", `resolvida` → "Resolvido nos ciclos". O template tem exatamente essas cinco seções e nenhuma execução inventa outra. A pendência nasce `aguardando_classificacao` no commit que **encerra** a tentativa; o `RECURSAO.md` nunca é escrito dentro da janela — durante F2 a F6 o registro fica na feature.
+
+**Alternativa descartada:** manter as seções por classe ("Aberto — o que exige decisão humana", "Aberto — o que exige recurso externo", "Resolvido") e registrar a pendência já classificada no momento do bloqueio.
+
+**Por quê:** o bloqueio e a classificação são momentos diferentes — o primeiro é do B4, com a janela acabando de fechar; o segundo é do B5, com a visão do ciclo inteiro. O piloto precisou de um lugar para "bloqueada e ainda não classificada", não tinha, e inventou uma seção. Seção inventada é estado que o contrato não conhece: nenhum leitor seguinte sabe tratá-la. E escrever o `RECURSAO.md` dentro da janela suja a `CONTROL`, que é exatamente o que mata o fast-forward (D-22, D-23).
+
+**O que invalida:** um estado de pendência que não caiba nos cinco aparecer em execução real — aí o contrato ganha o estado e a seção, por decisão, nunca por improviso.
+
+---
+
+## D-32 — PR-NN de feature que não integrou continuam reservados
+
+*(Complementa a D-23 e a D-24, que continuam valendo: só feature integrada promove.)*
+
+**Decisão:** ao registrar a pendência de uma feature que termina sem integrar, o buildx lê o `BUILDX-PREMISSAS.md` **commitado** dela e grava os ids em `pr_reservadas`. Toda alocação de premissa nova considera ocupados os `PR-NN` do `PREMISSAS.md`, todos os `pr_reservadas` do `RECURSAO.md` e os que já existem na própria feature. Artefato morto nunca é renumerado, e premissa de feature bloqueada nunca é promovida; a sucessora que precisar da mesma decisão a registra com id novo.
+
+**Alternativa descartada:** calcular o próximo `PR-NN` só pelo `PREMISSAS.md` global, como antes.
+
+**Por quê:** a premissa da feature bloqueada nunca chega ao global, então o id dela parecia livre — e a sucessora o reutilizaria com outro texto. A partir daí o mesmo `PR-NN` teria duas versões: uma no artefato preservado da bloqueada, que o relatório final cita, e outra no `PREMISSAS.md`. A promoção idempotente pelo id (D-23) deixaria de provar alguma coisa, e o leitor que seguisse `BUILDX-PREMISSAS.md#PR-09` chegaria a uma decisão que não é a que o produto realiza.
+
+**O que invalida:** as premissas ganharem identificador por feature (`FT-NN/PR-NN`), caso em que a colisão deixa de existir por construção.
+
+---
+
+## D-33 — O buildx nunca comita artefato da sprintx
+
+*(Reafirma, para o planejamento durável, a fronteira da D-20: cada ciclo tem um dono.)*
+
+**Decisão:** o checkpoint de planejamento é da sprintx (DS-131). O buildx não faz `git add` nem `git commit` da pasta da feature, não usa `--no-verify` para contornar hook, não completa checkpoint por conta própria e não cria, edita, apaga ou regera `00-PLANEJAMENTO.md`, `00-AUDITORIA.md` ou plano nenhum. O único arquivo do buildx dentro da pasta da feature é o `BUILDX-PREMISSAS.md` — e ele é persistido pelos commits da sprintx e da mergex, como todo artefato de método da pasta. A mergex continua entrando só na F6.
+
+**Alternativa descartada:** o buildx commitar a pasta da feature quando o checkpoint da sprintx falha, "para não perder o plano".
+
+**Por quê:** o commit do buildx esconderia a causa (`persistencia_falhou` é um hook do projeto recusando), criaria dois donos para o mesmo estado, e produziria um checkpoint sem as garantias do script — prova de paths, trailer, estado coerente com o `historico`. A sprintx P0.1 declarou que seu contrato se invalida se "a `buildx` passar a commitar a pasta da feature por conta própria". Parar e relatar preserva tudo: nada foi limpo, e a retomada cai de novo em `CHECKPOINT`.
+
+**O que invalida:** a sprintx delegar explicitamente o checkpoint ao caller — o que inverteria a DS-131.
