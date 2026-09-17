@@ -64,7 +64,7 @@ Cada pendência é um bloco `### PEND-NN — <assunto>` com uma linha `- chave: 
 | `regra_aplicada` | a regra da tabela que decidiu a classe, literalmente (`orcamento_f5_esgotado/alta_item_7`, `teto_de_ciclos_atingido`, …) |
 | `destino` | `FT-NN` da sucessora, quando `trabalho_novo`; senão `null` |
 | `pr_reservadas` | os `PR-NN` do `BUILDX-PREMISSAS.md` commitado da feature que terminou sem integrar (passo 7), ou `[]` |
-| `nota` | `teto_de_ciclos_atingido`, `laco_detectado`, ou `null` |
+| `nota` | `teto_de_ciclos_atingido`, `laco_detectado`, `segue PEND-NN` (a raiz que acompanha a filha, passo 4), ou `null` |
 
 E os específicos da classe: `decisao_humana` registra `decisao`, `opcoes`, `provisorio` e `reversibilidade`; `recurso_externo` registra `o_que_falta`, `o_que_destrava` e `estado_atual`; `trabalho_novo` registra `sucede` (a `FT-XX` bloqueada) e `slug_sucessora`.
 
@@ -131,6 +131,12 @@ A pendência passa a `estado: em_resolucao`, `classe: trabalho_novo`, `destino: 
 
 **Quando a sucessora também é bloqueada**, o B4 registra, no commit do bloqueio dela, uma pendência nova `aguardando_classificacao` com `raiz: PEND-NN` apontando a que ela tentava resolver. O B5 a classifica começando pelo detector de laço (passo 5). A raiz acompanha a filha: filha `em_resolucao` → raiz continua `em_resolucao`, com `destino` na sucessora nova; filha `decisao_humana`, `recurso_externo` ou `resolvida` → raiz no mesmo estado, com `nota` apontando a filha.
 
+A propagação é mecânica, e só lê o que está gravado:
+
+- **O `MAPA.md` manda; o `RECURSAO.md` acompanha.** Para cada pendência `em_resolucao`, o status do `destino`: `pendente`, `em_andamento` ou `bloqueada` → a raiz **continua** `em_resolucao` (bloqueada espera o B5 classificar a filha); `entregue` → `resolvida`. **`destino` que não existe no `MAPA.md` é inconsistência: pare e relate**, sem gravar nada — nenhum estado é inventado.
+- **A raiz que segue a filha** em `decisao_humana` ou `recurso_externo` recebe a `classe` e a `regra_aplicada` dela, e `nota: segue PEND-NN` (a filha). A propagação sobe a cadeia `raiz` enquanto o ancestral está `em_resolucao`; o que já saiu de `em_resolucao` não é tocado.
+- **A entrega resolve uma cadeia, e só uma.** As pendências `em_resolucao` com `destino` na sucessora entregue — a filha e as raízes que a acompanham — precisam formar **uma única** cadeia `raiz`. Duas raízes sem parentesco no mesmo `destino` é inconsistência: pare e relate, sem resolver nenhuma.
+
 ## Passo 5 — O detector de laço
 
 Antes da tabela, para toda pendência com `raiz`:
@@ -148,6 +154,15 @@ A `clausula_central` é derivada da evidência commitada, nunca escolhida:
 A sucessora que bloqueia pela mesma cláusula mostrou que trabalho novo não resolve aquilo: gerar outra seria girar em falso. **Nenhuma pendência gera sucessora indefinidamente.**
 
 Independente disso, reclassifique para `decisao_humana` quando um ciclo inteiro terminar sem nenhuma pendência `resolvida` e sem nenhuma sucessora entregue (`nota: laco_detectado`).
+
+"Ciclo inteiro sem conversão" é lido do `MAPA.md` e do `RECURSAO.md`, nunca da sessão:
+
+- **Só vale do ciclo 2 em diante.** O ciclo 1 é o B4 original e não roda sucessora: nele nada poderia ter convertido, e o detector não se aplica.
+- **As sucessoras que o ciclo `n` rodou** são as features `Origem: recursao` que integraram com a `**Pendência:**` do ciclo `n-1` que as criou, e as que bloquearam registrando, no commit do bloqueio, a filha do ciclo `n`. Sucessora do ciclo ainda `pendente` ou `em_andamento` quer dizer que o ciclo não terminou: pare e relate.
+- **Converteu** se ao menos uma delas está `entregue` **e** a pendência dela está `resolvida`. `entregue` sem a pendência `resolvida` é o commit de estado incompleto: pare e relate. Sucessora que bloqueou de novo — pelo mesmo ramo ou não — não é conversão.
+- **O ciclo é um só.** Se alguma sucessora do ciclo converteu, o detector não dispara para nenhuma pendência; a que não converteu segue a tabela, o detector de mesma cláusula e o teto.
+- **O que dispara:** a pendência `aguardando_classificacao` que a tabela levaria a `trabalho_novo` é gravada `decisao_humana`, `regra_aplicada: laco_detectado/ciclo_sem_conversao`, `nota: laco_detectado`, e a raiz a acompanha. Nenhuma sucessora nasce. Pendência já em `decisao_humana`, `recurso_externo` ou `resolvida` não é tocada.
+- **Precedência:** detector de mesma cláusula, depois a tabela; para `trabalho_novo`, o teto (passo 6), depois este detector — que dispara abaixo do teto, sem esperá-lo. Reaplicar tudo sobre o mesmo estado não muda nada.
 
 ## Passo 6 — O teto de ciclos
 
@@ -192,6 +207,7 @@ Se não sobrou nada resolvível, ou o teto foi atingido: siga para o B6.
 - o `RECURSAO.md` tem exatamente as cinco seções do template, nenhuma a mais
 - nenhuma classe `replanejamento` foi escrita
 - toda `trabalho_novo` tem sucessora com slug novo, ou foi para `decisao_humana` pelo teto ou pelo detector
+- toda raiz acompanha a filha, e todo `destino` `em_resolucao` existe no `MAPA.md`
 - nenhuma feature `bloqueada` voltou a `pendente`
 - toda pendência de feature que não integrou tem `pr_reservadas`, e nenhum desses ids foi reutilizado
 - toda `decisao_humana` registra a decisão, as opções, o provisório e a reversibilidade; todo `recurso_externo` registra o que providenciar e o que destrava

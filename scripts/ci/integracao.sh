@@ -736,13 +736,70 @@ pend_classifica() { # <RECURSAO.md> <PEND-NN> <classe> <regra> [nota]
 }
 
 # Mesmo gatilho e mesma cláusula central da raiz: trabalho novo não resolve.
-detector_laco() { # <RECURSAO.md> <PEND-NN>
+eh_laco() { # <RECURSAO.md> <PEND-NN>
   local raiz; raiz="$(pend_campo "$1" "$2" raiz)"
   [ -n "$raiz" ] && [ "$raiz" != null ] || return 1
   [ "$(pend_campo "$1" "$2" gatilho)" = "$(pend_campo "$1" "$raiz" gatilho)" ] || return 1
-  [ "$(pend_campo "$1" "$2" clausula_central)" = "$(pend_campo "$1" "$raiz" clausula_central)" ] || return 1
+  [ "$(pend_campo "$1" "$2" clausula_central)" = "$(pend_campo "$1" "$raiz" clausula_central)" ]   # [M13]
+}
+
+detector_laco() { # <RECURSAO.md> <PEND-NN>
+  local raiz
+  eh_laco "$1" "$2" || return 1
+  raiz="$(pend_campo "$1" "$2" raiz)"
   pend_classifica "$1" "$raiz" decisao_humana laco_detectado laco_detectado &&
-    pend_classifica "$1" "$2" decisao_humana laco_detectado "laco_detectado: segue $raiz"
+    pend_classifica "$1" "$2" decisao_humana laco_detectado "laco_detectado: segue $raiz" &&
+    raiz_acompanha "$1" "$raiz"
+}
+
+# A raiz acompanha a filha (passo 4). Sobe a cadeia `raiz` enquanto o ancestral
+# está em_resolucao: filha em_resolucao leva o destino novo; decisao_humana ou
+# recurso_externo levam estado, classe e regra, com `nota: segue <filha>`. O que
+# já saiu de em_resolucao não é tocado. Raiz ausente do arquivo: parada.
+raiz_acompanha() { # <RECURSAO.md> <PEND-filha>
+  local rec="$1" filha="$2" estado raiz
+  estado="$(pend_campo "$rec" "$filha" estado)"
+  raiz="$(pend_campo "$rec" "$filha" raiz)"
+  while [ -n "$raiz" ] && [ "$raiz" != null ]; do
+    [ -n "$(pend_campo "$rec" "$raiz" id)" ] || return 1
+    [ "$(pend_campo "$rec" "$raiz" estado)" = em_resolucao ] || break
+    case "$estado" in
+      em_resolucao) pend_define "$rec" "$raiz" destino "$(pend_campo "$rec" "$filha" destino)" || return 1 ;;
+      decisao_humana|recurso_externo)
+        pend_classifica "$rec" "$raiz" "$estado" "$(pend_campo "$rec" "$filha" regra_aplicada)" "segue $filha" || return 1 ;;
+      *) return 1 ;;
+    esac
+    raiz="$(pend_campo "$rec" "$raiz" raiz)"
+  done
+  recursao_reordena "$rec"
+}
+
+# Ciclo inteiro sem conversão (passo 5), só pelo MAPA e pelo RECURSAO persistidos.
+# O ciclo n ≥ 2 rodou as sucessoras (`Origem: recursao`) que integraram com a
+# `Pendência` do ciclo n-1 que as criou, e as que bloquearam registrando a filha
+# no ciclo n. Converteu se alguma delas está `entregue` com a pendência `resolvida`.
+# O ciclo 1 não roda sucessora: nao_se_aplica. Sucessora do ciclo ainda aberta, ou
+# entregue sem a pendência resolvida, é estado inconsistente: parada.
+ciclo_converteu() { # <RECURSAO.md> <MAPA.md> -> sim | nao | nao_se_aplica
+  local rec="$1" mapa="$2" n ft p c rodou=0 conv=0
+  n="$(fm "$rec" ciclo_atual)"
+  [ "$n" -ge 2 ] || { echo nao_se_aplica; return 0; }
+  for ft in $(tr -d '\r' < "$mapa" | awk '/^### FT-/ { print $2 }'); do
+    [ "$(mapa_valor "$mapa" "$ft" Origem)" = recursao ] || continue
+    p="$(mapa_valor "$mapa" "$ft" Pendência)"; c="$(pend_campo "$rec" "$p" ciclo)"
+    case "$(mapa_valor "$mapa" "$ft" Status)" in
+      entregue)
+        [ "$c" = $((n - 1)) ] || continue
+        rodou=1
+        [ "$(pend_campo "$rec" "$p" estado)" = resolvida ] || return 1
+        conv=1 ;;                                                           # [M15]
+      bloqueada) [ "$c" = "$n" ] && rodou=1 ;;
+      *) [ "$c" = $((n - 1)) ] && return 1 ;;
+    esac
+  done
+  if [ "$rodou" = 0 ]; then echo nao_se_aplica
+  elif [ "$conv" = 1 ]; then echo sim
+  else echo nao; fi
 }
 
 # Sucessora: FT e slug novos, origem recursao. A bloqueada não volta.
@@ -761,7 +818,7 @@ cria_sucessora() { # <RECURSAO.md> <PEND-NN> <MAPA.md> <FT-novo> <slug-novo> <re
 }
 
 b5_classifica() { # <RECURSAO.md> <PEND-NN> <MAPA.md> [FT-sucessora slug-sucessora] — sem commit
-  local rec="$1" id="$2" mapa="$3" g arg classe regra
+  local rec="$1" id="$2" mapa="$3" g arg classe regra conv
   [ "$(pend_campo "$rec" "$id" estado)" = aguardando_classificacao ] || return 1
   if detector_laco "$rec" "$id"; then recursao_reordena "$rec"; return; fi
   g="$(pend_campo "$rec" "$id" gatilho)"
@@ -778,24 +835,66 @@ EOF
     if [ "$(fm "$rec" ciclo_atual)" -ge "$(fm "$rec" teto_ciclos)" ]; then
       pend_classifica "$rec" "$id" decisao_humana teto_de_ciclos_atingido teto_de_ciclos_atingido || return 1
     else
-      cria_sucessora "$rec" "$id" "$mapa" "$4" "$5" "$regra" || return 1
+      conv="$(ciclo_converteu "$rec" "$mapa")" || return 1
+      if [ "$conv" = nao ]; then                                            # [M14]
+        pend_classifica "$rec" "$id" decisao_humana laco_detectado/ciclo_sem_conversao laco_detectado || return 1
+      else
+        cria_sucessora "$rec" "$id" "$mapa" "$4" "$5" "$regra" || return 1
+      fi
     fi
   else
     pend_classifica "$rec" "$id" "$classe" "$regra" || return 1
   fi
+  raiz_acompanha "$rec" "$id"
+}
+
+# A sucessora integrou. Resolve as pendências em_resolucao com `destino` nela —
+# a filha e as raízes que a acompanham —, que precisam formar UMA cadeia `raiz`:
+# duas cadeias no mesmo destino é inconsistência, e nada é gravado.
+resolve_por_entrega() { # <RECURSAO.md> <FT>
+  local rec="$1" id p membros=" " base="" n=0 visto=0 hoje
+  for id in $(pend_ids "$rec"); do
+    [ "$(pend_campo "$rec" "$id" destino)" = "$2" ] && [ "$(pend_campo "$rec" "$id" estado)" = em_resolucao ] || continue
+    membros="$membros$id "; n=$((n + 1))
+  done
+  for id in $membros; do
+    for p in $membros; do [ "$(pend_campo "$rec" "$p" raiz)" = "$id" ] && continue 2; done
+    [ -z "$base" ] || return 1
+    base="$id"
+  done
+  p="$base"
+  while [ -n "$p" ] && [ "$visto" -le "$n" ] && case "$membros" in *" $p "*) true ;; *) false ;; esac; do
+    visto=$((visto + 1)); p="$(pend_campo "$rec" "$p" raiz)"
+  done
+  [ "$visto" = "$n" ] || return 1
+  hoje="$(date +%Y-%m-%d)"
+  for id in $membros; do
+    pend_define "$rec" "$id" estado resolvida || return 1                   # [M11]
+    pend_define "$rec" "$id" resolvida_em "$hoje" || return 1
+    fm_define "$rec" pendencias_abertas $(( $(fm "$rec" pendencias_abertas) - 1 ))
+    fm_incrementa "$rec" pendencias_resolvidas
+  done
   recursao_reordena "$rec"
 }
 
-# A sucessora integrou: a pendência que tinha nela o destino está resolvida.
-resolve_por_entrega() { # <RECURSAO.md> <FT>
-  local id
-  for id in $(pend_ids "$1"); do
-    [ "$(pend_campo "$1" "$id" destino)" = "$2" ] && [ "$(pend_campo "$1" "$id" estado)" = em_resolucao ] || continue
-    pend_define "$1" "$id" estado resolvida && pend_define "$1" "$id" resolvida_em "$(date +%Y-%m-%d)" || return 1
-    fm_define "$1" pendencias_abertas $(( $(fm "$1" pendencias_abertas) - 1 ))
-    fm_incrementa "$1" pendencias_resolvidas
+# O MAPA manda, o RECURSAO acompanha: toda pendência em_resolucao lê o status do
+# seu `destino`. Entregue resolve; pendente, em_andamento ou bloqueada mantém.
+# Destino fora do MAPA é inconsistência: parada antes de qualquer escrita.
+recursao_acompanha() { # <RECURSAO.md> <MAPA.md>
+  local rec="$1" mapa="$2" id ft status entregues=""
+  for id in $(pend_ids "$rec"); do
+    [ "$(pend_campo "$rec" "$id" estado)" = em_resolucao ] || continue
+    ft="$(pend_campo "$rec" "$id" destino)"; status="$(mapa_valor "$mapa" "$ft" Status)"
+    case "$status" in
+      "") return 1 ;;                                                       # [M16]
+      entregue) case " $entregues " in *" $ft "*) ;; *) entregues="$entregues $ft" ;; esac ;;
+      pendente|em_andamento|bloqueada) ;;                                   # [M12]
+      *) return 1 ;;
+    esac
   done
-  recursao_reordena "$1"
+  cp "$rec" "$rec.acompanha"
+  for ft in $entregues; do resolve_por_entrega "$rec.acompanha" "$ft" || { rm -f "$rec.acompanha"; return 1; }; done
+  recursao_reordena "$rec.acompanha" && mv -f "$rec.acompanha" "$rec"
 }
 
 # O projeto de um cenário P0.1: mapa com features, PROJETO e PREMISSAS globais.
