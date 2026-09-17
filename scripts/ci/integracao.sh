@@ -1978,6 +1978,220 @@ caso "P01.24 nenhum artefato morto foi renumerado"    "[PR-09]" "$(pend_campo "$
 cd "$REPO"
 fi  # recursao
 
+if bloco convergencia; then
+echo
+echo "P0.1 — B5: a raiz acompanha a sucessora, e ciclo sem conversão não repete"
+
+# Auditorias terminais commitadas: a evidência que a tabela lê pelo git.
+CV="$TMP_RAIZ/convergencia"; mkdir -p "$CV"; cd "$CV"; git init -q . 2>/dev/null
+for a in "q 2 9" "r 3" "s 4" "h 7"; do
+  set -- $a; mkdir -p "$CV/aud/$1"; auditoria "$CV/aud/$1/00-AUDITORIA.md" nao "${@:2}"
+done
+git -c core.autocrlf=false add aud; git -c user.email=t@t -c user.name=t commit -q -m auditorias
+CV_SHA="$(git rev-parse HEAD)"
+
+# cv_ev <slug> <auditoria> — a evidência no formato do registro terminal.
+cv_ev() { printf 'feature/%s@%s:aud/%s/00-PLANEJAMENTO.md ; feature/%s@%s:aud/%s/00-AUDITORIA.md\n' "$1" "$CV_SHA" "$2" "$1" "$CV_SHA" "$2"; }
+
+# cv_bloqueia <dir> <FT> <slug> <auditoria> <raiz> — o commit do bloqueio no B4, sem o git.
+cv_bloqueia() {
+  local id
+  id="$(pend_nova "$1/RECURSAO.md" "$2 esgotou" orcamento_f5_esgotado "$2" "$(cv_ev "$3" "$4")" \
+        "$(clausula_central_auditoria < "$CV/aud/$4/00-AUDITORIA.md")" '[]' "$5" null)" || return 1
+  mapa_define "$1/MAPA.md" "$2" Status bloqueada
+  mapa_define "$1/MAPA.md" "$2" "Pendência" "$id"
+  printf '%s\n' "$id"
+}
+
+# cv_ciclo2 <nome> [n-raizes: 1|2] — ciclo 1 inteiro: FT-01 (e FT-02) esgotaram por
+# qualidade de plano, o B5 criou FT-03 (e FT-04), e o ciclo 2 começou.
+cv_ciclo2() {
+  local d="$CV/$1"; mkdir -p "$d"
+  recursao_nova "$d/RECURSAO.md" conv
+  printf '# Mapa\n' > "$d/MAPA.md"
+  mapa_feature "$d/MAPA.md" FT-01 cadastro em_andamento descricao
+  cv_bloqueia "$d" FT-01 cadastro q null >/dev/null
+  b5_classifica "$d/RECURSAO.md" PEND-01 "$d/MAPA.md" FT-03 cadastro-v2 || return 1
+  if [ "${2:-1}" = 2 ]; then
+    mapa_feature "$d/MAPA.md" FT-02 relatorio em_andamento descricao
+    cv_bloqueia "$d" FT-02 relatorio q null >/dev/null
+    b5_classifica "$d/RECURSAO.md" PEND-02 "$d/MAPA.md" FT-04 relatorio-v2 || return 1
+  fi
+  fm_incrementa "$d/RECURSAO.md" ciclo_atual
+}
+
+# cv_entrega <dir> <FT> — o commit "FT-NN entregue" do passo 7.
+cv_entrega() { mapa_define "$1/MAPA.md" "$2" Status entregue && recursao_acompanha "$1/RECURSAO.md" "$1/MAPA.md"; }
+
+secao_de() { tr -d '\r' < "$1" | awk -v id="$2" '/^## / { s = $0 } index($0, "### " id " ") == 1 { print s }'; }
+
+# --- Regra A: a raiz acompanha a sucessora ---
+
+cv_ciclo2 a; D="$CV/a"; R="$D/RECURSAO.md"
+caso "A0 PEND-01 em_resolucao com destino na sucessora" "em_resolucao FT-03" \
+  "$(pend_campo "$R" PEND-01 estado) $(pend_campo "$R" PEND-01 destino)"
+caso "A1 sucessora pendente: acompanhar nao falha"    sim "$(sim_nao recursao_acompanha "$R" "$D/MAPA.md")"
+caso "A1 sucessora pendente: raiz continua em_resolucao" em_resolucao "$(pend_campo "$R" PEND-01 estado)"
+caso "A1 e sem resolvida_em"                          null "$(pend_campo "$R" PEND-01 resolvida_em)"
+mapa_define "$D/MAPA.md" FT-03 Status em_andamento
+caso "A2 sucessora em_andamento: acompanhar nao falha" sim "$(sim_nao recursao_acompanha "$R" "$D/MAPA.md")"
+caso "A2 sucessora em_andamento: raiz continua em_resolucao" em_resolucao "$(pend_campo "$R" PEND-01 estado)"
+caso "A2 na secao Em resolucao"                       "$SECAO_RESOLUCAO" "$(secao_de "$R" PEND-01)"
+caso "A3 sucessora entregue: o commit de estado acompanha" sim "$(sim_nao cv_entrega "$D" FT-03)"
+caso "A3 raiz resolvida"                              resolvida "$(pend_campo "$R" PEND-01 estado)"
+caso "A3 resolvida_em e uma data"                     sim "$(sim_nao grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2}$' <<< "$(pend_campo "$R" PEND-01 resolvida_em)")"
+caso "A3 o destino continua dizendo por qual FT"      FT-03 "$(pend_campo "$R" PEND-01 destino)"
+caso "A3 na secao Resolvido nos ciclos"               "$SECAO_RESOLVIDO" "$(secao_de "$R" PEND-01)"
+caso "A3 contadores: 0 abertas, 1 resolvida"          "0 1" "$(fm "$R" pendencias_abertas) $(fm "$R" pendencias_resolvidas)"
+caso "A3 o RECURSAO continua valido"                  sim "$(sim_nao recursao_valida "$R")"
+cp "$R" "$D/antes.md"; recursao_acompanha "$R" "$D/MAPA.md"
+caso "A3 acompanhar de novo nao muda nada"            sim "$(sim_nao cmp -s "$R" "$D/antes.md")"
+caso "B1 ciclo com sucessora entregue: converteu"     sim "$(ciclo_converteu "$R" "$D/MAPA.md")"
+caso "B2 e a pendencia que ela resolvia esta resolvida" resolvida "$(pend_campo "$R" "$(mapa_valor "$D/MAPA.md" FT-03 Pendência)" estado)"
+
+cv_ciclo2 b2; D="$CV/b2"; R="$D/RECURSAO.md"
+mapa_define "$D/MAPA.md" FT-03 Status entregue
+caso "B2 entregue sem a pendencia resolvida nao conta como conversao: parada" nao \
+  "$(sim_nao ciclo_converteu "$R" "$D/MAPA.md")"
+
+cv_ciclo2 a4; D="$CV/a4"; R="$D/RECURSAO.md"
+P="$(cv_bloqueia "$D" FT-03 cadastro-v2 q PEND-01)"
+caso "A4 a sucessora bloqueada registra a filha com raiz" "PEND-02 PEND-01" "$P $(pend_campo "$R" "$P" raiz)"
+caso "A4 mesmo gatilho e mesma clausula: o B5 classifica" sim "$(sim_nao b5_classifica "$R" "$P" "$D/MAPA.md" FT-05 cadastro-v3)"
+caso "A4 raiz decisao_humana"                         decisao_humana "$(pend_campo "$R" PEND-01 estado)"
+caso "A4 regra laco_detectado"                        laco_detectado "$(pend_campo "$R" PEND-01 regra_aplicada)"
+caso "A4 nota laco_detectado"                         laco_detectado "$(pend_campo "$R" PEND-01 nota)"
+caso "A4 a raiz nao foi resolvida"                    null "$(pend_campo "$R" PEND-01 resolvida_em)"
+caso "A4 nenhuma sucessora nova"                      "" "$(mapa_valor "$D/MAPA.md" FT-05 Status)"
+caso "A4 o RECURSAO continua valido"                  sim "$(sim_nao recursao_valida "$R")"
+
+cv_ciclo2 a5; D="$CV/a5"; R="$D/RECURSAO.md"
+P="$(cv_bloqueia "$D" FT-03 cadastro-v2 h PEND-01)"
+caso "A5 clausula diferente: nao e laco"              nao "$(sim_nao eh_laco "$R" "$P")"
+caso "A5 a filha classifica pela tabela"              sim "$(sim_nao b5_classifica "$R" "$P" "$D/MAPA.md" FT-05 cadastro-v3)"
+caso "A5 filha decisao_humana pelo [item 7]"          "decisao_humana orcamento_f5_esgotado/alta_item_7" \
+  "$(pend_campo "$R" "$P" estado) $(pend_campo "$R" "$P" regra_aplicada)"
+caso "A5 a raiz NAO foi marcada resolvida"            decisao_humana "$(pend_campo "$R" PEND-01 estado)"
+caso "A5 a raiz segue a filha, com a regra dela"      "orcamento_f5_esgotado/alta_item_7 segue $P" \
+  "$(pend_campo "$R" PEND-01 regra_aplicada) $(pend_campo "$R" PEND-01 nota)"
+caso "A5 sem resolvida_em e nos contadores abertas"   "null 2 0" \
+  "$(pend_campo "$R" PEND-01 resolvida_em) $(fm "$R" pendencias_abertas) $(fm "$R" pendencias_resolvidas)"
+caso "A5 o RECURSAO continua valido"                  sim "$(sim_nao recursao_valida "$R")"
+
+cv_ciclo2 a5g; D="$CV/a5g"; R="$D/RECURSAO.md"
+P="$(pend_nova "$R" "FT-03 sem credencial" recurso_externo_ausente FT-03 "feature/cadastro-v2@$CV_SHA:aud/h/00-AUDITORIA.md" PR-NN '[]' PEND-01 null)"
+mapa_define "$D/MAPA.md" FT-03 Status bloqueada; mapa_define "$D/MAPA.md" FT-03 "Pendência" "$P"
+caso "A5 gatilho diferente: a filha classifica"       sim "$(sim_nao b5_classifica "$R" "$P" "$D/MAPA.md" FT-05 cadastro-v3)"
+caso "A5 gatilho diferente: raiz recurso_externo, nunca resolvida" "recurso_externo null" \
+  "$(pend_campo "$R" PEND-01 estado) $(pend_campo "$R" PEND-01 resolvida_em)"
+caso "A5 gatilho diferente: na secao do recurso externo" "$SECAO_EXTERNO" "$(secao_de "$R" PEND-01)"
+
+cv_ciclo2 a6; D="$CV/a6"; R="$D/RECURSAO.md"
+pend_define "$R" PEND-01 destino FT-99; mapa_define "$D/MAPA.md" FT-03 Status entregue
+cp "$R" "$D/antes.md"
+caso "A6 destino fora do MAPA: inconsistencia explicita" nao "$(sim_nao recursao_acompanha "$R" "$D/MAPA.md")"
+caso "A6 e nada foi gravado"                          sim "$(sim_nao cmp -s "$R" "$D/antes.md")"
+caso "A6 a raiz nao inventou estado"                  "em_resolucao null" \
+  "$(pend_campo "$R" PEND-01 estado) $(pend_campo "$R" PEND-01 resolvida_em)"
+
+# --- Duas raízes no mesmo ciclo: uma converte, a outra não ---
+
+cv_ciclo2 dup 2; D="$CV/dup"; R="$D/RECURSAO.md"
+P="$(cv_bloqueia "$D" FT-03 cadastro-v2 r PEND-01)"
+cv_entrega "$D" FT-04
+caso "B5 FT-04 entregou: PEND-02 resolvida"           resolvida "$(pend_campo "$R" PEND-02 estado)"
+caso "B5 e FT-03 bloqueou: PEND-01 ainda em_resolucao" em_resolucao "$(pend_campo "$R" PEND-01 estado)"
+caso "B5 o ciclo, inteiro, converteu"                 sim "$(ciclo_converteu "$R" "$D/MAPA.md")"
+caso "B5 a filha resolvivel ganha sucessora"          sim "$(sim_nao b5_classifica "$R" "$P" "$D/MAPA.md" FT-05 cadastro-v3)"
+caso "B5 filha em_resolucao em FT-05"                 "em_resolucao FT-05" "$(pend_campo "$R" "$P" estado) $(pend_campo "$R" "$P" destino)"
+caso "A5 clausula diferente e trabalho_novo: a raiz acompanha o destino novo" "em_resolucao FT-05" \
+  "$(pend_campo "$R" PEND-01 estado) $(pend_campo "$R" PEND-01 destino)"
+RESOLVIDA_EM="$(pend_campo "$R" PEND-02 resolvida_em)"
+fm_incrementa "$R" ciclo_atual
+mapa_define "$D/MAPA.md" FT-05 Status em_andamento
+cp "$R" "$D/pre.md"; cp "$D/MAPA.md" "$D/pre-mapa.md"
+
+# A7: a entrega de FT-05 resolve a cadeia dela, e só ela.
+caso "A7 FT-05 entregue: o commit de estado acompanha" sim "$(sim_nao cv_entrega "$D" FT-05)"
+caso "A7 filha e raiz dela resolvidas"                "resolvida resolvida" "$(pend_campo "$R" "$P" estado) $(pend_campo "$R" PEND-01 estado)"
+caso "A7 a outra raiz nao foi tocada"                 "resolvida $RESOLVIDA_EM FT-04" \
+  "$(pend_campo "$R" PEND-02 estado) $(pend_campo "$R" PEND-02 resolvida_em) $(pend_campo "$R" PEND-02 destino)"
+caso "A7 contadores: 0 abertas, 3 resolvidas"         "0 3" "$(fm "$R" pendencias_abertas) $(fm "$R" pendencias_resolvidas)"
+caso "A7 o RECURSAO final e valido"                   sim "$(sim_nao recursao_valida "$R")"
+cp "$D/pre.md" "$R"; cp "$D/pre-mapa.md" "$D/MAPA.md"
+mapa_feature "$D/MAPA.md" FT-06 outra-raiz em_andamento descricao
+P9="$(pend_nova "$R" "outra raiz" violacao_de_convencao FT-06 "feature/outra@$CV_SHA:aud/s/00-AUDITORIA.md" B-01 '[]' null null)"
+# O acidente: outra raiz, sem parentesco com a filha, gravada com o mesmo destino.
+pend_classifica "$R" "$P9" trabalho_novo violacao_de_convencao; pend_define "$R" "$P9" estado em_resolucao
+pend_define "$R" "$P9" destino FT-05; recursao_reordena "$R"
+caso "A7 o acidente montado: duas raizes em_resolucao em FT-05" "em_resolucao em_resolucao" \
+  "$(pend_campo "$R" "$P9" estado) $(pend_campo "$R" PEND-01 estado)"
+mapa_define "$D/MAPA.md" FT-05 Status entregue; cp "$R" "$D/antes.md"
+caso "A7 duas raizes diferentes no mesmo destino: parada" nao "$(sim_nao recursao_acompanha "$R" "$D/MAPA.md")"
+caso "A7 e nenhuma das duas foi resolvida por acidente" sim "$(sim_nao cmp -s "$R" "$D/antes.md")"
+
+# --- Regra B: ciclo inteiro sem conversão ---
+
+cv_ciclo2 c1; D="$CV/c1"; R="$D/RECURSAO.md"
+caso "B.ciclo 1 nao roda sucessora: o detector nao se aplica" nao_se_aplica \
+  "$(fm "$R" ciclo_atual >/dev/null; fm_define "$R" ciclo_atual 1; ciclo_converteu "$R" "$D/MAPA.md"; fm_define "$R" ciclo_atual 2)"
+caso "B.sucessora do ciclo ainda pendente: o ciclo nao terminou, parada" nao "$(sim_nao ciclo_converteu "$R" "$D/MAPA.md")"
+
+cv_ciclo2 b3 2; D="$CV/b3"; R="$D/RECURSAO.md"
+mapa_feature "$D/MAPA.md" FT-06 integracao em_andamento descricao
+fm_define "$R" ciclo_atual 1
+PX="$(pend_nova "$R" "FT-06 sem chave" recurso_externo_ausente FT-06 "feature/integracao@$CV_SHA:aud/h/00-AUDITORIA.md" chave '[]' null null)"
+b5_classifica "$R" "$PX" "$D/MAPA.md" >/dev/null
+fm_define "$R" ciclo_atual 2
+P3="$(cv_bloqueia "$D" FT-03 cadastro-v2 r PEND-01)"
+P4="$(cv_bloqueia "$D" FT-04 relatorio-v2 s PEND-02)"
+caso "B3 nenhuma entrega e nenhuma resolucao: nao converteu" nao "$(ciclo_converteu "$R" "$D/MAPA.md")"
+caso "B3 a filha resolvivel e classificada"           sim "$(sim_nao b5_classifica "$R" "$P3" "$D/MAPA.md" FT-07 cadastro-v3)"
+caso "B3 detector dispara: decisao_humana"            decisao_humana "$(pend_campo "$R" "$P3" estado)"
+caso "B3 regra laco_detectado/ciclo_sem_conversao"    laco_detectado/ciclo_sem_conversao "$(pend_campo "$R" "$P3" regra_aplicada)"
+caso "B3 nota laco_detectado"                         laco_detectado "$(pend_campo "$R" "$P3" nota)"
+caso "B3 nenhuma sucessora nasce"                     "" "$(mapa_valor "$D/MAPA.md" FT-07 Status)"
+caso "B3 a raiz acompanha"                            "decisao_humana segue $P3" "$(pend_campo "$R" PEND-01 estado) $(pend_campo "$R" PEND-01 nota)"
+caso "B3 a outra filha, no mesmo ciclo, tambem"       sim "$(sim_nao b5_classifica "$R" "$P4" "$D/MAPA.md" FT-08 relatorio-v3)"
+caso "B3 e sem sucessora"                             "decisao_humana laco_detectado/ciclo_sem_conversao " \
+  "$(pend_campo "$R" "$P4" estado) $(pend_campo "$R" "$P4" regra_aplicada) $(mapa_valor "$D/MAPA.md" FT-08 Status)"
+caso "B3 recurso_externo anterior intocado"           "recurso_externo recurso_externo_ausente null" \
+  "$(pend_campo "$R" "$PX" estado) $(pend_campo "$R" "$PX" regra_aplicada) $(pend_campo "$R" "$PX" nota)"
+caso "B3 o RECURSAO continua valido"                  sim "$(sim_nao recursao_valida "$R")"
+caso "B6 disparou no ciclo 2, abaixo do teto 3, sem regra de teto" "2 3 0" \
+  "$(fm "$R" ciclo_atual) $(fm "$R" teto_ciclos) $(grep -c 'teto_de_ciclos_atingido' "$R")"
+
+cp "$R" "$D/antes.md"; cp "$D/MAPA.md" "$D/antes-mapa.md"
+caso "B7 reclassificar a mesma pendencia e recusado"  nao "$(sim_nao b5_classifica "$R" "$P3" "$D/MAPA.md" FT-07 cadastro-v3)"
+raiz_acompanha "$R" "$P3"; raiz_acompanha "$R" "$P4"; recursao_acompanha "$R" "$D/MAPA.md"
+caso "B7 detector, raiz e acompanhamento repetidos: RECURSAO identico" sim "$(sim_nao cmp -s "$R" "$D/antes.md")"
+caso "B7 e MAPA identico"                             sim "$(sim_nao cmp -s "$D/MAPA.md" "$D/antes-mapa.md")"
+caso "B7 a mesma resposta do detector"                nao "$(ciclo_converteu "$R" "$D/MAPA.md")"
+
+cv_ciclo2 b4; D="$CV/b4"; R="$D/RECURSAO.md"
+P="$(cv_bloqueia "$D" FT-03 cadastro-v2 r PEND-01)"
+caso "B4 a sucessora bloqueou no mesmo ramo, clausula nova: nao e laco" nao "$(sim_nao eh_laco "$R" "$P")"
+caso "B4 a tabela ainda diria trabalho_novo"          trabalho_novo "$(classe_da_tabela orcamento_f5_esgotado "$CV_SHA:aud/r/00-AUDITORIA.md" | cut -d' ' -f1)"
+caso "B4 mas nada entregou: detector dispara"         sim "$(sim_nao b5_classifica "$R" "$P" "$D/MAPA.md" FT-05 cadastro-v3)"
+caso "B4 decisao_humana, sem outra sucessora"         "decisao_humana laco_detectado/ciclo_sem_conversao " \
+  "$(pend_campo "$R" "$P" estado) $(pend_campo "$R" "$P" regra_aplicada) $(mapa_valor "$D/MAPA.md" FT-05 Status)"
+caso "B4 a raiz acompanha, sem resolvida_em"          "decisao_humana null" "$(pend_campo "$R" PEND-01 estado) $(pend_campo "$R" PEND-01 resolvida_em)"
+
+cv_ciclo2 teto; D="$CV/teto"; R="$D/RECURSAO.md"
+fm_define "$R" teto_ciclos 2
+P="$(cv_bloqueia "$D" FT-03 cadastro-v2 r PEND-01)"
+b5_classifica "$R" "$P" "$D/MAPA.md" FT-05 cadastro-v3 >/dev/null
+caso "B6 no teto, sem conversao: o teto tem precedencia" teto_de_ciclos_atingido "$(pend_campo "$R" "$P" regra_aplicada)"
+
+REF_B5="$REPO/.claude/skills/buildx/references/06-recursao.md"
+caso "contrato: destino fora do MAPA e parada, no reference" sim \
+  "$(sim_nao grep -qF '`destino` que não existe no `MAPA.md` é inconsistência: pare e relate' "$REF_B5")"
+caso "contrato: a entrega resolve uma cadeia, e so uma"       sim "$(sim_nao grep -qF '**A entrega resolve uma cadeia, e só uma.**' "$REF_B5")"
+caso "contrato: a regra do ciclo sem conversao, literal"     sim "$(sim_nao grep -qF '`regra_aplicada: laco_detectado/ciclo_sem_conversao`' "$REF_B5")"
+caso "contrato: o detector nao se aplica ao ciclo 1"         sim "$(sim_nao grep -qF '**Só vale do ciclo 2 em diante.**' "$REF_B5")"
+cd "$REPO"
+fi  # convergencia
+
 if bloco vivos; then
 echo
 echo "P0.1 — o contrato vivo não contradiz a máquina nova"

@@ -7,8 +7,11 @@
 # CHECKPOINT, aceitar terminal só no working tree, deixar passar produto antes
 # da F6, voltar a escrever `replanejamento`, reabrir a feature velha, apagar a
 # seção de aguardando classificação, reutilizar PR-NN morto, não reservar PR-NN,
-# deixar o item 8 vencer o item 7, contar reprovação por texto — e exige que o
-# harness FALHE. Mutação que sobrevive é teste que falta.
+# deixar o item 8 vencer o item 7, contar reprovação por texto, deixar a raiz de
+# fora da entrega da sucessora ou resolvê-la cedo, ignorar o laço de mesma
+# cláusula, repetir ciclo sem conversão, disparar o detector com entrega, e
+# resolver destino que o MAPA não tem — e exige que o harness FALHE. Mutação que
+# sobrevive é teste que falta.
 #
 # O repositório real nunca é alterado: a cópia vive num diretório temporário e é
 # apagada no fim. Antes das mutações, a mesma cópia sem mutação precisa passar.
@@ -109,6 +112,36 @@ EOF
     saida="$(printf 'fase=PARAR\nestado=orcamento_esgotado\nfonte=planejamento\npersistencia=duravel\n')"
 EOF
       ;;
+    M11) # a sucessora entregue não resolve a raiz
+      troca "$d/$HARNESS" '# [M11]' <<'EOF'
+    :                                                                       # [M11]
+EOF
+      ;;
+    M12) # a sucessora pendente resolve a raiz cedo demais
+      troca "$d/$HARNESS" '# [M12]' <<'EOF'
+      pendente|em_andamento|bloqueada) entregues="$entregues $ft" ;;        # [M12]
+EOF
+      ;;
+    M13) # ignorar mesmo gatilho e mesma cláusula da sucessora bloqueada
+      troca "$d/$HARNESS" '# [M13]' <<'EOF'
+  false                                                                     # [M13]
+EOF
+      ;;
+    M14) # ciclo sem conversão inicia outro ciclo
+      troca "$d/$HARNESS" '# [M14]' <<'EOF'
+      if false; then                                                        # [M14]
+EOF
+      ;;
+    M15) # o detector dispara mesmo havendo entrega
+      troca "$d/$HARNESS" '# [M15]' <<'EOF'
+        ;;                                                                  # [M15]
+EOF
+      ;;
+    M16) # resolver a raiz com destino fora do MAPA
+      troca "$d/$HARNESS" '# [M16]' <<'EOF'
+      "") entregues="$entregues $ft" ;;                                     # [M16]
+EOF
+      ;;
     *) echo "mutacao desconhecida: $1" >&2; return 1 ;;
   esac
 }
@@ -126,6 +159,8 @@ blocos() {
     M8) echo "x1" ;;
     M9) echo "recursao" ;;
     M10) echo "checkpoint" ;;
+    M11|M12|M14|M15|M16) echo "convergencia" ;;
+    M13) echo "recursao convergencia" ;;
   esac
 }
 
@@ -133,7 +168,7 @@ roda() { # roda <nome> <arvore> <blocos> -> grava <nome>.log e <nome>.rc
   ( cd "$TMP" && BLOCOS="$3" bash "$2/$HARNESS" > "$TMP/$1.log" 2>&1; echo $? > "$TMP/$1.rc" )
 }
 
-MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10}"
+MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16}"
 TODOS_BLOCOS="$(for m in $MUTACOES; do blocos "$m"; done | tr ' ' '\n' | sort -u | tr '\n' ' ')"
 
 echo "controle — a árvore sem mutação passa nos blocos: $TODOS_BLOCOS"
