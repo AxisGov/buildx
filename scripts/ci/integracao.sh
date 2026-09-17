@@ -2233,12 +2233,12 @@ DEC_SKILL="$REPO/.claude/skills/buildx/DECISOES-DA-SKILL.md"
 IDS="$(tr -d '\r' < "$DEC_SKILL" | sed -n 's/^## \(D-[0-9][0-9]*\) — .*/\1/p')"
 caso "P01.36 nenhum D-NN repetido" "$(printf '%s\n' "$IDS" | wc -l | tr -d ' ')" "$(printf '%s\n' "$IDS" | sort -u | wc -l | tr -d ' ')"
 FALTA=""
-for n in $(seq 1 33); do
+for n in $(seq 1 34); do
   printf '%s\n' "$IDS" | grep -qx "$(printf 'D-%02d' "$n")" || FALTA="$FALTA D-$n"
 done
-caso "P01.36 D-01 a D-33 presentes" "" "$FALTA"
-caso "P01.36 as decisoes P0.1 vem depois da D-25, em ordem" "D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33" \
-  "$(printf '%s\n' "$IDS" | tail -9 | tr '\n' ' ' | sed 's/ $//')"
+caso "P01.36 D-01 a D-34 presentes" "" "$FALTA"
+caso "P01.36 as decisoes P0.1 vem depois da D-25, em ordem" "D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34" \
+  "$(printf '%s\n' "$IDS" | tail -10 | tr '\n' ' ' | sed 's/ $//')"
 for t in 'O orçamento da F5 é do caller; a contagem é da sprintx' \
          'Checkpoint da sprintx é estado legítimo da feature' \
          'Terminal pré-F6 só move a CONTROL com evidência commitada' \

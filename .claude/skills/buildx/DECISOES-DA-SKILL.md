@@ -524,3 +524,17 @@ Dois casos particulares, e os dois importam:
 **Por quê:** o commit do buildx esconderia a causa (`persistencia_falhou` é um hook do projeto recusando), criaria dois donos para o mesmo estado, e produziria um checkpoint sem as garantias do script — prova de paths, trailer, estado coerente com o `historico`. A sprintx P0.1 declarou que seu contrato se invalida se "a `buildx` passar a commitar a pasta da feature por conta própria". Parar e relatar preserva tudo: nada foi limpo, e a retomada cai de novo em `CHECKPOINT`.
 
 **O que invalida:** a sprintx delegar explicitamente o checkpoint ao caller — o que inverteria a DS-131.
+
+---
+
+## D-34 — Conversão de ciclo exige entrega
+
+*(Refina a D-30 e o detector de ciclo sem conversão do `06-recursao.md`, que continuam valendo. Não muda a máquina: explicita o que ela já faz, para que ninguém a "corrija" depois.)*
+
+**Decisão:** para a regra `ciclo_sem_conversao`, um ciclo só **converteu** quando ao menos uma sucessora dele está `entregue` **e** a pendência correspondente está `resolvida`. Mudar a classificação de uma pendência para `decisao_humana`, para `recurso_externo` ou para qualquer outra condição de bloqueio ou interrupção **não é conversão** — nem quando a mudança vem de evidência nova, e nem quando a própria sucessora a produz. Um ciclo cujas sucessoras só bloquearam de novo terminou sem conversão, por mais pendências que tenha reclassificado, e o detector se aplica a ele como a qualquer outro.
+
+**Alternativa descartada:** contar como conversão a pendência que saiu de `trabalho_novo` para `decisao_humana` ou `recurso_externo` por evidência nova, sob o argumento de que o ciclo "produziu conhecimento" e, portanto, não girou em falso.
+
+**Por quê:** a recursão existe para transformar trabalho recursivo em **entrega**. Reclassificar interrompe ou redireciona o fluxo — às vezes é exatamente a coisa certa a fazer —, mas não entrega nada: a `CONTROL` não recebeu feature, o `MAPA.md` não ganhou `entregue`, e o produto é o mesmo do começo do ciclo. Aceitar reclassificação como conversão abriria o caminho que o detector existe para fechar: cada ciclo descobre um motivo novo para não entregar, e o teto vira o único freio. Também quebraria a leitura pelo disco — "converteu" deixaria de ser uma prova sobre `entregue` e `resolvida`, que o `MAPA.md` e o `RECURSAO.md` carregam, e passaria a depender de julgar se a evidência era "nova o bastante". E o disparo não custa nada a quem já foi reclassificado: pendência em `decisao_humana` ou `recurso_externo` não é tocada pelo detector; ele só impede que outra sucessora nasça naquele ciclo.
+
+**O que invalida:** a recursão ganhar uma finalidade além da entrega — por exemplo, um ciclo dedicado a levantar decisões para o humano —, caso em que esse ciclo precisa de regra e contador próprios, nunca de uma conversão mais frouxa.
