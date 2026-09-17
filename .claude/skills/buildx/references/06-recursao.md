@@ -1,14 +1,14 @@
 # B5 — Recursão
 
-Varrer tudo que ficou pelo caminho no B4, classificar cada pendência, e devolver ao laço o que a máquina ainda consegue resolver.
+Varrer tudo que ficou pelo caminho no B4, classificar cada pendência por uma tabela determinística, e devolver ao laço — como **feature sucessora nova** — o que a máquina ainda consegue resolver.
 
-Entrada: `MAPA.md`, os `00-BLOQUEIOS.md` de todas as features, os achados da F5 e o portão que a mergex registrou no `ENTREGA.md` de cada feature. Saída: `docs/projeto/RECURSAO.md` atualizado no checkout de controle, e possivelmente features novas no `MAPA.md`.
+Entrada: `MAPA.md`, `RECURSAO.md` com as pendências que o B4 registrou ao encerrar tentativas, os artefatos **commitados** de cada feature, e o `PREMISSAS.md`. Saída: `docs/projeto/RECURSAO.md` atualizado no checkout de controle, e possivelmente features sucessoras no `MAPA.md`.
+
+**O B5 roda fora da janela fechada.** Nenhuma feature está aberta quando ele começa: toda feature do mapa está `entregue` ou `bloqueada`, e a `CONTROL` pode receber commit. É por isso que o `RECURSAO.md` só é escrito aqui e no commit de estado que **encerra** uma tentativa (a triagem do B4) — nunca durante F2 a F6 de uma feature.
 
 **Feature integrada já está aqui.** O que entrou em `buildx/<projeto_id>` pelo fast-forward veio inteiro — código e artefatos —, então o `00-BLOQUEIOS.md`, o `00-AUDITORIA.md` e o `FECHAMENTO.md` de cada feature entregue são lidos direto no checkout de controle.
 
-**Feature bloqueada, não.** Ela nunca foi integrada: os artefatos dela existem só na árvore e na branch dela. Localize com `git worktree list --porcelain`; sem worktree, leia da branch sem trocar de árvore (`git show feature/<slug>:docs/sprintx/features/<slug>/00-BLOQUEIOS.md`).
-
-**Artefato que não aparece no checkout de controle não é artefato inexistente** — quando a feature não foi integrada, ele está noutro lugar. Concluir "a feature não registrou bloqueio" porque o arquivo não está aqui é o erro que faz o B5 fechar um ciclo cego.
+**Feature bloqueada, não.** Ela nunca foi integrada: os artefatos dela existem só na branch dela. Leia **do commit**, sem trocar de árvore — `git show feature/<slug>:docs/sprintx/features/<slug>/00-AUDITORIA.md` — e cite o SHA. **Artefato que não aparece no checkout de controle não é artefato inexistente**; e artefato que só existe no working tree de um worktree não é evidência.
 
 O B5 é o que separa "rodou até o fim" de "entregou". Sem ele o buildx produziria um repositório com nove features prontas e três bloqueadas, e chamaria isso de terminado.
 
@@ -18,103 +18,194 @@ Colete de todas as fontes, sem filtrar nada ainda:
 
 | Fonte | O que colher |
 |---|---|
-| `MAPA.md` | toda feature `bloqueada`, com o motivo |
-| `docs/sprintx/features/<slug>/00-BLOQUEIOS.md` | toda dúvida que a F6 registrou e pulou — **no worktree/branch daquela feature** |
-| `docs/sprintx/features/<slug>/00-AUDITORIA.md` | todo achado alto que mandou voltar à F3 — idem |
-| `docs/entregas/<slug>/ENTREGA.md` | `portao: bloqueado` e o que ele apontou, mais os `desvios`. Feature integrada: aqui mesmo. Feature bloqueada: **commitado na branch dela** (`git show feature/<slug>:…`), porque o E8 persiste o bloqueio |
+| `RECURSAO.md` | toda pendência em `aguardando_classificacao` — o B4 a registrou no commit que encerrou a tentativa |
+| `MAPA.md` | toda feature `bloqueada`, conferindo que cada uma já tem a sua pendência |
+| `docs/sprintx/features/<slug>/00-BLOQUEIOS.md` | toda dúvida que a F6 registrou e pulou — no commit da feature: integrada, na `CONTROL`; bloqueada, na branch dela |
+| `docs/entregas/<slug>/ENTREGA.md` | `portao: bloqueado` e o que ele apontou, mais os `desvios` — commitado |
 | `PREMISSAS.md` | toda premissa marcada provisória |
-| `RECURSAO.md` do ciclo anterior | toda pendência que continua aberta |
 
-Consulte o `memox`, se instalado: uma pendência que já apareceu em ciclo anterior e voltou não é a mesma pendência — é sinal de que a tentativa anterior não resolveu, e repetir a mesma correção vai falhar igual.
+Toda pendência nova encontrada aqui entra no `RECURSAO.md` como `aguardando_classificacao`, com a evidência commitada, e só então é classificada.
 
-## Passo 2 — A classificação
+Consulte o `memox`, se instalado: uma pendência que já apareceu em ciclo anterior e voltou não é a mesma pendência — é sinal de que a tentativa anterior não resolveu.
 
-Cada pendência recebe exatamente uma classe. É a classificação que decide o destino, e ela é a única decisão real do B5.
+## Passo 2 — A máquina de pendências
 
-### `trabalho_novo` — vira feature
+### Os estados, e a seção de cada um
 
-A pendência descreve algo que ninguém construiu e que a máquina sabe construir.
+O `RECURSAO.md` tem **exatamente** cinco seções, nesta ordem, e cada pendência mora na seção do seu `estado`. Nenhuma execução acrescenta, renomeia ou remove seção — situação que "não cabe" numa delas é um estado que falta ao contrato, e isso é **parar e relatar**, não inventar título.
 
-Exemplos: a exclusão de conta pela LGPD não coube em nenhuma feature; a rota de saúde ficou de fora; uma tela não tratou o estado de erro.
+| `estado` | Seção | `classe` |
+|---|---|---|
+| `aguardando_classificacao` | `## Aguardando classificação do B5` | `null` |
+| `em_resolucao` | `## Em resolução pela máquina` | `trabalho_novo` |
+| `decisao_humana` | `## Aberto — decisão humana` | `decisao_humana` |
+| `recurso_externo` | `## Aberto — recurso externo` | `recurso_externo` |
+| `resolvida` | `## Resolvido nos ciclos` | a que tinha — normalmente `trabalho_novo` |
 
-**Destino:** feature nova no `MAPA.md`, com `origem: recursao`, e volta ao B4 — nascendo do `HEAD` atual de `buildx/<projeto_id>`, como qualquer outra.
+`resolvida` é **estado**, não classe.
 
-### `replanejamento` — e por que ele quase nunca chega aqui
+### Os campos
 
-Replanejar uma feature é trabalho do **B4**, na triagem imediata, no momento em que ela falha: ali a árvore ainda está em `BASE_SHA`, a branch daquela feature ainda descende dela, e voltar à F3 no mesmo worktree é seguro (`references/05-construcao.md`, "a triagem imediata"). Teto de dois replanejamentos, como sempre.
+Cada pendência é um bloco `### PEND-NN — <assunto>` com uma linha `- chave: valor` por campo, **nenhum omitido** — ausente é `null` ou `[]` (forma exata em `assets/TEMPLATE-RECURSAO.md`):
 
-**No B5, esse caminho já se fechou.** Quando o laço chega aqui, `buildx/<projeto_id>` avançou com as features seguintes, e a branch antiga não descende mais da árvore atual — um fast-forward depois seria impossível. Por isso:
+| Campo | Conteúdo |
+|---|---|
+| `id` | `PEND-NN`, sequencial no arquivo, nunca reutilizado |
+| `estado` | um dos cinco acima |
+| `gatilho` | a linha da tabela do passo 3 que a originou |
+| `classe` | `null` enquanto `aguardando_classificacao`; depois, uma das três classes |
+| `origem` | `FT-NN`, ou a etapa (`b1`, `b2`, `b6`) que a levantou |
+| `ciclo` | o ciclo em que foi detectada |
+| `evidencia` | referências **commitadas**, `feature/<slug>@<sha>:<caminho>` (ou `buildx/<projeto_id>@<sha>:<caminho>`), separadas por ` ; ` |
+| `causa` | nas entregas: o gatilho que a evidência commitada aponta; senão `null` |
+| `clausula_central` | o que o detector de laço compara (passo 5) |
+| `raiz` | `PEND-NN` da pendência que a sucessora bloqueada tentava resolver; senão `null` |
+| `detectada_em` · `classificada_em` · `resolvida_em` | datas `AAAA-MM-DD`, ou `null` |
+| `regra_aplicada` | a regra da tabela que decidiu a classe, literalmente (`orcamento_f5_esgotado/alta_item_7`, `teto_de_ciclos_atingido`, …) |
+| `destino` | `FT-NN` da sucessora, quando `trabalho_novo`; senão `null` |
+| `pr_reservadas` | os `PR-NN` do `BUILDX-PREMISSAS.md` commitado da feature que terminou sem integrar (passo 7), ou `[]` |
+| `nota` | `teto_de_ciclos_atingido`, `laco_detectado`, ou `null` |
 
-**Uma pendência que só se resolve com trabalho novo vira feature nova**, com `origem: recursao`, slug novo, branch nova e worktree novo, nascendo do `HEAD` atual de `buildx/<projeto_id>`. Não é burocracia: é o que garante que o trabalho novo enxergue tudo que foi entregue desde então.
+E os específicos da classe: `decisao_humana` registra `decisao`, `opcoes`, `provisorio` e `reversibilidade`; `recurso_externo` registra `o_que_falta`, `o_que_destrava` e `estado_atual`; `trabalho_novo` registra `sucede` (a `FT-XX` bloqueada) e `slug_sucessora`.
 
-**Nunca reabra uma branch antiga para forçá-la na árvore.** Sem `rebase`, sem `cherry-pick`, sem `merge --no-ff`, sem `--force`. A branch antiga continua existindo com o PR dela; o que continua a partir daqui é uma feature nova.
+## Passo 3 — A classificação
 
-### `decisao_humana` — fica para o relatório
+As classes finais do B5 são **três**, e só estas são escritas:
 
-A pendência exige alguém decidir algo que o buildx não pode decidir: regra de negócio não declarada, escolha com consequência comercial, premissa provisória que precisa de confirmação, conflito entre o que o usuário pediu e o que a premissa assumiu.
+| Classe | Destino |
+|---|---|
+| `trabalho_novo` | **feature sucessora** nova no `MAPA.md` (passo 4) |
+| `decisao_humana` | fica no `RECURSAO.md`, vai para a primeira seção do relatório. **Nunca vira feature** |
+| `recurso_externo` | fica no `RECURSAO.md`, vai para a segunda seção do relatório |
 
-**Destino:** `RECURSAO.md`, e daí para o relatório final. **Nunca vira feature**, nunca é resolvida por chute.
+**Replanejar não é classe do B5.** Replanejar a mesma feature existe **só** dentro do B4, pela sprintx, enquanto o orçamento da F5 não terminou — na mesma branch e no mesmo worktree. Quando a pendência chega ao B5, aquela tentativa já acabou: o que continua é trabalho novo, em feature nova.
 
-Cada uma registra: qual é a decisão, quais são as opções, o que o buildx fez provisoriamente enquanto isso, e o que muda em cada opção.
+### A tabela gatilho → classe
 
-### `recurso_externo` — fica para o relatório
+Determinística: a mesma evidência commitada dá sempre a mesma classe. Nenhuma linha depende de julgamento sobre "quanto esforço vale".
 
-Falta algo que não está na máquina: credencial de um serviço, acesso a um sistema, chave de API, domínio, conta em nuvem.
+| Gatilho | Classe | `regra_aplicada` |
+|---|---|---|
+| `orcamento_f5_esgotado` | pela última `00-AUDITORIA.md` commitada — abaixo | `orcamento_f5_esgotado/alta_item_7` · `/alta_item_8` · `/alta_qualidade_plano` |
+| `regra_de_negocio_nao_declarada` | `decisao_humana` | `regra_de_negocio_nao_declarada` |
+| `recurso_externo_ausente` | `recurso_externo` | `recurso_externo_ausente` |
+| `incompatibilidade_de_versao` | `decisao_humana` | `incompatibilidade_de_versao` |
+| `violacao_de_convencao` | `trabalho_novo` | `violacao_de_convencao` |
+| `dependencia_nao_integrada` | a classe da pendência raiz — a da dependência que não integrou —, quando identificável; senão `decisao_humana`, com a ambiguidade na `evidencia` | `dependencia_nao_integrada/segue_raiz` · `/raiz_ambigua` |
+| `entrega_bloqueada` | pela `causa` commitada: um gatilho desta tabela → a classe dele; `falha_tecnica` (portão reprovado por suíte, cobertura ou escopo) → `trabalho_novo`; sem causa commitada identificável → `decisao_humana` | `entrega_bloqueada/causa_<gatilho>` · `/falha_tecnica` · `/causa_nao_commitada` |
+| `entrega_interrompida` | pela `causa` commitada, quando ela é um gatilho desta tabela; senão `trabalho_novo` — tecnicamente resolvível sem decisão | `entrega_interrompida/causa_<gatilho>` · `/resolvivel_sem_decisao` |
 
-**Destino:** `RECURSAO.md` e relatório final, com **o que exatamente é preciso providenciar** e o que passa a funcionar quando providenciado.
+### `orcamento_f5_esgotado` — os prefixos `[item N]` da sprintx
 
-O buildx nunca inventa credencial, nunca põe valor de exemplo em lugar de segredo, e nunca marca como pronto o que depende de algo que não tem.
+Leia a `00-AUDITORIA.md` **commitada** da rodada terminal (a referência está na `evidencia`) e considere só os achados `ALTA` — todo achado começa por `[item N]` desde a sprintx P0.1. Nesta ordem:
 
-## Passo 3 — O teto de ciclos
+1. existe **qualquer** `ALTA` `[item 7]` (task que exigiria decisão humana) → **`decisao_humana`**;
+2. senão, existe **qualquer** `ALTA` `[item 8]` (pré-requisito externo não declarado) → **`recurso_externo`**;
+3. senão — os `ALTA` são problemas de qualidade ou de planejamento que a máquina corrige: teste fraco, critério subjetivo, dependência, paralelismo, base ignorada, granularidade — → **`trabalho_novo`**.
 
-O ciclo B4 → B5 repete enquanto houver pendência `trabalho_novo` ou `replanejamento`. Sem teto, isso é um laço infinito com custo real.
+**Mistura:** o `[item 7]` vence, porque exige decisão humana e nenhuma sucessora a produz; sem `[item 7]`, o `[item 8]` vence. Nenhuma `ALTA` na auditoria terminal é contrato quebrado — `orcamento_esgotado` só existe com `VEREDITO: NÃO` —: **pare e relate**.
 
-**Teto padrão: 3 ciclos.** Declarado no frontmatter do `RECURSAO.md` desde o primeiro.
+A regra que decidiu vai para `regra_aplicada`, literalmente. **Nunca tente reabrir a feature antiga.**
 
-O ciclo 1 é o B4 original. Cada retorno ao B4 incrementa. Atingido o teto:
+### Compatibilidade
 
-- toda pendência ainda aberta é reclassificada como `decisao_humana`, com a nota de que atingiu o teto
-- o buildx segue para o B6 com o que existe
-- o relatório final declara tudo, sem eufemismo
+Um `RECURSAO.md` antigo pode trazer a classe `replanejamento`. Ela é **lida** como `trabalho_novo` — e a pendência segue o passo 4 como qualquer outra. Nenhuma escrita nova usa `replanejamento`: ao regravar aquele bloco, a classe sai `trabalho_novo`.
 
-**Por que 3.** O ciclo 2 resolve o que o B3 recortou mal — é o mais produtivo. O ciclo 3 resolve o que o ciclo 2 criou. Do quarto em diante, o que sobra normalmente não é falta de trabalho, é falta de decisão: continuar gasta muito e resolve pouco.
+## Passo 4 — `trabalho_novo` vira feature sucessora
 
-### O detector de laço em falso
+A feature bloqueada **permanece `bloqueada` para sempre**. A branch dela não descende mais da `CONTROL` atual, e o plano dela esgotou o orçamento: não há como voltá-la a `pendente`, e tentar seria recomeçar pelo lado que já falhou.
 
-Independente do teto, pare uma linha de trabalho quando:
+O que continua é uma **feature sucessora**:
 
-- a mesma pendência, com a mesma descrição, aparece em **dois ciclos seguidos**
-- uma feature entra em `bloqueada` **duas vezes** pelo mesmo motivo
-- o ciclo inteiro não converteu nenhuma pendência em entrega
+- `FT-NN` novo, no `MAPA.md`, na posição correta de dependência;
+- **slug novo** — nunca o da bloqueada;
+- `origem: recursao`, com `**Sucede:** FT-XX` e `**Pendência:** PEND-NN` no bloco dela;
+- nasce, no B4, do `HEAD` **atual** de `buildx/<projeto_id>` — enxergando tudo que foi entregue desde a tentativa antiga;
+- passa por uma F1 nova, com worktree novo e branch nova, e com o briefing de sempre — inclusive o orçamento da F5.
 
-Nos três casos, reclassifique para `decisao_humana` imediatamente, sem esperar o teto. Repetir o que não funcionou é a forma mais cara de não resolver nada.
+**Nunca** volte a feature velha para `pendente`; **nunca** `rebase`, `cherry-pick`, `merge --no-ff` ou `--force` sobre a branch antiga. Ela fica como está, local, para o relatório apontar.
 
-## Passo 4 — Devolver ao laço
+A pendência passa a `estado: em_resolucao`, `classe: trabalho_novo`, `destino: FT-NN`, com `sucede` e `slug_sucessora` preenchidos, e muda para a seção "Em resolução pela máquina".
 
-Se sobrou pendência `trabalho_novo` ou `replanejamento` e o teto não foi atingido:
+**Quando a sucessora é entregue** (integrada pelo passo 7 do B4), a pendência vira `estado: resolvida`, com `resolvida_em`, e vai para "Resolvido nos ciclos" — no mesmo commit de estado que marca a sucessora `entregue`.
 
-1. acrescente as features novas ao `MAPA.md`, na posição correta de dependência — feature de recursão respeita a ordenação do B3 como qualquer outra
-2. incremente `ciclo_atual` no `RECURSAO.md`
-3. commite o estado (`chore(buildx): ciclo <n> da recursão`) e faça push normal — a árvore precisa estar limpa antes de a próxima feature começar
-4. volte ao B4
+**Quando a sucessora também é bloqueada**, o B4 registra, no commit do bloqueio dela, uma pendência nova `aguardando_classificacao` com `raiz: PEND-NN` apontando a que ela tentava resolver. O B5 a classifica começando pelo detector de laço (passo 5). A raiz acompanha a filha: filha `em_resolucao` → raiz continua `em_resolucao`, com `destino` na sucessora nova; filha `decisao_humana`, `recurso_externo` ou `resolvida` → raiz no mesmo estado, com `nota` apontando a filha.
 
-Features que ficaram `bloqueada` **não voltam a `pendente`**: o que volta ao laço é feature nova. A branch e o worktree da bloqueada permanecem como estão, para o relatório final apontar.
+## Passo 5 — O detector de laço
+
+Antes da tabela, para toda pendência com `raiz`:
+
+> **Mesmo `gatilho` e mesma `clausula_central` da raiz → a raiz é reclassificada `decisao_humana`**, com `regra_aplicada: laco_detectado` e `nota: laco_detectado`, e a filha segue a raiz.
+
+A `clausula_central` é derivada da evidência commitada, nunca escolhida:
+
+| Gatilho | `clausula_central` |
+|---|---|
+| `orcamento_f5_esgotado` | os prefixos distintos dos achados `ALTA` da auditoria terminal, em ordem — `[item N]`, e `[item 2][fraco:<tipo>]` no item 2 —, separados por vírgula |
+| `entrega_bloqueada` · `entrega_interrompida` | a `causa` |
+| os demais | o identificador do item commitado que a evidência cita (`B-NN` do `00-BLOQUEIOS.md`, `PR-NN`, o artefato ausente) |
+
+A sucessora que bloqueia pela mesma cláusula mostrou que trabalho novo não resolve aquilo: gerar outra seria girar em falso. **Nenhuma pendência gera sucessora indefinidamente.**
+
+Independente disso, reclassifique para `decisao_humana` quando um ciclo inteiro terminar sem nenhuma pendência `resolvida` e sem nenhuma sucessora entregue (`nota: laco_detectado`).
+
+## Passo 6 — O teto de ciclos
+
+**Teto padrão: 3 ciclos**, declarado em `teto_ciclos` no frontmatter desde o primeiro.
+
+O ciclo agora é:
+
+```
+B4  →  B5  →  features sucessoras novas  →  B4
+```
+
+— nunca "reabrir a F3 de uma branch antiga". O ciclo 1 é o B4 original; cada volta ao B4 com sucessoras incrementa `ciclo_atual`.
+
+Atingido o teto (`ciclo_atual` == `teto_ciclos`), toda pendência que ainda seria resolvível pela máquina — `aguardando_classificacao` que a tabela levaria a `trabalho_novo` — é gravada `estado: decisao_humana`, `classe: decisao_humana`, `regra_aplicada: teto_de_ciclos_atingido`, `nota: teto_de_ciclos_atingido`. Nenhuma sucessora nova nasce. O buildx segue para o B6 com o que existe, e o relatório final declara tudo, sem eufemismo.
+
+**Por que 3.** O ciclo 2 resolve o que o B3 recortou mal — é o mais produtivo. O ciclo 3 resolve o que o ciclo 2 criou. Do quarto em diante, o que sobra normalmente não é falta de trabalho, é falta de decisão.
+
+## Passo 7 — `PR-NN` de feature que não integrou continuam reservados
+
+Uma feature bloqueada pode ter um `BUILDX-PREMISSAS.md` com premissas que **nunca foram promovidas**. Os `PR-NN` delas não voltam para o estoque: reusá-los numa sucessora faria dois textos diferentes disputarem o mesmo id — um no artefato morto, outro no `PREMISSAS.md` — e a promoção idempotente pelo id passaria a mentir.
+
+1. Ao registrar a pendência de uma feature que termina sem integrar, leia o `BUILDX-PREMISSAS.md` **commitado** dela (`git show feature/<slug>:docs/sprintx/features/<slug>/BUILDX-PREMISSAS.md`) e grave os ids em `pr_reservadas`.
+2. Toda alocação de premissa nova feature-local considera ocupados: os `PR-NN` do `PREMISSAS.md`, **todos** os `pr_reservadas` do `RECURSAO.md`, e os que já existem no `BUILDX-PREMISSAS.md` daquela feature. O próximo número é o maior ocupado mais um.
+3. **Nunca renumere artefato morto** e **nunca promova premissa de feature bloqueada**: a premissa global representa decisão incorporada ao produto integrado. A sucessora que precisar da mesma decisão a registra de novo, com `PR-NN` novo, e ela é promovida quando a sucessora integrar.
+
+## Passo 8 — Devolver ao laço
+
+Se sobrou pendência classificada `trabalho_novo` e o teto não foi atingido:
+
+1. acrescente as sucessoras ao `MAPA.md`, na posição correta de dependência;
+2. mova cada pendência para `em_resolucao`, com o `destino`;
+3. incremente `ciclo_atual` e os contadores do frontmatter;
+4. commite o estado (`chore(buildx): ciclo <n> da recursão`) e faça push normal — a árvore precisa estar limpa antes de a próxima feature começar;
+5. volte ao B4.
 
 Se não sobrou nada resolvível, ou o teto foi atingido: siga para o B6.
 
 ## Critério de saída do B5
 
-- toda pendência coletada tem exatamente uma classe
-- nenhuma pendência `trabalho_novo` ou `replanejamento` continua aberta, ou o teto foi atingido
-- toda `decisao_humana` registra: a decisão, as opções, o provisório adotado, o efeito de cada opção
-- todo `recurso_externo` registra o que providenciar e o que destrava
+- nenhuma pendência em `aguardando_classificacao`
+- toda pendência classificada tem `classe`, `classificada_em` e `regra_aplicada`, e mora na seção do seu `estado`
+- o `RECURSAO.md` tem exatamente as cinco seções do template, nenhuma a mais
+- nenhuma classe `replanejamento` foi escrita
+- toda `trabalho_novo` tem sucessora com slug novo, ou foi para `decisao_humana` pelo teto ou pelo detector
+- nenhuma feature `bloqueada` voltou a `pendente`
+- toda pendência de feature que não integrou tem `pr_reservadas`, e nenhum desses ids foi reutilizado
+- toda `decisao_humana` registra a decisão, as opções, o provisório e a reversibilidade; todo `recurso_externo` registra o que providenciar e o que destrava
 - `RECURSAO.md` com frontmatter válido e os contadores certos
 
 ## Erros que esta etapa comete
 
-- **Classificar `decisao_humana` como `trabalho_novo`.** É o erro caro: o buildx decide regra de negócio no lugar do usuário e constrói, com esmero, a coisa errada.
+- **Classificar `decisao_humana` como `trabalho_novo`.** É o erro caro: o buildx decide regra de negócio no lugar do usuário e constrói, com esmero, a coisa errada. Um `[item 7]` numa mistura é exatamente esse caso.
 - **Classificar `trabalho_novo` como `decisao_humana`.** O erro preguiçoso: joga para o humano o que a máquina resolveria, e esvazia a promessa do modo autônomo.
-- **Ignorar o teto por otimismo.** "Mais um ciclo e sai" é como se gasta o orçamento inteiro sem entregar.
-- **Perder pendência que o portão reprovou.** A verificação bloqueada é pendência como qualquer outra; feature com `portao: bloqueado` não é feature entregue.
-- **Tentar destravar reexecutando a entrega.** Rodar de novo o portão, o PR ou o pacote de QA não é recursão: é duplicar o ciclo que a F6 conduziu. O que volta ao B4 é a feature, pela porta da F3 ou como feature nova.
-- **Deixar premissa provisória fora do relatório.** Ela é exatamente o que o humano precisa revisar, e é a mais fácil de esquecer porque não quebrou nada.
+- **Reabrir a feature velha.** Voltar a bloqueada para `pendente`, ou replanejá-la na branch antiga, é recomeçar do lado que já falhou — e a branch dela não integra mais.
+- **Classificar por evidência do working tree.** Só o commitado é evidência.
+- **Inventar seção.** A pendência que não cabe nas cinco é contrato faltando: pare e relate.
+- **Ignorar o teto ou o detector por otimismo.** "Mais uma sucessora e sai" é como se gasta o orçamento inteiro sem entregar.
+- **Reutilizar `PR-NN` de feature bloqueada.** O artefato morto continua citando aquele id.
+- **Perder pendência que o portão reprovou.** Feature com `portao: bloqueado` não é feature entregue.
+- **Tentar destravar reexecutando a entrega.** Rodar de novo o portão, o PR ou o pacote de QA não é recursão: é duplicar o ciclo que a F6 conduziu.
+- **Deixar premissa provisória fora do relatório.** Ela é exatamente o que o humano precisa revisar.

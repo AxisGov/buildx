@@ -115,7 +115,7 @@ Se a F2 levantar **regra de negócio** que nenhum dos três arquivos responde �
 
 Isso não é requisito não-funcional. É o que o sistema faz, e decidir no lugar do usuário produz um sistema que funciona e está errado — o pior resultado possível, porque parece pronto.
 
-Nesse caso: registre na própria feature — o bloqueio na pasta dela e a decisão provisória no `BUILDX-PREMISSAS.md`, com `o_que_invalida` preenchido — e siga com **a decisão mais reversível possível**, marcada como provisória no código e na premissa. **Nada vai para o `RECURSAO.md` agora:** a `CONTROL` está em `BASE_SHA`, dentro da janela fechada. A pendência global é escrita pelo buildx só quando a tentativa termina — integrada ou encerrada terminalmente (`references/05-construcao.md`, "A triagem imediata") —, e o relatório final abre com essas.
+Nesse caso: registre na própria feature, no arquivo do buildx — a premissa provisória no `BUILDX-PREMISSAS.md`, marcada provisória e com `o_que_invalida` preenchido; o `00-BLOQUEIOS.md` é da sprintx — e siga com **a decisão mais reversível possível**, marcada como provisória no código e na premissa. **Nada vai para o `RECURSAO.md` agora:** a `CONTROL` está em `BASE_SHA`, dentro da janela fechada. A pendência global é escrita pelo buildx só quando a tentativa termina — integrada ou encerrada terminalmente (`references/05-construcao.md`, "A triagem imediata") —, e o relatório final abre com essas.
 
 ## As regras do sprintx que o buildx não toca
 

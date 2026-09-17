@@ -34,10 +34,15 @@ Verificável, sem adjetivo, numa frase.>
 **Premissas que realiza:** <[PR-NN, ...] ou []>
 **Status:** <pendente | em_andamento | entregue | bloqueada>
 
-<Se bloqueada:>
-**Bloqueada por:** <o motivo exato — o que o portão registrou em `ENTREGA.md`, o
-achado da F5, ou o que a F6 não conseguiu resolver>
-**Pendência:** <o item correspondente no RECURSAO.md>
+<Se origem recursao — feature sucessora, com slug novo:>
+**Sucede:** <FT-XX, a feature bloqueada que ela substitui e que nunca volta>
+**Pendência:** <PEND-NN que ela resolve, em_resolucao no RECURSAO.md>
+
+<Se bloqueada — escrito só depois da evidência commitada:>
+**Bloqueada por:** <o gatilho — orcamento_f5_esgotado, entrega_bloqueada,
+entrega_interrompida, incompatibilidade_de_versao, dependencia_nao_integrada… —
+e o motivo exato que a evidência commitada registra>
+**Pendência:** <PEND-NN no RECURSAO.md, nascida aguardando_classificacao>
 
 <Se entregue:>
 **PR:** <#numero — da feature, contra buildx/<projeto_id> | caminho do PR.md>

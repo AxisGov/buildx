@@ -145,22 +145,25 @@ O buildx roda **sempre** em `buildx/<projeto_id>`, criada no B2, e nunca troca d
 
 **A F2 no modo autônomo.** A regra 10 do sprintx obriga a F2 a entrevistar o humano. No buildx o humano já falou — na descrição e, no modo briefing, na rodada única. Então o buildx **responde a F2 no lugar dele**, derivando cada resposta do `PROJETO.md`, do `PREMISSAS.md` e do `CONVENCOES.md`, e gravando em `00-DECISOES.md` no schema da sprintx, **sem chave nova**: a proveniência vai no `motivo`, com `(HIPOTESE)` quando o buildx assumiu e sem marcador quando o usuário declarou. Nenhuma resposta é inventada: o que não estiver derivável de um desses três arquivos vira **premissa nova, registrada antes de ser usada** — em `docs/sprintx/features/<slug>/BUILDX-PREMISSAS.md`, arquivo do buildx dentro da pasta da feature, e promovida ao `PREMISSAS.md` do projeto depois que a feature é integrada. A decisão que resulta dela vai para o `00-DECISOES.md`, que é da sprintx, citando `BUILDX-PREMISSAS.md#PR-NN` como fonte. Escrever direto no estado global sujaria a árvore de controle dentro da janela fechada e barraria o fast-forward.
 
-**Bloqueio nunca para o laço.** Feature bloqueada é marcada `bloqueada` no `MAPA.md`, com o motivo, e o laço segue para a próxima. É o B5 que decide o que fazer com ela.
+**O planejamento durável é da sprintx.** O briefing declara `max_reprovacoes_f5: 3` e `orcamento_declarado_por: buildx`; a F1 os grava no `00-PLANEJAMENTO.md`, e dali em diante a sprintx conta as reprovações e faz os checkpoints locais na `feature/<slug>`. O buildx decide só pela resposta de `planejamento.sh fase`: `CHECKPOINT` pendente não decide nada, e `persistencia_falhou` para a feature sem virar bloqueio. Commit à frente de `BASE_SHA` antes da F6 pode ser checkpoint legítimo — não é E1, não é entrega.
+
+**Bloqueio nunca para o laço — mas só bloqueia com evidência commitada.** Quando a tentativa termina sem integrar (orçamento da F5 esgotado, portão bloqueado, entrega interrompida, incompatibilidade), o buildx prova pelo Git que o terminal está no `HEAD` da feature; só então marca `bloqueada` no `MAPA.md` e registra a pendência `aguardando_classificacao` no `RECURSAO.md`, no mesmo commit, e o laço segue. A feature bloqueada nunca volta: é o B5 que decide o que fazer com a pendência dela.
 
 Roteiro: `references/05-construcao.md`.
 
 ### B5 — Recursão
 
-Depois que o laço passou por todas as features, o buildx varre os `00-BLOQUEIOS.md` de todas elas — **cada um na árvore ou na branch da sua feature**, porque não há merge — e o `MAPA.md`, e classifica cada pendência:
+Depois que o laço passou por todas as features, o buildx varre as pendências `aguardando_classificacao` do `RECURSAO.md` e os artefatos **commitados** de cada feature — os da bloqueada, na branch dela — e classifica cada pendência por uma tabela determinística gatilho → classe:
 
 | Classe | Destino |
 |---|---|
-| resolvível por trabalho novo | vira feature nova no `MAPA.md`, volta ao B4 |
-| resolvível por replanejamento | a feature volta para a F3 do sprintx |
-| depende de decisão humana | fica em `RECURSAO.md`, reportada no fim |
-| depende de recurso externo (credencial, serviço, acesso) | fica em `RECURSAO.md`, reportada no fim |
+| `trabalho_novo` | vira **feature sucessora** no `MAPA.md` — `FT-NN` e slug novos, `origem: recursao`, nascendo do `HEAD` atual da `CONTROL`. A bloqueada nunca volta |
+| `decisao_humana` | fica em `RECURSAO.md`, reportada no fim |
+| `recurso_externo` | fica em `RECURSAO.md`, reportada no fim |
 
-O ciclo B4 → B5 repete enquanto houver pendência resolvível, com **teto de ciclos** declarado em `RECURSAO.md`. Atingido o teto, o buildx para de tentar e reporta — girar em falso é pior que entregar com pendência declarada.
+Replanejar a mesma feature não é classe do B5: isso só existe dentro do B4, pela sprintx, antes de o orçamento acabar. A pendência vive numa máquina de cinco estados — `aguardando_classificacao`, `em_resolucao`, `decisao_humana`, `recurso_externo`, `resolvida` —, uma seção fixa do `RECURSAO.md` para cada. Os `PR-NN` de feature que não integrou ficam reservados.
+
+O ciclo B4 → B5 → sucessoras → B4 repete enquanto houver pendência resolvível, com **teto de ciclos** declarado em `RECURSAO.md` e um detector de laço: a sucessora que bloqueia pelo mesmo gatilho e pela mesma cláusula manda a pendência para decisão humana. Atingido o teto, o buildx para de tentar e reporta — girar em falso é pior que entregar com pendência declarada.
 
 Roteiro: `references/06-recursao.md`.
 

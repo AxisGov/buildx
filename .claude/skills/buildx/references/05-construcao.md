@@ -261,7 +261,7 @@ Formato, sem frontmatter e sem schema novo — exatamente os campos que a promo�
 
 ### Reservar o `PR-NN` antes de usar
 
-1. **determine o próximo número** lendo o `PREMISSAS.md` da `CONTROL` em `BASE_SHA` — a árvore congelada. Como só há uma feature por vez e `CONTROL` não se move dentro da janela, o número reservado **permanece estável** até a integração;
+1. **determine o próximo número** lendo, na `CONTROL` em `BASE_SHA` — a árvore congelada —, os ids **ocupados**: os `PR-NN` do `PREMISSAS.md`, **todos** os `pr_reservadas` do `RECURSAO.md` (premissas de features que terminaram sem integrar, que nunca foram promovidas e cujos ids não voltam ao estoque) e os que já existem no `BUILDX-PREMISSAS.md` desta feature. O próximo é o maior ocupado mais um. Como só há uma feature por vez e `CONTROL` não se move dentro da janela, o número reservado **permanece estável** até a integração;
 2. **confira o `BUILDX-PREMISSAS.md` da feature.** A mesma premissa já está lá: **reuse**, com o `PR-NN` que ela já tem;
 3. **senão, grave-a** no `BUILDX-PREMISSAS.md`;
 4. **só então** use essa premissa para responder à F2 (ou à F3);
@@ -295,7 +295,7 @@ A rastreabilidade continua inteira, em `motivo`: uma linha de texto que diz **de
 
 Se a F2 levantar uma questão de **regra de negócio** que nenhum dos três arquivos responde — quanto tempo um contrato fica válido, se o desconto acumula, qual imposto se aplica — o buildx **não inventa**. Isso não é requisito não-funcional; é o que o sistema faz, e decidir isso no lugar do usuário produz um sistema que funciona e está errado.
 
-Nesse caso: registre **na própria feature** — o bloqueio na pasta dela e a premissa provisória no `BUILDX-PREMISSAS.md` — e **siga com a decisão mais reversível possível**, marcada como provisória no código e na premissa. O `RECURSAO.md` **não** é escrito agora: a `CONTROL` está em `BASE_SHA`, e qualquer escrita nela mataria o fast-forward. A pendência global nasce quando a tentativa termina — no commit de estado que fecha a feature, entregue ou terminalmente bloqueada (a triagem, adiante). O relatório final lista todas essas — são a primeira coisa que o humano precisa olhar.
+Nesse caso: registre **na própria feature**, no arquivo do buildx — a premissa provisória no `BUILDX-PREMISSAS.md`, marcada provisória e com `o_que_invalida` preenchido; o `00-BLOQUEIOS.md` é da sprintx, e o buildx não escreve nele — e **siga com a decisão mais reversível possível**, marcada como provisória no código e na premissa. O `RECURSAO.md` **não** é escrito agora: a `CONTROL` está em `BASE_SHA`, e qualquer escrita nela mataria o fast-forward. A pendência global nasce quando a tentativa termina — no commit de estado que fecha a feature, entregue ou terminalmente bloqueada (a triagem, adiante). O relatório final lista todas essas — são a primeira coisa que o humano precisa olhar.
 
 ## Passo 4 — F3 a F5, dentro da janela fechada
 
@@ -401,8 +401,10 @@ Nenhum campo além desses é inventado: são os que os contratos das duas skills
 | O que o `ENTREGA.md` diz | `MAPA.md` | O que registrar |
 |---|---|---|
 | `estado: entregue` e `portao: pronto` | **`entregue`** | `pr_url` quando houver, os testes de `testes_adicionados`, e o `risco_residual` do fechamento |
-| `portao: bloqueado` (com `estado: bloqueado`) | **`bloqueada`** | o motivo que o portão registrou, e os `desvios`, se houver |
-| `estado: aberto` depois de a F6 ter devolvido o controle | **`bloqueada`** | entrega interrompida no meio; o motivo é o que a F6 relatou |
+| `portao: bloqueado` (com `estado: bloqueado`) | **`bloqueada`** | pela triagem terminal, gatilho `entrega_bloqueada`: o motivo que o portão registrou, e os `desvios`, se houver |
+| `estado: aberto` depois de a F6 ter devolvido o controle | **`bloqueada`** | pela triagem terminal, gatilho `entrega_interrompida`; a causa é a que está commitada na feature |
+
+Nas duas linhas de bloqueio, o `ENTREGA.md` lido é o **commitado** — é ele a evidência que autoriza a `CONTROL` a avançar.
 
 **`pr_url: null` não reprova a feature.** O contrato da mergex é explícito: PR não aberto — porque a ferramenta do serviço não estava disponível ou autenticada — não é falha, e a descrição fica em `docs/entregas/<slug>/PR.md`. O que decide é o portão, não a existência da URL. Registre no `MAPA.md` que a descrição está em arquivo, para o relatório final apontar para lá.
 
@@ -425,7 +427,7 @@ Não trate a ausência de PR ou de push como problema a mais: é o portão funci
 
 Com a mergex instalada — e ela é obrigatória —, a ausência de `ENTREGA.md` **commitado** depois da F6 significa que **a sprintx ou a mergex instaladas não têm o contrato E0/E1/E2→E8 com fechamento persistido**. Isso é incompatibilidade de versão, não trabalho pendente.
 
-Nesse caso: marque a feature `bloqueada` com o motivo `incompatibilidade_de_versao`, registre a pendência no `RECURSAO.md` dizendo qual artefato faltou, e **siga para a próxima feature**.
+Nesse caso, pela triagem terminal, com gatilho `incompatibilidade_de_versao`: prove a ausência (`git cat-file -e feature/<slug>:docs/entregas/<slug>/ENTREGA.md` falhando) e prove o estado que existe, commitado, onde o dono dele existe — o `00-PLANEJAMENTO.md` em `aprovado` na branch mostra que a F6 começou. Então marque a feature `bloqueada`, registre a pendência dizendo qual artefato faltou, no mesmo commit de estado, e **siga para a próxima feature**.
 
 **Não complete o fluxo à mão.** Não rode `mergex-check`, `mergex-pr`, `mergex-qa` nem `mergex-abrir` para "terminar o que faltou": um ciclo de entrega conduzido pela metade por cada lado produz commit sem portão, PR sem pacote de QA, ou entrega registrada duas vezes. Falha explícita de versão é melhor que execução dupla — e o B5 classifica a pendência depois.
 
@@ -519,7 +521,7 @@ No `MAPA.md`, no checkout de controle:
 - `**Integrada em:** <FEATURE_SHA>` no bloco daquela feature;
 - o PR (ou o caminho do `PR.md`), os testes de `testes_adicionados` e o `risco_residual` do `FECHAMENTO.md`.
 
-Junto vai o `PREMISSAS.md` com as premissas recém-promovidas, e o mais que estiver represado. Então:
+Junto vai o `PREMISSAS.md` com as premissas recém-promovidas, e o mais que estiver represado. **Se a feature é sucessora** (`origem: recursao`, `**Sucede:** FT-XX`), a pendência que tinha nela o `destino` passa a `estado: resolvida`, com `resolvida_em`, e muda para a seção "Resolvido nos ciclos" do `RECURSAO.md` — no mesmo commit. A feature que ela sucede continua `bloqueada`. Então:
 
 ```
 commit   chore(buildx): FT-NN entregue
@@ -555,9 +557,39 @@ Replanejar é da sprintx: com `estado: replanejar`, `planejamento.sh fase` respo
 
 **É isto que mantém o fast-forward possível.** Se o buildx commitasse um "FT-NN replanejando" aqui, `CONTROL` andaria para `BASE_SHA+1`, deixaria de ser ancestral da feature, e a integração depois seria impossível — exatamente o beco que a barreira serial existe para evitar. O teto é o orçamento do briefing, contado pela sprintx: duas voltas de replanejamento, e a reprovação que o atinge leva a `orcamento_esgotado`.
 
-### Terminal: aí sim o laço segue
+### Terminal: aí sim o laço segue — com evidência commitada
 
-`MAPA.md` para `bloqueada`, com o motivo e a pendência no `RECURSAO.md`; commit `chore(buildx): FT-NN bloqueada`; push normal. Aquela branch **nunca será integrada**, e é justamente por isso que `CONTROL` pode avançar sem risco.
+O buildx **não marca uma feature `bloqueada` com base no relato do modelo.** Antes de qualquer escrita em `CONTROL`, a evidência do encerramento tem de estar **commitada** — nada que exista só num working tree move a `CONTROL`:
+
+| Gatilho | Evidência exigida antes de mover a `CONTROL` |
+|---|---|
+| `orcamento_f5_esgotado` | o portão terminal pré-F6 inteiro, A a I: `00-PLANEJAMENTO.md` e `00-AUDITORIA.md` commitados, sprintx fora de `CHECKPOINT`, nenhum produto antes da F6 |
+| `entrega_bloqueada` · `entrega_interrompida` | o `ENTREGA.md` **commitado** na branch, como no P0 (passo 6) |
+| `incompatibilidade_de_versao` | o artefato esperado **comprovadamente ausente** no `HEAD` da feature, e o estado da feature commitado quando o dono dele existe (passo 6) |
+| `dependencia_nao_integrada` | o portão 2 falhando pelo Git — a feature nem chegou a nascer |
+| `regra_de_negocio_nao_declarada` · `recurso_externo_ausente` | o registro commitado na feature, lido e nunca escrito pelo buildx — o bloqueio no `ENTREGA.md` ou no `00-BLOQUEIOS.md` da sprintx —, ou a premissa provisória no `BUILDX-PREMISSAS.md` |
+
+Sem a evidência: **pare e relate.** Não há "bloqueio provisório" — ou o terminal está provado, ou a feature continua `em_andamento` e a `CONTROL` continua em `BASE_SHA`.
+
+Provado o terminal, a janela se encerra, e **um único commit de estado** registra:
+
+1. `MAPA.md` — a feature vira `bloqueada`, com `**Bloqueada por:**` (o gatilho) e `**Pendência:** PEND-NN`, e os contadores do frontmatter;
+2. `PROJETO.md` — `features_bloqueadas` incrementado;
+3. `RECURSAO.md` — criado a partir de `assets/TEMPLATE-RECURSAO.md` se ainda não existe; uma pendência nova na seção `## Aguardando classificação do B5`, com `estado: aguardando_classificacao`, `classe: null`, o `gatilho`, `origem: FT-NN`, e a `evidencia` apontando **commits**, nunca arquivos soltos — para o orçamento esgotado:
+
+   ```
+   feature/<slug>@<HEAD>:docs/sprintx/features/<slug>/00-PLANEJAMENTO.md
+   feature/<slug>@<HEAD>:docs/sprintx/features/<slug>/00-AUDITORIA.md
+   ```
+
+   E `pr_reservadas` com os `PR-NN` do `BUILDX-PREMISSAS.md` commitado da feature — reservados, nunca reutilizados (`references/06-recursao.md`, passo 7). Se a feature bloqueada é ela mesma uma sucessora, a pendência nova leva `raiz: PEND-NN`.
+
+```
+commit   chore(buildx): FT-NN bloqueada
+git push origin buildx/<projeto_id>
+```
+
+Push normal da `CONTROL`. A branch da feature **continua local e preservada**: o buildx não a publica — uma feature que não passou pela F6 não tem entrega a publicar —, não a apaga e não a reescreve. Aquela branch **nunca será integrada** e **nunca volta a `pendente`**; é justamente por isso que `CONTROL` pode avançar sem risco. Classificar a pendência é do B5.
 
 **As premissas pendentes dela não são promovidas.** Elas permanecem no `BUILDX-PREMISSAS.md` daquela feature como evidência histórica da tentativa, e o B5 e o relatório final podem lê-las de lá — `git show feature/<slug>:docs/sprintx/features/<slug>/BUILDX-PREMISSAS.md` — quando precisarem explicar as decisões provisórias de uma feature bloqueada. A premissa global representa decisão **incorporada ao produto integrado** — não plano abandonado. Promover a premissa de uma feature que nunca entrou faria o `PREMISSAS.md` afirmar uma decisão que nenhum código realiza, que é exatamente a falha mais cara deste método.
 
@@ -593,7 +625,8 @@ Nunca peça confirmação para seguir. Nunca ofereça parar. O usuário fechou o
 - o `MAPA.md` foi atualizado no checkout de controle, não dentro de um worktree
 - toda feature entregue tem `ENTREGA.md` com `estado: entregue` e `portao: pronto` — com o PR aberto, ou com a descrição em `PR.md` quando a ferramenta do serviço não estava disponível
 - nenhuma etapa da mergex foi executada pelo buildx depois da F6
-- toda feature bloqueada tem o motivo registrado no `MAPA.md` e a pendência no `RECURSAO.md`
+- toda feature bloqueada tem o motivo registrado no `MAPA.md` e a pendência no `RECURSAO.md` — escritos no commit que encerrou a tentativa, depois da evidência commitada, nunca dentro da janela
+- nenhuma feature foi bloqueada por `orcamento_f5_esgotado` sem o portão terminal pré-F6 inteiro
 - as convenções foram revisadas contra o código real depois da primeira entrega
 - nenhuma pergunta chegou ao usuário
 

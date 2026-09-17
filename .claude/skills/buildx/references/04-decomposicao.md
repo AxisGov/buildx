@@ -54,7 +54,8 @@ Toda feature do `MAPA.md` declara, obrigatoriamente:
 | `depende_de` | `[ids]` ou `[]` | explícito; nunca inferido em tempo de execução |
 | `paralelizavel` | `true` \| `false` | declarado aqui, nunca decidido no B4 |
 | `origem` | `descricao` \| `premissa` \| `recursao` \| `template` | rastreia por que a feature existe |
-| `status` | `pendente` \| `em_andamento` \| `entregue` \| `bloqueada` | nasce `pendente` |
+| `status` | `pendente` \| `em_andamento` \| `entregue` \| `bloqueada` | nasce `pendente`. `bloqueada` é para sempre: a feature nunca volta a `pendente` |
+| `sucede` | `FT-XX` | só em feature sucessora (`origem: recursao`): a bloqueada cuja pendência ela resolve, com slug novo (`references/06-recursao.md`, passo 4) |
 
 O campo `origem` é o que o B6 usa para conferir: toda premissa de segurança do `PREMISSAS.md` precisa ter virado feature com `origem: premissa`, ou estar explicitamente dentro de uma feature com `origem: descricao`. Premissa registrada que não virou código é a falha mais cara que este método pode cometer — ela cria a impressão de que o sistema está protegido.
 

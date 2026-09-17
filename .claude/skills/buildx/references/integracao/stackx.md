@@ -60,7 +60,7 @@ Exceção: convenção que realiza premissa de segurança. Aí a convenção gan
 
 ## Os ciclos seguintes
 
-Depois da primeira revisão, o stackx volta ao papel normal. O `stackx-check` pode entrar no B4 como verificação extra por feature, se for barato — ele aponta violação de convenção, não corrige, e o achado vira pendência `replanejamento` no B5.
+Depois da primeira revisão, o stackx volta ao papel normal. O `stackx-check` pode entrar no B4 como verificação extra por feature, se for barato — ele aponta violação de convenção, não corrige, e o achado vira pendência com gatilho `violacao_de_convencao` no `RECURSAO.md` — registrada fora da janela da feature —, que o B5 classifica como `trabalho_novo`.
 
 Não é obrigatório: o portão de prontidão (E2), que a F6 roda em toda feature, já cobre o essencial. Vale em projeto grande, onde a deriva entre features é maior.
 

@@ -123,6 +123,8 @@ pendencias_abertas: 2
 pendencias_resolvidas: 5
 ```
 
+O corpo tem **exatamente** cinco seções, nesta ordem — `## Aguardando classificação do B5`, `## Em resolução pela máquina`, `## Aberto — decisão humana`, `## Aberto — recurso externo`, `## Resolvido nos ciclos` —, e nenhuma outra. Cada pendência é um bloco `### PEND-NN — <assunto>` na seção do seu `estado`, com os campos `id`, `estado`, `gatilho`, `classe`, `origem`, `ciclo`, `evidencia`, `causa`, `clausula_central`, `raiz`, `detectada_em`, `classificada_em`, `regra_aplicada`, `destino`, `pr_reservadas`, `resolvida_em` e `nota`, nenhum omitido (`references/06-recursao.md`, `assets/TEMPLATE-RECURSAO.md`).
+
 ### `validacao` — `docs/projeto/VALIDACAO.md`
 
 ```yaml
@@ -163,7 +165,9 @@ ciclos_recursao: 2
 | `origem` (feature) | `descricao` · `premissa` · `recursao` · `template` |
 | `origem` (premissa) | `catalogo_lacunas` · `decisao_de_stack` · `f2_autonoma` · `recursao` · `template` |
 | `veredito` (validação) | `aprovado` · `aprovado_com_pendencia` · `reprovado` |
-| `classe` (pendência) | `trabalho_novo` · `replanejamento` · `decisao_humana` · `recurso_externo` |
+| `estado` (pendência) | `aguardando_classificacao` · `em_resolucao` · `decisao_humana` · `recurso_externo` · `resolvida` |
+| `classe` (pendência) | `trabalho_novo` · `decisao_humana` · `recurso_externo` — `null` enquanto `aguardando_classificacao`. Valor legado de arquivo antigo é lido como `trabalho_novo` e nunca escrito |
+| `gatilho` (pendência) | `orcamento_f5_esgotado` · `regra_de_negocio_nao_declarada` · `recurso_externo_ausente` · `incompatibilidade_de_versao` · `violacao_de_convencao` · `dependencia_nao_integrada` · `entrega_bloqueada` · `entrega_interrompida` |
 
 ## O que o buildx grava nos artefatos das outras camadas
 

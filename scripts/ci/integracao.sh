@@ -434,6 +434,386 @@ retomada_decide() { # <slug> <base_sha> <status-no-mapa> <branch-do-projeto> -> 
   esac
 }
 
+# ---------------------------------------------------------------------------
+# P0.1 — RECURSAO.md: a máquina de pendências
+# ---------------------------------------------------------------------------
+
+SECAO_AGUARDANDO='## Aguardando classificação do B5'
+SECAO_RESOLUCAO='## Em resolução pela máquina'
+SECAO_HUMANA='## Aberto — decisão humana'
+SECAO_EXTERNO='## Aberto — recurso externo'
+SECAO_RESOLVIDO='## Resolvido nos ciclos'
+
+secoes_canonicas() {
+  printf '%s\n' "$SECAO_AGUARDANDO" "$SECAO_RESOLUCAO" "$SECAO_HUMANA" "$SECAO_EXTERNO" "$SECAO_RESOLVIDO"
+}
+
+ESTADOS_PEND="aguardando_classificacao em_resolucao decisao_humana recurso_externo resolvida"
+CLASSES_B5="trabalho_novo decisao_humana recurso_externo"                   # [M4]
+CAMPOS_PEND="id estado gatilho classe origem ciclo evidencia causa clausula_central raiz detectada_em classificada_em regra_aplicada destino pr_reservadas resolvida_em nota"
+
+secao_do_estado() {
+  case "$1" in
+    aguardando_classificacao) echo "$SECAO_AGUARDANDO" ;;
+    em_resolucao)             echo "$SECAO_RESOLUCAO" ;;
+    decisao_humana)           echo "$SECAO_HUMANA" ;;
+    recurso_externo)          echo "$SECAO_EXTERNO" ;;
+    resolvida)                echo "$SECAO_RESOLVIDO" ;;
+    *) return 1 ;;
+  esac
+}
+
+# As seções `## ` de um arquivo, fora de comentário HTML.
+secoes_de() {
+  tr -d '\r' < "$1" | awk '/^<!--/ { c = 1 } c { if (/-->/) c = 0; next } /^## / { print }'
+}
+
+# Compatibilidade: arquivo antigo pode trazer `replanejamento`. É lido, nunca escrito.
+classe_lida() { case "$1" in replanejamento) echo trabalho_novo ;; *) echo "$1" ;; esac; }
+
+# Classe de um bloco no formato antigo (`**Classe:** `x``), já traduzida.
+classe_legada() { # <arquivo> <PEND-NN>
+  classe_lida "$(tr -d '\r' < "$1" | awk -v id="$2" '
+    /^### / { dentro = (index($0, "### " id " ") == 1) }
+    dentro && /^\*\*Classe:\*\*/ { v = $0; gsub(/^\*\*Classe:\*\* *`?|`.*$/, "", v); print v; exit }')"
+}
+
+pend_campo() { # <arquivo> <PEND-NN> <campo>
+  tr -d '\r' < "$1" | awk -v id="$2" -v k="- $3: " '
+    /^## / || /^<!--/ { dentro = 0 }
+    /^### / { dentro = (index($0, "### " id " ") == 1) }
+    dentro && index($0, k) == 1 { print substr($0, length(k) + 1); exit }'
+}
+
+# pend_define — reescreve (ou acrescenta ao fim do bloco) um campo. A classe só
+# aceita as três do B5, ou null: `replanejamento` não se escreve mais.
+pend_define() { # <arquivo> <PEND-NN> <campo> <valor>
+  if [ "$3" = classe ] && [ "$4" != null ]; then
+    case " $CLASSES_B5 " in *" $4 "*) ;; *) return 1 ;; esac
+  fi
+  if [ "$3" = estado ]; then case " $ESTADOS_PEND " in *" $4 "*) ;; *) return 1 ;; esac; fi
+  local tmp="$1.tmp"
+  tr -d '\r' < "$1" | awk -v id="$2" -v k="- $3: " -v v="$4" '
+    function fecha() { if (dentro && !feito) { print k v; feito = 1 } dentro = 0 }
+    /^## / || /^<!--/ { fecha() }
+    /^### / { fecha(); if (index($0, "### " id " ") == 1) { dentro = 1; feito = 0; visto = 0 } print; next }
+    dentro && index($0, k) == 1 { print k v; feito = 1; next }
+    dentro && /^- / { visto = 1 }
+    dentro && visto && !feito && !NF { print k v; feito = 1 }
+    { print }
+    END { fecha() }' > "$tmp" && mv -f "$tmp" "$1"
+}
+
+proximo_id() { # <prefixo PEND|PR> <ids...> -> PREFIXO-NN
+  local p="$1" max=0 n i; shift
+  for i in "$@"; do
+    n="${i#"$p"-}"; n="$(printf '%s' "$n" | sed 's/^0*//')"; n="${n:-0}"
+    [ "$n" -gt "$max" ] && max="$n"
+  done
+  printf '%s-%02d\n' "$p" $((max + 1))
+}
+
+pend_ids() { tr -d '\r' < "$1" | awk '/^<!--/ { c = 1 } c { if (/-->/) c = 0; next } /^### PEND-/ { print $2 }'; }
+
+# Reescreve o arquivo com as cinco seções canônicas, na ordem, e cada bloco na
+# seção do seu estado. Estado desconhecido: nada é gravado.
+recursao_reordena() { # <arquivo>
+  local tmp="$1.tmp"
+  tr -d '\r' < "$1" | awk -v s1="$SECAO_AGUARDANDO" -v s2="$SECAO_RESOLUCAO" -v s3="$SECAO_HUMANA" \
+                          -v s4="$SECAO_EXTERNO" -v s5="$SECAO_RESOLVIDO" '
+    function fecha() {
+      if (bloco != "") {
+        if (!(est in pos)) { erro = 1 }
+        blocos[est] = blocos[est] bloco "\n"
+      }
+      bloco = ""; est = ""
+    }
+    BEGIN { pos["aguardando_classificacao"] = s1; pos["em_resolucao"] = s2; pos["decisao_humana"] = s3
+            pos["recurso_externo"] = s4; pos["resolvida"] = s5 }
+    /^<!--/ { fecha(); c = 1 }
+    c { if (/-->/) c = 0; next }
+    !inicio && /^## / { inicio = 1 }
+    !inicio { cab = cab $0 "\n"; next }
+    /^## / { fecha(); next }
+    /^### PEND-/ { fecha(); bloco = $0 "\n\n"; next }
+    bloco != "" && NF { if (index($0, "- estado: ") == 1) est = substr($0, 11); bloco = bloco $0 "\n"; next }
+    END {
+      fecha()
+      if (erro) exit 1
+      printf "%s", cab
+      split("aguardando_classificacao em_resolucao decisao_humana recurso_externo resolvida", E, " ")
+      for (i = 1; i <= 5; i++) { print pos[E[i]]; print ""; printf "%s", blocos[E[i]] }
+    }' > "$tmp" || { rm -f "$tmp"; return 1; }
+  mv -f "$tmp" "$1"
+}
+
+# Um RECURSAO.md válido: as cinco seções, exatamente; todo bloco na seção do seu
+# estado; classe null só aguardando; nenhuma classe fora das três; campos inteiros.
+recursao_valida() { # <arquivo>
+  [ "$(secoes_de "$1")" = "$(secoes_canonicas)" ] || return 1
+  local linha secao id estado classe campo
+  while IFS="$(printf '\t')" read -r secao id; do
+    [ -n "$id" ] || continue
+    estado="$(pend_campo "$1" "$id" estado)"; classe="$(pend_campo "$1" "$id" classe)"
+    [ "$secao" = "$(secao_do_estado "$estado")" ] || return 1
+    if [ "$estado" = aguardando_classificacao ]; then [ "$classe" = null ] || return 1
+    else case " $CLASSES_B5 " in *" $classe "*) ;; *) return 1 ;; esac; fi
+    for campo in $CAMPOS_PEND; do
+      tr -d '\r' < "$1" | awk -v id="$id" -v k="- $campo: " '
+        /^## / { d = 0 } /^### / { d = (index($0, "### " id " ") == 1) } d && index($0, k) == 1 { achou = 1 }
+        END { exit !achou }' || return 1
+    done
+  done <<EOF
+$(tr -d '\r' < "$1" | awk '/^<!--/ { c = 1 } c { if (/-->/) c = 0; next } /^## / { s = $0 } /^### PEND-/ { print s "\t" $2 }')
+EOF
+}
+
+recursao_nova() { # <arquivo> <projeto_id> — a partir do template, já sem instruções
+  mkdir -p "$(dirname "$1")"
+  tr -d '\r' < "$REPO/.claude/skills/buildx/assets/TEMPLATE-RECURSAO.md" |
+    sed -e "s/<slug-do-projeto>/$2/" -e "s/<AAAA-MM-DD>/$(date +%Y-%m-%d)/" -e 's/<titulo>/Projeto/' |
+    awk '/^## / { print; next } /^<[^!]/ { next } { print }' > "$1"
+  recursao_reordena "$1"
+}
+
+fm() { tr -d '\r' < "$1" | awk -v k="$2: " 'NR > 1 && /^---$/ { exit } index($0, k) == 1 { print substr($0, length(k) + 1); exit }'; }
+fm_define() { # <arquivo> <chave> <valor>
+  local tmp="$1.tmp"
+  tr -d '\r' < "$1" | awk -v k="$2: " -v v="$3" 'NR > 1 && /^---$/ { fim = 1 } !fim && index($0, k) == 1 { print k v; next } { print }' > "$tmp" &&
+    mv -f "$tmp" "$1"
+}
+fm_incrementa() { fm_define "$1" "$2" $(( $(fm "$1" "$2") + 1 )); }
+
+pend_nova() { # <arquivo> <assunto> <gatilho> <origem> <evidencia> <clausula> <pr_reservadas> <raiz> <causa> -> PEND-NN
+  local arq="$1" id campo hoje
+  id="$(proximo_id PEND $(pend_ids "$arq"))"; hoje="$(date +%Y-%m-%d)"
+  {
+    printf '\n### %s — %s\n\n' "$id" "$2"
+    printf -- '- id: %s\n- estado: aguardando_classificacao\n- gatilho: %s\n- classe: null\n- origem: %s\n' "$id" "$3" "$4"
+    printf -- '- ciclo: %s\n- evidencia: %s\n- causa: %s\n- clausula_central: %s\n- raiz: %s\n' "$(fm "$arq" ciclo_atual)" "$5" "$9" "$6" "$8"
+    printf -- '- detectada_em: %s\n- classificada_em: null\n- regra_aplicada: null\n- destino: null\n' "$hoje"
+    printf -- '- pr_reservadas: %s\n- resolvida_em: null\n- nota: null\n' "$7"
+  } >> "$arq"
+  recursao_reordena "$arq" || return 1
+  fm_incrementa "$arq" pendencias_abertas
+  printf '%s\n' "$id"
+}
+
+# --- MAPA.md e PROJETO.md, só no que o P0.1 toca ---
+
+mapa_feature() { # <mapa> <FT> <slug> <status> <origem> [sucede] [pendencia]
+  {
+    printf '\n### %s — %s\n\n**Slug:** `%s`\n**Origem:** %s\n**Status:** %s\n' "$2" "$3" "$3" "$5" "$4"
+    [ -n "${6:-}" ] && printf '**Sucede:** %s\n' "$6"
+    [ -n "${7:-}" ] && printf '**Pendência:** %s\n' "$7"
+  } >> "$1"
+}
+
+mapa_valor() { # <mapa> <FT> <rotulo>
+  tr -d '\r' < "$1" | awk -v ft="$2" -v k="**$3:** " '
+    /^### / { d = (index($0, "### " ft " ") == 1) } d && index($0, k) == 1 { v = substr($0, length(k) + 1); gsub(/`/, "", v); print v; exit }'
+}
+
+mapa_define() { # <mapa> <FT> <rotulo> <valor>
+  local tmp="$1.tmp"
+  tr -d '\r' < "$1" | awk -v ft="$2" -v k="**$3:** " -v v="$4" '
+    function fecha() { if (d && !feito) { print k v; feito = 1 } d = 0 }
+    /^### / { fecha(); if (index($0, "### " ft " ") == 1) { d = 1; feito = 0; visto = 0 } print; next }
+    d && /^\*\*/ { visto = 1 }
+    d && visto && !feito && !NF { print k v; feito = 1 }
+    d && index($0, k) == 1 { print k v; feito = 1; next }
+    { print }
+    END { fecha() }' > "$tmp" && mv -f "$tmp" "$1"
+}
+
+# --- PR-NN: ocupado é ocupado, inclusive o de feature que não integrou ---
+
+pr_ids_commitados() { # <slug> -> [PR-NN, ...]
+  local ids
+  ids="$(git show "feature/$1:docs/sprintx/features/$1/BUILDX-PREMISSAS.md" 2>/dev/null | tr -d '\r' |
+    awk '/^### PR-/ { print $2 }' | paste -sd, - | sed 's/,/, /g')"
+  printf '[%s]\n' "$ids"
+}
+
+pr_reservados() { # <RECURSAO.md> -> um PR-NN por linha
+  [ -f "$1" ] || return 0
+  tr -d '\r' < "$1" | awk '/^- pr_reservadas: / { sub(/^- pr_reservadas: \[/, ""); sub(/\]$/, ""); n = split($0, a, /, */); for (i = 1; i <= n; i++) if (a[i] != "") print a[i] }'
+}
+
+pr_ocupados() { # <PREMISSAS.md> <RECURSAO.md> <BUILDX-PREMISSAS.md da feature>
+  {
+    tr -d '\r' < "$1" 2>/dev/null | awk '/^### PR-/ { print $2 }'
+    pr_reservados "$2"                                                      # [M7]
+    [ -f "$3" ] && premissa_ids "$3"
+  } | sort -u
+}
+
+proximo_pr() { proximo_id PR $(pr_ocupados "$@"); }
+
+# --- o registro terminal: só depois do portão, num commit só ---
+
+clausula_central_auditoria() { # stdin: 00-AUDITORIA.md -> prefixos ALTA distintos, em ordem
+  altas_prefixos | awk '!visto[$0]++' | paste -sd, -
+}
+
+altas_prefixos() { # stdin: 00-AUDITORIA.md
+  tr -d '\r' | awk -F'|' '/^\|/ {
+    s = $2; gsub(/^[ \t]+|[ \t]+$/, "", s); if (s != "ALTA") next
+    p = $4; sub(/^[ \t]+/, "", p)
+    if (match(p, /^\[item [0-9]+\](\[fraco:[a-z]+\])?/)) print substr(p, RSTART, RLENGTH)
+  }'
+}
+
+registra_terminal_pre_f6() { # <base> <slug> <FT> <branch-do-projeto> <worktree> [raiz]
+  local base="$1" slug="$2" ft="$3" proj="$4" wt="$5" raiz="${6:-null}"
+  local pasta="docs/sprintx/features/$2" rec=docs/projeto/RECURSAO.md head prs clausula id
+  gate_terminal_pre_f6 "$base" "$slug" "$proj" "$wt" || return 1
+  head="$(git rev-parse "feature/$slug")"
+  [ -f "$rec" ] || recursao_nova "$rec" "${proj#buildx/}"
+  prs="$(pr_ids_commitados "$slug")"                                        # [M8]
+  clausula="$(git show "$head:$pasta/00-AUDITORIA.md" | clausula_central_auditoria)"
+  id="$(pend_nova "$rec" "$ft esgotou o orcamento da F5" orcamento_f5_esgotado "$ft" \
+        "feature/$slug@$head:$pasta/00-PLANEJAMENTO.md ; feature/$slug@$head:$pasta/00-AUDITORIA.md" \
+        "$clausula" "$prs" "$raiz" null)" || return 1
+  mapa_define docs/projeto/MAPA.md "$ft" Status bloqueada
+  mapa_define docs/projeto/MAPA.md "$ft" "Bloqueada por" orcamento_f5_esgotado
+  mapa_define docs/projeto/MAPA.md "$ft" "Pendência" "$id"
+  fm_incrementa docs/projeto/PROJETO.md features_bloqueadas
+  git add docs/projeto && git commit -q -m "chore(buildx): $ft bloqueada" || return 1
+  if git rev-parse --verify --quiet "refs/remotes/origin/$proj" >/dev/null; then git push -q origin "$proj" || return 1; fi
+}
+
+# --- B5: a tabela gatilho -> classe, determinística ---
+
+classe_orcamento() { # stdin: a 00-AUDITORIA.md terminal -> "classe regra"
+  local p item classe regra
+  p="$(altas_prefixos)"
+  [ -n "$p" ] || return 1
+  for regra in "7 decisao_humana" "8 recurso_externo"; do                  # [M9]
+    item="${regra% *}"; classe="${regra#* }"
+    if printf '%s\n' "$p" | grep -q "^\[item $item\]"; then
+      echo "$classe orcamento_f5_esgotado/alta_item_$item"; return 0
+    fi
+  done
+  echo "trabalho_novo orcamento_f5_esgotado/alta_qualidade_plano"
+}
+
+GATILHOS_DIRETOS="regra_de_negocio_nao_declarada recurso_externo_ausente incompatibilidade_de_versao violacao_de_convencao"
+
+classe_da_tabela() { # <gatilho> <argumento: ref da auditoria | causa | classe da raiz> -> "classe regra"
+  local g="$1" a="${2:-}" r
+  case "$g" in
+    orcamento_f5_esgotado)          git show "$a" 2>/dev/null | classe_orcamento ;;
+    regra_de_negocio_nao_declarada) echo "decisao_humana $g" ;;
+    recurso_externo_ausente)        echo "recurso_externo $g" ;;
+    incompatibilidade_de_versao)    echo "decisao_humana $g" ;;
+    violacao_de_convencao)          echo "trabalho_novo $g" ;;
+    dependencia_nao_integrada)
+      case " $CLASSES_B5 " in
+        *" $a "*) [ -n "$a" ] && { echo "$a $g/segue_raiz"; return; } ;;
+      esac
+      echo "decisao_humana $g/raiz_ambigua" ;;
+    entrega_bloqueada|entrega_interrompida)
+      case " $GATILHOS_DIRETOS " in
+        *" $a "*) [ -n "$a" ] && { r="$(classe_da_tabela "$a")"; echo "${r% *} $g/causa_$a"; return; } ;;
+      esac
+      if [ "$g" = entrega_interrompida ]; then echo "trabalho_novo $g/resolvivel_sem_decisao"
+      elif [ "$a" = falha_tecnica ]; then echo "trabalho_novo $g/falha_tecnica"
+      else echo "decisao_humana $g/causa_nao_commitada"; fi ;;
+    *) return 1 ;;
+  esac
+}
+
+# A referência `feature/<slug>@<sha>:<caminho>` da evidência, como `<sha>:<caminho>`.
+ref_da_evidencia() { # <evidencia> <nome-do-arquivo>
+  printf '%s\n' "$1" | tr ';' '\n' | sed 's/^ *//; s/ *$//' | grep "/$2\$" | head -1 | sed 's/^[^@]*@//'
+}
+
+pend_classifica() { # <RECURSAO.md> <PEND-NN> <classe> <regra> [nota]
+  pend_define "$1" "$2" estado "$3" && pend_define "$1" "$2" classe "$3" &&
+    pend_define "$1" "$2" regra_aplicada "$4" && pend_define "$1" "$2" classificada_em "$(date +%Y-%m-%d)" &&
+    { [ -z "${5:-}" ] || pend_define "$1" "$2" nota "$5"; }
+}
+
+# Mesmo gatilho e mesma cláusula central da raiz: trabalho novo não resolve.
+detector_laco() { # <RECURSAO.md> <PEND-NN>
+  local raiz; raiz="$(pend_campo "$1" "$2" raiz)"
+  [ -n "$raiz" ] && [ "$raiz" != null ] || return 1
+  [ "$(pend_campo "$1" "$2" gatilho)" = "$(pend_campo "$1" "$raiz" gatilho)" ] || return 1
+  [ "$(pend_campo "$1" "$2" clausula_central)" = "$(pend_campo "$1" "$raiz" clausula_central)" ] || return 1
+  pend_classifica "$1" "$raiz" decisao_humana laco_detectado laco_detectado &&
+    pend_classifica "$1" "$2" decisao_humana laco_detectado "laco_detectado: segue $raiz"
+}
+
+# Sucessora: FT e slug novos, origem recursao. A bloqueada não volta.
+cria_sucessora() { # <RECURSAO.md> <PEND-NN> <MAPA.md> <FT-novo> <slug-novo> <regra>
+  local rec="$1" id="$2" mapa="$3" ft_novo="$4" slug_novo="$5" ft_velha slug_velho
+  ft_velha="$(pend_campo "$rec" "$id" origem)"; slug_velho="$(mapa_valor "$mapa" "$ft_velha" Slug)"
+  [ "$slug_novo" != "$slug_velho" ] || return 1                            # [M5]
+  [ -z "$(mapa_valor "$mapa" "$ft_novo" Status)" ] || return 1
+  tr -d '\r' < "$mapa" | grep -qx "\*\*Slug:\*\* \`$slug_novo\`" && return 1
+  git rev-parse --verify --quiet "refs/heads/feature/$slug_novo" >/dev/null && return 1
+  mapa_feature "$mapa" "$ft_novo" "$slug_novo" pendente recursao "$ft_velha" "$id"
+  pend_define "$rec" "$id" estado em_resolucao && pend_define "$rec" "$id" classe trabalho_novo &&
+    pend_define "$rec" "$id" regra_aplicada "$6" && pend_define "$rec" "$id" classificada_em "$(date +%Y-%m-%d)" &&
+    pend_define "$rec" "$id" destino "$ft_novo" &&
+    pend_define "$rec" "$id" sucede "$ft_velha" && pend_define "$rec" "$id" slug_sucessora "$slug_novo"
+}
+
+b5_classifica() { # <RECURSAO.md> <PEND-NN> <MAPA.md> [FT-sucessora slug-sucessora] — sem commit
+  local rec="$1" id="$2" mapa="$3" g arg classe regra
+  [ "$(pend_campo "$rec" "$id" estado)" = aguardando_classificacao ] || return 1
+  if detector_laco "$rec" "$id"; then recursao_reordena "$rec"; return; fi
+  g="$(pend_campo "$rec" "$id" gatilho)"
+  case "$g" in
+    orcamento_f5_esgotado) arg="$(ref_da_evidencia "$(pend_campo "$rec" "$id" evidencia)" 00-AUDITORIA.md)" ;;
+    dependencia_nao_integrada) arg="$(pend_campo "$rec" "$(pend_campo "$rec" "$id" raiz)" classe 2>/dev/null)" ;;
+    *) arg="$(pend_campo "$rec" "$id" causa)" ;;
+  esac
+  read -r classe regra <<EOF
+$(classe_da_tabela "$g" "$arg")
+EOF
+  [ -n "$classe" ] || return 1
+  if [ "$classe" = trabalho_novo ]; then
+    if [ "$(fm "$rec" ciclo_atual)" -ge "$(fm "$rec" teto_ciclos)" ]; then
+      pend_classifica "$rec" "$id" decisao_humana teto_de_ciclos_atingido teto_de_ciclos_atingido || return 1
+    else
+      cria_sucessora "$rec" "$id" "$mapa" "$4" "$5" "$regra" || return 1
+    fi
+  else
+    pend_classifica "$rec" "$id" "$classe" "$regra" || return 1
+  fi
+  recursao_reordena "$rec"
+}
+
+# A sucessora integrou: a pendência que tinha nela o destino está resolvida.
+resolve_por_entrega() { # <RECURSAO.md> <FT>
+  local id
+  for id in $(pend_ids "$1"); do
+    [ "$(pend_campo "$1" "$id" destino)" = "$2" ] && [ "$(pend_campo "$1" "$id" estado)" = em_resolucao ] || continue
+    pend_define "$1" "$id" estado resolvida && pend_define "$1" "$id" resolvida_em "$(date +%Y-%m-%d)" || return 1
+    fm_define "$1" pendencias_abertas $(( $(fm "$1" pendencias_abertas) - 1 ))
+    fm_incrementa "$1" pendencias_resolvidas
+  done
+  recursao_reordena "$1"
+}
+
+# O projeto de um cenário P0.1: mapa com features, PROJETO e PREMISSAS globais.
+projeto_p01() { # <nome> <PR-NN globais...> -> ecoa o caminho do controle
+  local nome="$1" c id; shift
+  c="$(novo_projeto "$nome" sim)" || return 1
+  (
+    cd "$c" || exit 1
+    printf -- '---\nkind: projeto\nfeatures_bloqueadas: 0\n---\n' > docs/projeto/PROJETO.md
+    printf '# Premissas\n' > docs/projeto/PREMISSAS.md
+    for id in "$@"; do printf '\n### %s — premissa global\n\n- decisao: d\n' "$id" >> docs/projeto/PREMISSAS.md; done
+    mapa_feature docs/projeto/MAPA.md FT-01 ft-01 em_andamento descricao
+    mapa_feature docs/projeto/MAPA.md FT-02 ft-02 pendente descricao
+    git add -A && git commit -q -m "chore(buildx): FT-01 em andamento" && git push -q origin "buildx/$nome"
+  ) >/dev/null 2>&1 || return 1
+  printf '%s\n' "$c"
+}
+
 # --- a sprintx F1–F5 simulada NOS ARTEFATOS, mas com o script de estado REAL ---
 
 # F1: exclui o rastro localmente (como a F1 real faz) e cria o planejamento com
@@ -1238,12 +1618,19 @@ echo
 echo "P0.1 — X1: terminal pré-F6 sobrevive à morte da sessão"
 
 if com_sprintx "X1"; then
-  C="$(novo_projeto x1 sim)"; cd "$C"
+  C="$(projeto_p01 x1 PR-01 PR-02 PR-03 PR-04 PR-05 PR-06 PR-07 PR-08)"; cd "$C"
   BASE="$(git rev-parse HEAD)"
   feature_nasce ft-01 "$BASE" x1; WT="$TMP_RAIZ/x1/wt-ft-01"
   PASTA="docs/sprintx/features/ft-01"
   caso "X1 feature nasce exatamente em BASE_SHA"      "$BASE" "$(git rev-parse feature/ft-01)"
-  sx_f1 "$WT" ft-01; sx_f2 "$WT" ft-01
+  sx_f1 "$WT" ft-01
+  # A F2 autônoma cria uma premissa feature-local; o checkpoint da sprintx a leva junto.
+  caso "P01.25 a premissa da F2 pula so os ocupados globais" PR-09 \
+    "$(proximo_pr docs/projeto/PREMISSAS.md docs/projeto/RECURSAO.md "$WT/$PASTA/BUILDX-PREMISSAS.md")"
+  escreve_premissa "$WT/$PASTA/BUILDX-PREMISSAS.md" PR-09 "Sessao expira apos 8 horas"
+  sx_f2 "$WT" ft-01
+  caso "X1 o checkpoint da sprintx levou o BUILDX-PREMISSAS" sim \
+    "$(sim_nao git cat-file -e "feature/ft-01:$PASTA/BUILDX-PREMISSAS.md")"
   sx_rodada_nao "$WT" ft-01 9
   caso "X1 primeira reprovacao: replanejar"            continuar_f3 "$(buildx_acao "$WT" ft-01)"
   sx_rodada_nao "$WT" ft-01 2 9
@@ -1252,7 +1639,7 @@ if com_sprintx "X1"; then
 
   # Terceira F5 NÃO com o checkpoint recusado: o terminal existe só no disco.
   hook_recusa liga
-  sx_f5 "$WT" ft-01 nao 7 9 >/dev/null
+  sx_f5 "$WT" ft-01 nao 2 9 >/dev/null
   caso "P01.4 orcamento_esgotado no working tree"      sim "$(sim_nao grep -qx 'estado: orcamento_esgotado' "$WT/$PASTA/00-PLANEJAMENTO.md")"
   caso "P01.4 mas nao no HEAD: prova F barra"          nao "$(sim_nao prova_f_terminal_commitado ft-01)"
   caso "P01.4 a sprintx responde CHECKPOINT: prova G barra" nao "$(sim_nao prova_g_sprintx_terminal "$WT" ft-01)"
@@ -1284,8 +1671,246 @@ if com_sprintx "X1"; then
   caso "X1 retomada reconhece o terminal"              G "$(retomada_decide ft-01 "$BASE" em_andamento buildx/x1)"
   caso "X1 e o portao passa de novo, sem nada refeito" sim "$(sim_nao gate_terminal_pre_f6 "$BASE" ft-01 buildx/x1 "$WT")"
   caso "X1 a CONTROL ainda em BASE_SHA ate o registro" "$BASE" "$(git rev-parse HEAD)"
+
+  # Um portão que falha não escreve nada: a CONTROL suja barra o registro.
+  printf 'rascunho\n' > docs/projeto/RASCUNHO.md
+  caso "P01.9 com a prova D falhando, o registro terminal recusa" nao \
+    "$(sim_nao registra_terminal_pre_f6 "$BASE" ft-01 FT-01 buildx/x1 "$WT")"
+  caso "P01.9 e a CONTROL nao se moveu"               "$BASE" "$(git rev-parse HEAD)"
+  caso "P01.9 nem o mapa foi tocado"                  em_andamento "$(mapa_valor docs/projeto/MAPA.md FT-01 Status)"
+  rm -f docs/projeto/RASCUNHO.md
+
+  caso "P01.8 terminal valido: registro e commit de estado" sim \
+    "$(sim_nao registra_terminal_pre_f6 "$BASE" ft-01 FT-01 buildx/x1 "$WT")"
+  REC=docs/projeto/RECURSAO.md
+  caso "P01.8 a CONTROL avancou exatamente um commit" "$BASE" "$(git rev-parse HEAD~1)"
+  caso "P01.8 com a mensagem do bloqueio"             "chore(buildx): FT-01 bloqueada" "$(git log -1 --format=%s)"
+  caso "P01.8 e publicada com push normal"            "$(git rev-parse HEAD)" "$(git rev-parse origin/buildx/x1)"
+  caso "P01.8 MAPA: FT-01 bloqueada"                  bloqueada "$(mapa_valor docs/projeto/MAPA.md FT-01 Status)"
+  caso "P01.8 MAPA: pelo gatilho do orcamento"        orcamento_f5_esgotado "$(mapa_valor docs/projeto/MAPA.md FT-01 'Bloqueada por')"
+  caso "P01.8 PROJETO: features_bloqueadas"           1 "$(fm docs/projeto/PROJETO.md features_bloqueadas)"
+  caso "P01.8 RECURSAO: PEND-01 aguardando_classificacao" aguardando_classificacao "$(pend_campo "$REC" PEND-01 estado)"
+  caso "P01.8 classe null enquanto aguarda"           null "$(pend_campo "$REC" PEND-01 classe)"
+  caso "P01.8 gatilho orcamento_f5_esgotado"          orcamento_f5_esgotado "$(pend_campo "$REC" PEND-01 gatilho)"
+  caso "P01.8 na secao canonica"                      "$SECAO_AGUARDANDO" \
+    "$(tr -d '\r' < "$REC" | awk '/^## / { s = $0 } /^### PEND-01 / { print s }')"
+  caso "P01.8 o arquivo e valido"                     sim "$(sim_nao recursao_valida "$REC")"
+  caso "P01.8 tudo commitado: CONTROL limpa"          sim "$(sim_nao test -z "$(git status --porcelain)")"
+  EVID="$(pend_campo "$REC" PEND-01 evidencia)"
+  caso "P01.8 a evidencia aponta o HEAD da feature"   sim \
+    "$(sim_nao grep -q "feature/ft-01@$TIP:$PASTA/00-PLANEJAMENTO.md" <<< "$EVID")"
+  caso "P01.8 e resolve pelo git o PLANEJAMENTO"      sim \
+    "$(sim_nao git show "$(ref_da_evidencia "$EVID" 00-PLANEJAMENTO.md)")"
+  caso "P01.8 e a AUDITORIA terminal"                 sim \
+    "$(sim_nao git show "$(ref_da_evidencia "$EVID" 00-AUDITORIA.md)")"
+  caso "P01.8 a branch da feature nao foi publicada"  nao \
+    "$(sim_nao git rev-parse --verify --quiet refs/remotes/origin/feature/ft-01)"
+  caso "P01.8 nem mexida"                             "$TIP" "$(git rev-parse feature/ft-01)"
+  caso "P01.24 PR-NN da feature bloqueada reservado"  "[PR-09]" "$(pend_campo "$REC" PEND-01 pr_reservadas)"
+  caso "P01.26 a premissa da bloqueada nao foi promovida" nao "$(sim_nao grep -q '^### PR-09 ' docs/projeto/PREMISSAS.md)"
+  caso "P01.26 e o commit do bloqueio nao tocou o PREMISSAS" "" \
+    "$(git show --format= --name-only HEAD -- docs/projeto/PREMISSAS.md)"
+
+  # B5: qualidade de plano -> trabalho_novo -> sucessora.
+  caso "P01.13 B5: ALTA de qualidade classifica trabalho_novo" sim \
+    "$(sim_nao b5_classifica "$REC" PEND-01 docs/projeto/MAPA.md FT-03 ft-01-sessao-v2)"
+  caso "P01.13 com a regra registrada"                orcamento_f5_esgotado/alta_qualidade_plano "$(pend_campo "$REC" PEND-01 regra_aplicada)"
+  caso "P01.pend pendencia em_resolucao"               em_resolucao "$(pend_campo "$REC" PEND-01 estado)"
+  caso "P01.pend com destino na sucessora"             FT-03 "$(pend_campo "$REC" PEND-01 destino)"
+  caso "P01.15 sucessora com slug novo"               ft-01-sessao-v2 "$(mapa_valor docs/projeto/MAPA.md FT-03 Slug)"
+  caso "P01.15 origem recursao"                       recursao "$(mapa_valor docs/projeto/MAPA.md FT-03 Origem)"
+  caso "P01.15 sucede FT-01"                          FT-01 "$(mapa_valor docs/projeto/MAPA.md FT-03 Sucede)"
+  caso "P01.15 nasce pendente"                        pendente "$(mapa_valor docs/projeto/MAPA.md FT-03 Status)"
+  caso "P01.16 a feature velha continua bloqueada"    bloqueada "$(mapa_valor docs/projeto/MAPA.md FT-01 Status)"
+  caso "P01.16 reusar o slug velho e recusado"        nao \
+    "$(sim_nao cria_sucessora "$REC" PEND-01 docs/projeto/MAPA.md FT-04 ft-01 x)"
+  caso "P01.20 nenhuma classe replanejamento escrita" "" "$(grep -r 'classe: replanejamento' docs/projeto || true)"
+  caso "P01.8 o RECURSAO segue valido depois do B5"   sim "$(sim_nao recursao_valida "$REC")"
+  fm_incrementa "$REC" ciclo_atual
+  git add -A; git commit -q -m "chore(buildx): ciclo 2 da recursão"; git push -q origin buildx/x1
+
+  # B4 da sucessora: nasce do HEAD atual, não da base antiga.
+  mapa_define docs/projeto/MAPA.md FT-03 Status em_andamento
+  git add -A; git commit -q -m "chore(buildx): FT-03 em andamento"; git push -q origin buildx/x1
+  BASE2="$(git rev-parse HEAD)"
+  caso "P01.17 caminho A da sucessora: a branch nova nao existe" sim "$(sim_nao caminho_a_livre ft-01-sessao-v2)"
+  feature_nasce ft-01-sessao-v2 "$BASE2" x1; WT2="$TMP_RAIZ/x1/wt-ft-01-sessao-v2"
+  caso "P01.17 sucessora nasce exatamente no HEAD atual da CONTROL" "$BASE2" "$(git rev-parse feature/ft-01-sessao-v2)"
+  caso "P01.17 que ja contem o bloqueio registrado"   sim "$(sim_nao git merge-base --is-ancestor "$BASE" feature/ft-01-sessao-v2)"
+  caso "P01.17 e nao carrega os checkpoints da velha" nao "$(sim_nao git merge-base --is-ancestor feature/ft-01 feature/ft-01-sessao-v2)"
+  caso "P01.25 premissa nova da sucessora pula o PR-09 reservado" PR-10 \
+    "$(proximo_pr docs/projeto/PREMISSAS.md "$REC" "$WT2/docs/sprintx/features/ft-01-sessao-v2/BUILDX-PREMISSAS.md")"
+
+  # A sucessora entrega: F1-F5 real, F6 simulada, ff-only.
+  sx_f1 "$WT2" ft-01-sessao-v2
+  escreve_premissa "$WT2/docs/sprintx/features/ft-01-sessao-v2/BUILDX-PREMISSAS.md" PR-10 "Sessao expira apos 4 horas"
+  sx_f2 "$WT2" ft-01-sessao-v2; sx_f3 "$WT2" ft-01-sessao-v2; sx_f4 "$WT2" ft-01-sessao-v2
+  sx_f5 "$WT2" ft-01-sessao-v2 sim >/dev/null
+  caso "X1 sucessora aprovada: F6"                    f6 "$(buildx_acao "$WT2" ft-01-sessao-v2)"
+  mkdir -p "$WT2/src" "$WT2/docs/entregas/ft-01-sessao-v2"
+  printf 'codigo\n' > "$WT2/src/sessao.ts"
+  printf 'estado: entregue\nportao: pronto\npush_feito: true\n' > "$WT2/docs/entregas/ft-01-sessao-v2/ENTREGA.md"
+  git -C "$WT2" add -A; git -C "$WT2" commit -q -m "feat: T-01.01" -m "Task: T-01.01"
+  mergex_publica ft-01-sessao-v2
+  caso "X1 sucessora passa nas seis provas"           sim "$(sim_nao provas_abcdef "$BASE2" ft-01-sessao-v2 buildx/x1 "$WT2")"
+  caso "X1 e integra por ff-only"                     sim "$(sim_nao integrar feature/ft-01-sessao-v2)"
+  promover_premissas "docs/sprintx/features/ft-01-sessao-v2/BUILDX-PREMISSAS.md" docs/projeto/PREMISSAS.md
+  mapa_define docs/projeto/MAPA.md FT-03 Status entregue
+  resolve_por_entrega "$REC" FT-03
+  git add -A; git commit -q -m "chore(buildx): FT-03 entregue"
+  caso "P01.pend a sucessora entregue resolve a pendencia" resolvida "$(pend_campo "$REC" PEND-01 estado)"
+  caso "P01.pend na secao Resolvido nos ciclos"        "$SECAO_RESOLVIDO" \
+    "$(tr -d '\r' < "$REC" | awk '/^## / { s = $0 } /^### PEND-01 / { print s }')"
+  caso "P01.26 a premissa da sucessora foi promovida" sim "$(sim_nao grep -q '^### PR-10 ' docs/projeto/PREMISSAS.md)"
+  caso "P01.26 e a da bloqueada continua fora"        nao "$(sim_nao grep -q '^### PR-09 ' docs/projeto/PREMISSAS.md)"
+  caso "P01.16 FT-01 continua bloqueada para sempre"  bloqueada "$(mapa_valor docs/projeto/MAPA.md FT-01 Status)"
+  caso "P01.16 e sua branch nunca foi integrada"      nao "$(sim_nao git merge-base --is-ancestor feature/ft-01 HEAD)"
+  caso "X1 o RECURSAO final e valido"                 sim "$(sim_nao recursao_valida "$REC")"
 fi
 fi  # x1
+
+if bloco recursao; then
+echo
+echo "P0.1 — B5: tabela gatilho → classe, laço, teto, seções e PR-NN"
+
+AUDS="$TMP_RAIZ/auditorias"; mkdir -p "$AUDS"
+auditoria "$AUDS/7.md" nao 7 9;   auditoria "$AUDS/8.md" nao 8 2
+auditoria "$AUDS/q.md" nao 2 9 3; auditoria "$AUDS/78.md" nao 8 9 7
+caso "P01.11 ALTA [item 7] -> decisao_humana"         "decisao_humana orcamento_f5_esgotado/alta_item_7" "$(classe_orcamento < "$AUDS/7.md")"
+caso "P01.12 ALTA [item 8] -> recurso_externo"        "recurso_externo orcamento_f5_esgotado/alta_item_8" "$(classe_orcamento < "$AUDS/8.md")"
+caso "P01.13 ALTA de qualidade de plano -> trabalho_novo" "trabalho_novo orcamento_f5_esgotado/alta_qualidade_plano" "$(classe_orcamento < "$AUDS/q.md")"
+caso "P01.14 mistura item 7 + item 8 -> decisao_humana" "decisao_humana orcamento_f5_esgotado/alta_item_7" "$(classe_orcamento < "$AUDS/78.md")"
+auditoria "$AUDS/sim.md" sim
+caso "P01.11 auditoria sem ALTA nao classifica: parada" nao "$(sim_nao classe_orcamento < "$AUDS/sim.md")"
+caso "P01.11 a clausula central sai dos prefixos"     "[item 2][fraco:criterio],[item 9],[item 3]" "$(clausula_central_auditoria < "$AUDS/q.md")"
+
+caso "P01.tabela regra de negocio -> decisao_humana"     "decisao_humana regra_de_negocio_nao_declarada" "$(classe_da_tabela regra_de_negocio_nao_declarada)"
+caso "P01.tabela recurso externo -> recurso_externo"     "recurso_externo recurso_externo_ausente" "$(classe_da_tabela recurso_externo_ausente)"
+caso "P01.tabela incompatibilidade -> decisao_humana"    "decisao_humana incompatibilidade_de_versao" "$(classe_da_tabela incompatibilidade_de_versao)"
+caso "P01.tabela dependencia segue a raiz"               "recurso_externo dependencia_nao_integrada/segue_raiz" "$(classe_da_tabela dependencia_nao_integrada recurso_externo)"
+caso "P01.tabela dependencia sem raiz -> decisao_humana" "decisao_humana dependencia_nao_integrada/raiz_ambigua" "$(classe_da_tabela dependencia_nao_integrada '')"
+caso "P01.tabela entrega bloqueada pela causa commitada" "recurso_externo entrega_bloqueada/causa_recurso_externo_ausente" "$(classe_da_tabela entrega_bloqueada recurso_externo_ausente)"
+caso "P01.tabela entrega bloqueada por falha tecnica"    "trabalho_novo entrega_bloqueada/falha_tecnica" "$(classe_da_tabela entrega_bloqueada falha_tecnica)"
+caso "P01.tabela entrega bloqueada sem causa commitada"  "decisao_humana entrega_bloqueada/causa_nao_commitada" "$(classe_da_tabela entrega_bloqueada null)"
+caso "P01.tabela entrega interrompida resolvivel"        "trabalho_novo entrega_interrompida/resolvivel_sem_decisao" "$(classe_da_tabela entrega_interrompida null)"
+caso "P01.tabela entrega interrompida pela causa"        "decisao_humana entrega_interrompida/causa_regra_de_negocio_nao_declarada" "$(classe_da_tabela entrega_interrompida regra_de_negocio_nao_declarada)"
+caso "P01.tabela gatilho desconhecido nao classifica"    nao "$(sim_nao classe_da_tabela palpite)"
+
+TPL="$REPO/.claude/skills/buildx/assets/TEMPLATE-RECURSAO.md"
+caso "P01.22 o template tem exatamente as cinco secoes, na ordem" "$(secoes_canonicas)" "$(secoes_de "$TPL")"
+caso "P01.22 a secao Aguardando classificacao existe"  sim "$(sim_nao grep -qx "$SECAO_AGUARDANDO" <(tr -d '\r' < "$TPL"))"
+
+RC="$TMP_RAIZ/rec-unit"; mkdir -p "$RC"; cd "$RC"; git init -q . 2>/dev/null
+R="$RC/RECURSAO.md"; M="$RC/MAPA.md"
+recursao_nova "$R" unit
+printf '# Mapa\n' > "$M"
+mapa_feature "$M" FT-01 cadastro bloqueada descricao
+caso "P01.22 RECURSAO novo nasce valido, com as cinco secoes" sim "$(sim_nao recursao_valida "$R")"
+P1="$(pend_nova "$R" "cadastro esgotou" orcamento_f5_esgotado FT-01 'feature/cadastro@abc:x/00-AUDITORIA.md' '[item 2][fraco:criterio],[item 9]' '[PR-09]' null null)"
+caso "P01.20 classe replanejamento nao se escreve"    nao "$(sim_nao pend_define "$R" "$P1" classe replanejamento)"
+caso "P01.20 e o arquivo continua com classe null"    null "$(pend_campo "$R" "$P1" classe)"
+cp "$R" "$RC/invent.md"; printf '\n## Aberto — aguardando classificação do B5\n' >> "$RC/invent.md"
+caso "P01.23 secao inventada num arquivo: rejeitada"  nao "$(sim_nao recursao_valida "$RC/invent.md")"
+sed "s/^- estado: aguardando_classificacao$/- estado: decisao_humana/" "$R" > "$RC/fora.md"
+caso "P01.23 bloco fora da secao do seu estado: rejeitado" nao "$(sim_nao recursao_valida "$RC/fora.md")"
+
+# O caso do Conselho: a seção que a execução real precisou inventar.
+cat > "$RC/conselho.md" <<'FIM'
+---
+kind: recursao
+---
+
+## Aberto — aguardando classificação do B5
+
+### PEND-01 — FT-02 bloqueada
+
+- estado: aguardando_classificacao
+FIM
+caso "P01.23 o RECURSAO do piloto real e rejeitado"   nao "$(sim_nao recursao_valida "$RC/conselho.md")"
+
+cat > "$RC/legado.md" <<'FIM'
+## Aberto — o que exige decisão humana
+
+### PEND-04 — relatorio
+
+**Classe:** `replanejamento`
+**Origem:** FT-04
+FIM
+caso "P01.21 RECURSAO antigo: replanejamento e lido como trabalho_novo" trabalho_novo "$(classe_legada "$RC/legado.md" PEND-04)"
+caso "P01.21 classe_lida traduz so o legado"           decisao_humana "$(classe_lida decisao_humana)"
+
+# Detector de laço: a sucessora bloqueia pelo mesmo gatilho e pela mesma cláusula.
+pend_define "$R" "$P1" estado em_resolucao; pend_define "$R" "$P1" classe trabalho_novo
+pend_define "$R" "$P1" regra_aplicada orcamento_f5_esgotado/alta_qualidade_plano; pend_define "$R" "$P1" destino FT-03
+recursao_reordena "$R"
+P2="$(pend_nova "$R" "sucessora esgotou" orcamento_f5_esgotado FT-03 'feature/cadastro-v2@def:x/00-AUDITORIA.md' '[item 2][fraco:criterio],[item 9]' '[]' "$P1" null)"
+caso "P01.18 mesmo gatilho e clausula: detector dispara" sim "$(sim_nao b5_classifica "$R" "$P2" "$M" FT-05 cadastro-v3)"
+caso "P01.18 a raiz vai para decisao_humana"           decisao_humana "$(pend_campo "$R" "$P1" estado)"
+caso "P01.18 com a regra do laco"                      laco_detectado "$(pend_campo "$R" "$P1" regra_aplicada)"
+caso "P01.18 e nenhuma sucessora nova nasce"           "" "$(mapa_valor "$M" FT-05 Status)"
+caso "P01.18 a filha segue a raiz"                     decisao_humana "$(pend_campo "$R" "$P2" estado)"
+caso "P01.18 o arquivo continua valido"                sim "$(sim_nao recursao_valida "$R")"
+
+P3="$(pend_nova "$R" "outra sucessora" orcamento_f5_esgotado FT-06 'feature/x@1:x/00-AUDITORIA.md' '[item 4]' '[]' "$P1" null)"
+caso "P01.18 clausula diferente: detector nao dispara"  nao "$(sim_nao detector_laco "$R" "$P3")"
+
+# Teto: no ciclo 3, o resolvível vira decisão humana.
+git -C "$RC" init -q 2>/dev/null
+mkdir -p "$RC/x"; auditoria "$RC/x/00-AUDITORIA.md" nao 2 9; git -C "$RC" add x/00-AUDITORIA.md; git -C "$RC" -c user.email=t@t -c user.name=t commit -q -m aud
+SHA_Q="$(git -C "$RC" rev-parse HEAD)"
+P4="$(pend_nova "$R" "no teto" orcamento_f5_esgotado FT-01 "feature/cadastro@$SHA_Q:x/00-AUDITORIA.md" '[item 2]' '[]' null null)"
+fm_define "$R" ciclo_atual 3
+caso "P01.19 teto de 3 ciclos: trabalho_novo vira decisao_humana" sim "$(sim_nao b5_classifica "$R" "$P4" "$M" FT-07 cadastro-v4)"
+caso "P01.19 estado decisao_humana"                    decisao_humana "$(pend_campo "$R" "$P4" estado)"
+caso "P01.19 nota teto_de_ciclos_atingido"             teto_de_ciclos_atingido "$(pend_campo "$R" "$P4" nota)"
+caso "P01.19 e nenhuma sucessora nasce"                "" "$(mapa_valor "$M" FT-07 Status)"
+fm_define "$R" ciclo_atual 2
+P5="$(pend_nova "$R" "antes do teto" orcamento_f5_esgotado FT-01 "feature/cadastro@$SHA_Q:x/00-AUDITORIA.md" '[item 2]' '[]' null null)"
+caso "P01.19 antes do teto a mesma evidencia gera sucessora" sim "$(sim_nao b5_classifica "$R" "$P5" "$M" FT-08 cadastro-v5)"
+caso "P01.19 em_resolucao"                             em_resolucao "$(pend_campo "$R" "$P5" estado)"
+
+# PR-NN: ocupado é ocupado.
+printf '# Premissas\n\n### PR-01 — a\n\n### PR-08 — b\n' > "$RC/PREMISSAS.md"
+caso "P01.25 sem reserva, o proximo seria PR-09"       PR-09 "$(proximo_pr "$RC/PREMISSAS.md" /dev/null /dev/null)"
+caso "P01.25 com PR-09 reservado no RECURSAO, pula para PR-10" PR-10 "$(proximo_pr "$RC/PREMISSAS.md" "$R" /dev/null)"
+escreve_premissa "$RC/feat.md" PR-10 "ja nesta feature"
+caso "P01.25 e o que ja existe na feature tambem conta" PR-11 "$(proximo_pr "$RC/PREMISSAS.md" "$R" "$RC/feat.md")"
+caso "P01.24 nenhum artefato morto foi renumerado"    "[PR-09]" "$(pend_campo "$R" "$P1" pr_reservadas)"
+cd "$REPO"
+fi  # recursao
+
+if bloco vivos; then
+echo
+echo "P0.1 — o contrato vivo não contradiz a máquina nova"
+
+VIVOS2="$REPO/.claude/skills/buildx/SKILL.md $REPO/.claude/skills/buildx/references $REPO/.claude/skills/buildx/assets $REPO/.claude/commands $REPO/.opencode/commands $REPO/AGENTS.md $REPO/README.md"
+vivo() { grep -rniE "$1" $VIVOS2 2>/dev/null | grep -v '/template/' ; }
+caso "P01.40 nenhum texto vivo reabre a feature velha na F3" "" \
+  "$(vivo 'feature volta (para|à) (a )?F3|volta para a F3 do sprintx|pela porta da F3|devolve a feature à F3')"
+caso "P01.40 replanejamento nao e classe escrita pelo B5" "" \
+  "$(vivo '\| *`?replanejamento`? *\||· `replanejamento`|\\\| replanejamento|classifica como `replanejamento`|pend[eê]ncia `replanejamento`|replanejamento +→|### `replanejamento`|resolvível por replanejamento')"
+caso "P01.40 o buildx nao apaga nem regenera o plano da sprintx" "" \
+  "$(vivo 'apagando o plano|apag(ue|ar|a) o plano|buildx (regera|regenera) o plano')"
+caso "P01.40 RECURSAO nao e escrita dentro da janela" "" \
+  "$(vivo '00-BLOQUEIOS\.md.{0,80}RECURSAO\.md|registre a pendência no .RECURSAO\.md. dizendo')"
+caso "P01.40 commit a frente nao e necessariamente E1" "" \
+  "$(vivo 'commits à frente são do E1|são os commits que o E1')"
+caso "P01.40 o buildx nao conta a terceira reprovacao" "" \
+  "$(vivo 'reprovad[oa] tr[eê]s vezes|terceira reprova[çc][aã]o do mesmo plano|Teto: dois replanejamentos|Limite: duas voltas|o replanejamento é reprovado')"
+caso "P01.40 nada bloqueia sem terminal commitado" "" \
+  "$(vivo 'marque .bloqueada., e deixe para o B5')"
+caso "P01.40 o B5 declara as tres classes e o compat" sim \
+  "$(sim_nao grep -q 'pode trazer a classe `replanejamento`. Ela é \*\*lida\*\* como `trabalho_novo`' "$REPO/.claude/skills/buildx/references/06-recursao.md")"
+STATUS="$REPO/.claude/commands/buildx-status.md"
+caso "P01.32 status mostra feature em planejamento" sim "$(sim_nao grep -q 'planejamento: <estado> · reprovações <n> de <teto>' "$STATUS")"
+caso "P01.32 status mostra CHECKPOINT pendente"      sim "$(sim_nao grep -q 'CHECKPOINT pendente' "$STATUS")"
+caso "P01.32 status mostra bloqueada aguardando classificacao" sim "$(sim_nao grep -q 'PEND-NN aguardando classificação' "$STATUS")"
+caso "P01.32 status mostra pendencia em resolucao por sucessora" sim "$(sim_nao grep -q 'sucede FT-XX · resolve PEND-NN' "$STATUS")"
+caso "P01.32 e o MAPA nao ganhou estado novo"        sim \
+  "$(sim_nao grep -q '^| `status` (feature) | `pendente` · `em_andamento` · `entregue` · `bloqueada` |' "$REPO/.claude/skills/buildx/references/00-schema.md")"
+caso "P01.40 o enum vivo de classe tem so as tres" sim \
+  "$(sim_nao grep -q '^| `classe` (pendência) | `trabalho_novo` · `decisao_humana` · `recurso_externo` ' "$REPO/.claude/skills/buildx/references/00-schema.md")"
+fi  # vivos
 
 if bloco contrato; then
 echo

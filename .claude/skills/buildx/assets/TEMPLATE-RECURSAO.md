@@ -4,97 +4,95 @@ expx_tool: buildx
 kind: recursao
 projeto_id: <slug-do-projeto>
 atualizado_em: <AAAA-MM-DD>
-ciclo_atual: <n>
+ciclo_atual: 1
 teto_ciclos: 3
-pendencias_abertas: <n>
-pendencias_resolvidas: <n>
+pendencias_abertas: 0
+pendencias_resolvidas: 0
 ---
 
 # <titulo> — Recursão
 
-Tudo que ficou pelo caminho, classificado. O ciclo B4 → B5 repete enquanto
-houver pendência resolvível, até o teto.
+Tudo que ficou pelo caminho, uma pendência por bloco, cada bloco na seção do seu `estado`.
+O ciclo é B4 → B5 → features sucessoras → B4, até o teto. Estas cinco seções são fixas:
+nenhuma execução acrescenta, renomeia ou remove seção.
 
-## Ciclos
+## Aguardando classificação do B5
 
-| Ciclo | Pendências entraram | Viraram feature | Replanejadas | Ficaram para o humano |
-|---|---|---|---|---|
-| 1 | <n> | <n> | <n> | <n> |
+<Pendência registrada no commit que encerrou uma tentativa — `estado: aguardando_classificacao`,
+`classe: null`. O B5 a classifica pela tabela gatilho → classe.>
 
----
+## Em resolução pela máquina
 
-## Aberto — o que exige decisão humana
+<`estado: em_resolucao`, `classe: trabalho_novo`: uma feature sucessora, nova, está no
+`MAPA.md` e é o `destino`.>
 
-<Vai para a PRIMEIRA seção do relatório final. Nunca vira feature,
+## Aberto — decisão humana
+
+<`estado: decisao_humana`. Vai para a PRIMEIRA seção do relatório final. Nunca vira feature,
 nunca é resolvida por chute.>
 
-### PEND-01 — <assunto>
+## Aberto — recurso externo
 
-**Classe:** `decisao_humana`
-**Origem:** <FT-NN, ou a etapa que levantou>
-**A decisão:** <o que precisa ser decidido, em uma frase>
-**As opções:** <as alternativas reais, com o efeito de cada uma>
-**O que o buildx fez enquanto isso:** <a decisão provisória adotada, e
-onde ela está no código>
-**Reversibilidade:** <o que custa mudar depois>
-
----
-
-## Aberto — o que exige recurso externo
-
-<Vai para a SEGUNDA seção do relatório final.>
-
-### PEND-02 — <assunto>
-
-**Classe:** `recurso_externo`
-**Origem:** <FT-NN>
-**O que falta:** <exatamente o que precisa ser providenciado —
-credencial, acesso, conta, domínio, chave>
-**O que destrava:** <o que passa a funcionar quando providenciado>
-**Estado atual:** <o que existe sem isso — normalmente a feature
-construída e não conectada>
-
----
+<`estado: recurso_externo`. Vai para a SEGUNDA seção do relatório final.>
 
 ## Resolvido nos ciclos
 
-| ID | Assunto | Classe | Ciclo | Como resolveu |
-|---|---|---|---|---|
-| PEND-NN | <assunto> | <trabalho_novo \| replanejamento> | <n> | <FT-NN nova, ou replanejamento aprovado> |
-
----
+<`estado: resolvida`: a sucessora foi entregue.>
 
 <!--
-AS QUATRO CLASSES
+O BLOCO DE UMA PENDÊNCIA — sempre inteiro, chave nunca omitida (ausente é null ou []):
 
-  trabalho_novo    → vira feature nova no MAPA.md, volta ao B4
-  replanejamento   → a feature volta à F3 do sprintx (teto próprio: 2 voltas)
+### PEND-01 — <assunto>
+
+- id: PEND-01
+- estado: aguardando_classificacao
+- gatilho: orcamento_f5_esgotado
+- classe: null
+- origem: FT-03
+- ciclo: 1
+- evidencia: feature/<slug>@<sha>:docs/sprintx/features/<slug>/00-PLANEJAMENTO.md ; feature/<slug>@<sha>:docs/sprintx/features/<slug>/00-AUDITORIA.md
+- causa: null
+- clausula_central: [item 2][fraco:criterio],[item 9]
+- raiz: null
+- detectada_em: <AAAA-MM-DD>
+- classificada_em: null
+- regra_aplicada: null
+- destino: null
+- pr_reservadas: [PR-09, PR-10]
+- resolvida_em: null
+- nota: null
+
+Campos específicos, acrescentados quando a classe os exige:
+
+  decisao_humana   - decisao: <o que precisa ser decidido, em uma frase>
+                   - opcoes: <as alternativas reais, com o efeito de cada uma>
+                   - provisorio: <o que o buildx fez enquanto isso, e onde está>
+                   - reversibilidade: <o que custa mudar depois>
+
+  recurso_externo  - o_que_falta: <credencial, acesso, conta, domínio, chave>
+                   - o_que_destrava: <o que passa a funcionar quando providenciado>
+                   - estado_atual: <o que existe sem isso>
+
+  trabalho_novo    - sucede: <FT-XX, a feature bloqueada que não volta>
+                   - slug_sucessora: <slug novo; nunca o da bloqueada>
+
+OS ESTADOS — um por seção, nesta ordem
+
+  aguardando_classificacao → Aguardando classificação do B5   (classe: null)
+  em_resolucao             → Em resolução pela máquina        (classe: trabalho_novo)
+  decisao_humana           → Aberto — decisão humana
+  recurso_externo          → Aberto — recurso externo
+  resolvida                → Resolvido nos ciclos
+
+AS CLASSES DO B5 — só estas três são escritas
+
+  trabalho_novo    → feature SUCESSORA nova no MAPA.md (slug novo, origem recursao)
   decisao_humana   → fica aqui, vai para o relatório. NUNCA vira feature
   recurso_externo  → fica aqui, vai para o relatório
 
-OS DOIS ERROS QUE ESTA CLASSIFICAÇÃO COMETE
+Replanejar a mesma feature não é classe do B5: existe só dentro do B4, pela sprintx, antes de
+o orçamento acabar. RECURSAO.md antigo com classe `replanejamento` é lido como `trabalho_novo`,
+e nunca reescrito com ela.
 
-  Classificar decisao_humana como trabalho_novo — o erro caro: o buildx
-  decide regra de negócio no lugar do usuário e constrói, com esmero,
-  a coisa errada.
-
-  Classificar trabalho_novo como decisao_humana — o erro preguiçoso:
-  joga para o humano o que a máquina resolveria, e esvazia a promessa
-  do modo autônomo.
-
-O TETO
-
-Padrão 3 ciclos. O ciclo 2 resolve o que o B3 recortou mal — o mais
-produtivo. O ciclo 3 resolve o que o 2 criou. Do quarto em diante o que
-sobra normalmente não é falta de trabalho, é falta de decisão.
-
-Atingido o teto: toda pendência aberta vira decisao_humana, com a nota
-de que atingiu o teto, e o buildx segue para o B6.
-
-O DETECTOR DE LAÇO EM FALSO
-
-Independente do teto, reclassifique para decisao_humana quando:
-  - a mesma pendência aparece em dois ciclos seguidos
-  - uma feature entra em bloqueada duas vezes pelo mesmo motivo
-  - o ciclo inteiro não converteu nenhuma pendência em entrega
+A TABELA GATILHO → CLASSE, O DETECTOR DE LAÇO E O TETO: references/06-recursao.md.
 -->

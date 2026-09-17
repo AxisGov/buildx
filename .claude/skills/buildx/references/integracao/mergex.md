@@ -47,8 +47,10 @@ Dois artefatos, na branch da feature. Só o que os contratos das duas skills dec
 Regra, no B4 (`references/05-construcao.md`, passo 6):
 
 - `estado: entregue` com `portao: pronto` → feature `entregue` no `MAPA.md`;
-- `portao: bloqueado` → feature `bloqueada`, com o motivo do portão;
-- `ENTREGA.md` ausente, ou ainda `aberto` depois de a F6 devolver o controle → **incompatibilidade de versão da sprintx**: feature `bloqueada`, pendência registrada, e o laço segue.
+- `portao: bloqueado` → feature `bloqueada`, com o motivo do portão, pelo gatilho `entrega_bloqueada`;
+- `ENTREGA.md` ainda `aberto` depois de a F6 devolver o controle → gatilho `entrega_interrompida`; `ENTREGA.md` ausente → **incompatibilidade de versão da sprintx** (`incompatibilidade_de_versao`). Nos dois casos, feature `bloqueada` e o laço segue.
+
+Em todos, o `ENTREGA.md` que decide é o **commitado**, e a pendência nasce no mesmo commit de estado que marca a feature `bloqueada` — depois da evidência, nunca antes (`references/05-construcao.md`, "Terminal: aí sim o laço segue").
 
 **`pr_url: null` não é falha.** O contrato da mergex diz isso literalmente: sem a ferramenta do serviço, a descrição fica em `docs/entregas/<slug>/PR.md` e a entrega continua válida. Quem decide é o `portao`.
 
@@ -85,7 +87,7 @@ Um buildx que faz merge sozinho não é mais autônomo: é irreversível. São c
 
 As dez verificações do E2 são o que impede o laço do B4 de produzir onze entregas que parecem prontas. Elas rodam dentro da F6, e o buildx lê o veredito em `portao`.
 
-Devolveu **bloqueado**: o buildx **não força e não repete**. Marca a feature `bloqueada` no `MAPA.md` com o motivo registrado, anota a pendência, e segue para a próxima feature. O B5 classifica depois.
+Devolveu **bloqueado**: o buildx **não força e não repete**. Com o `ENTREGA.md` bloqueado commitado na branch, marca a feature `bloqueada` no `MAPA.md` com o motivo registrado, registra a pendência `aguardando_classificacao` no mesmo commit, e segue para a próxima feature. O B5 classifica depois.
 
 A tentação de "só rodar o check de novo" é maior no modo autônomo — não há ninguém olhando, e o portão "quase" passa. Ceder é o que transforma a promessa de "sistema pronto" numa pilha de entregas que ninguém consegue revisar.
 
