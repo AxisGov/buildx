@@ -21,12 +21,17 @@ CONTROL = checkout de controle = buildx/<projeto_id>
   4. BASE_SHA := HEAD de CONTROL
   │
   5. sprintx F1 ── nasce de BASE_SHA ──► worktree ../<repo>--<slug>
-  │                                      branch  feature/<slug>
+  │                                      branch  feature/<slug>  (tip == BASE_SHA)
+  │                                      00-PLANEJAMENTO.md  criar <slug> 3 buildx
   │                                           │
   │   ┌─ JANELA FECHADA ─────────────┐        ├─ F2 → F5   plano e auditoria
-  │   │ CONTROL não recebe commit    │        └─ F6        execução sob TDD
-  │   │ nenhum enquanto isto roda    │                     + entrega inteira:
-  │   └──────────────────────────────┘                     E0 · E1 por task ·
+  │   │ CONTROL não recebe commit    │        │            + checkpoints locais da sprintx
+  │   │ nenhum enquanto isto roda    │        │  planejamento.sh fase decide:
+  │   └──────────────────────────────┘        │    F6 ─────┐    PARAR/orcamento_esgotado
+  │                                           │            │    → portão terminal pré-F6
+  │                                           └─ F6        execução sob TDD
+  │                                                        + entrega inteira:
+  │                                                        E0 · E1 por task ·
   │                                           │            FECHAMENTO.md · E2→E8
   ◄──────── volta ao checkout de controle ────┘
   6. lê ENTREGA.md + FECHAMENTO.md COMMITADOS (git show feature/<slug>:...)
@@ -59,7 +64,9 @@ O worktree é criado pela **F1 do sprintx** (regra 21 dele), a partir de `buildx
 
 ## A invariante que sustenta tudo
 
-> **Entre o nascimento de `feature/<slug>` e a integração dela, `buildx/<projeto_id>` não recebe nenhum commit que não venha dessa própria feature.**
+> **Entre o nascimento de `feature/<slug>` e a integração dela — ou o seu encerramento terminal —, `buildx/<projeto_id>` não recebe nenhum commit que não venha dessa própria feature.**
+
+A branch da feature, ela sim, avança dentro da janela: pelos **checkpoints de planejamento da sprintx** (fim da F2, da F3, da F4 e cada veredito da F5), pelos **commits E1** e pelos commits de método e de entrega posteriores. Nada disso quebra a janela — nenhum deles toca a `CONTROL`.
 
 O `git merge --ff-only` do passo 7 não é apenas o mecanismo de integração: ele é o **teste** dessa invariante. Se o fast-forward falhar, ele está dizendo que alguma coisa avançou `CONTROL` no meio do caminho — e a resposta certa é **parar e relatar**, nunca trocar de mecanismo.
 
@@ -147,13 +154,13 @@ Passados os dois portões:
 
 ### Caminho A — feature nova: igualdade exata
 
-Imediatamente depois de a F1 abrir a área de trabalho, **antes da F2 e antes de qualquer commit da feature**:
+Imediatamente depois de a F1 abrir a área de trabalho, **antes da F2 e antes de qualquer commit da feature** — o primeiro checkpoint da sprintx só acontece no fim da F2:
 
 ```
 git rev-parse feature/<slug>        # tem que ser exatamente BASE_SHA
 ```
 
-**Exatamente**, não "descendente". A F1 não implementa e não commita produto: uma branch recém-criada aponta para o mesmo commit da base. Se o tip já está à frente, a branch **não é nova** — carrega commits que ninguém auditou, e que entrariam na árvore do projeto no fast-forward sem nunca terem passado por um portão.
+**Exatamente**, não "descendente". A F1 não implementa, não commita produto e não faz checkpoint: uma branch recém-criada aponta para o mesmo commit da base. Se o tip já está à frente, a branch **não é nova** — carrega commits que ninguém auditou, e que entrariam na árvore do projeto no fast-forward sem nunca terem passado por um portão.
 
 Diferente de `BASE_SHA`: **pare e relate.**
 
@@ -161,17 +168,21 @@ Descendência (`git merge-base --is-ancestor`) não basta aqui, e é justamente 
 
 ### Caminho B — retomada: ancestralidade
 
-Quando o `MAPA.md` já dizia `em_andamento` e a feature volta de uma sessão interrompida, a branch **legitimamente** está à frente: são os commits que o E1 fez a cada task. Aqui a prova é a de ancestralidade:
+Quando o `MAPA.md` já dizia `em_andamento` e a feature volta de uma sessão interrompida, a branch pode estar **legitimamente** à frente, por três razões, nesta ordem no tempo:
+
+1. **checkpoints de planejamento da sprintx** — commits com o trailer `Planejamento: checkpoint`, só em `docs/sprintx/features/<slug>/**`, antes da F6;
+2. **commits E1** — um por task, na F6;
+3. **commits de método e de entrega** da mergex, até o E8.
+
+Ela também pode estar **exatamente** em `BASE_SHA`, se a sessão morreu antes do primeiro checkpoint. Aqui a prova é a de ancestralidade:
 
 ```
 git merge-base --is-ancestor <BASE_SHA> feature/<slug>
 ```
 
-E `BASE_SHA` é derivado da `CONTROL` congelada — o `HEAD` dela, que não se moveu desde o início da janela. **Nunca recrie a branch**, nunca exija igualdade de tip numa retomada.
+E `BASE_SHA` é derivado da `CONTROL` congelada — o `HEAD` dela, que não se moveu desde o início da janela. **Nunca recrie a branch**, nunca exija igualdade de tip numa retomada, nunca faça `rebase`. Worktree perdido se reabre **sobre a mesma branch** (`git worktree add ../<repo>--<slug> feature/<slug>`), e a sprintx retoma pelo `planejamento.sh fase` (passo 4).
 
 Nos dois caminhos, falhar significa a mesma coisa: a feature nasceu de outro lugar — `CONVENCOES.md` alterado, seção marcada `PROPOSTA`, branch reaproveitada. Integrar depois seria impossível, e seguir seria construir sobre a árvore errada.
-
-Sem git, ou com worktree recusado, a F1 segue na árvore atual e nada aqui se aplica.
 
 Sem git, ou com worktree recusado, a F1 segue na árvore atual e nada aqui muda: o buildx continua não abrindo branch.
 
@@ -187,6 +198,15 @@ O briefing da feature carrega:
 | critérios de aceite de negócio | os do `PROJETO.md` que esta feature cobre |
 | premissas aplicáveis | as `PR-NN` que esta feature realiza |
 | convenções | ponteiro para `docs/stack/CONVENCOES.md` |
+
+E, sempre, o orçamento da F5, literalmente:
+
+```
+max_reprovacoes_f5: 3
+orcamento_declarado_por: buildx
+```
+
+A F1 o repassa ao criar o estado do planejamento — `planejamento.sh criar <slug> 3 buildx` — e dali em diante **a sprintx é a única dona da contagem** (`references/integracao/sprintx.md`, "O orçamento da F5, declarado no briefing"). O buildx não cria nem edita o `00-PLANEJAMENTO.md`.
 
 Acrescente `origem_buildx` e `feature_id` ao frontmatter dos artefatos da feature (`references/00-schema.md`).
 
@@ -275,21 +295,66 @@ A rastreabilidade continua inteira, em `motivo`: uma linha de texto que diz **de
 
 Se a F2 levantar uma questão de **regra de negócio** que nenhum dos três arquivos responde — quanto tempo um contrato fica válido, se o desconto acumula, qual imposto se aplica — o buildx **não inventa**. Isso não é requisito não-funcional; é o que o sistema faz, e decidir isso no lugar do usuário produz um sistema que funciona e está errado.
 
-Nesse caso: registre em `00-BLOQUEIOS.md`, registre como pendência `decisao_humana` no `RECURSAO.md`, e **siga com a decisão mais reversível possível**, marcada como provisória no código e na premissa. O relatório final lista todas essas — são a primeira coisa que o humano precisa olhar.
+Nesse caso: registre **na própria feature** — o bloqueio na pasta dela e a premissa provisória no `BUILDX-PREMISSAS.md` — e **siga com a decisão mais reversível possível**, marcada como provisória no código e na premissa. O `RECURSAO.md` **não** é escrito agora: a `CONTROL` está em `BASE_SHA`, e qualquer escrita nela mataria o fast-forward. A pendência global nasce quando a tentativa termina — no commit de estado que fecha a feature, entregue ou terminalmente bloqueada (a triagem, adiante). O relatório final lista todas essas — são a primeira coisa que o humano precisa olhar.
 
 ## Passo 4 — F3 a F5, dentro da janela fechada
 
-**Da F1 até a integração, `CONTROL` não recebe commit nenhum — e nem sequer fica suja.** Nem do buildx, nem de ninguém: `MAPA.md`, `PREMISSAS.md` e `CONVENCOES.md` não são editados enquanto a feature roda. Premissa nova nasce **feature-local** (passo 3) e só vira estado global depois da integração (passo 8).
+**Da F1 até a integração — ou o encerramento terminal —, `CONTROL` não recebe commit nenhum, e nem sequer fica suja.** Nem do buildx, nem de ninguém: `MAPA.md`, `PREMISSAS.md`, `CONVENCOES.md`, `PROJETO.md` e `RECURSAO.md` não são editados enquanto a feature roda. Premissa nova nasce **feature-local** (passo 3) e só vira estado global depois da integração (passo 8); pendência da feature fica em artefato feature-local e só vira pendência global quando a tentativa termina.
 
-É só isso que garante o fast-forward — e é a regra mais fácil de quebrar sem perceber, porque o impulso natural é "registrar agora que está fresco". O registro acontece agora; o que espera é a **promoção**.
+É só isso que garante o fast-forward — e é a regra mais fácil de quebrar sem perceber, porque o impulso natural é "registrar agora que está fresco". O registro acontece agora, na feature; o que espera é o **estado global**.
 
-Rodam sem intervenção do buildx. Três pontos de atenção:
+Rodam sem intervenção do buildx. Os pontos de atenção:
 
 **A F3 pode perguntar.** A regra 11 do sprintx permite uma pergunta quando a F3 encontra decisão que exigiria humano em execução. No modo autônomo essa pergunta não chega ao usuário: o buildx a responde pelo mesmo procedimento de quatro degraus do passo 3.
 
-**A F5 é auditoria de verdade.** Achado de severidade alta manda voltar à F3 — e o buildx obedece, sem atalho. A tentação de seguir com um plano que a auditoria reprovou é grande no modo autônomo, e ceder a ela é o que transforma execução autônoma em dano autônomo. Se a F3 e a F5 entrarem em laço (o replanejamento é reprovado três vezes), pare a feature, marque `bloqueada`, e deixe para o B5.
+**A F5 é auditoria de verdade.** Achado de severidade alta manda voltar à F3 — e o buildx obedece, sem atalho. A tentação de seguir com um plano que a auditoria reprovou é grande no modo autônomo, e ceder a ela é o que transforma execução autônoma em dano autônomo.
+
+**Quem decide o passo seguinte é o `planejamento.sh fase`.** Depois de cada fase, antes de avançar e em toda retomada, o buildx consulta a sprintx de dentro do worktree e age **só** pela saída dela — a tabela está em `references/integracao/sprintx.md`, "O buildx consulta, não interpreta". Em resumo:
+
+| A sprintx responde | O buildx |
+|---|---|
+| `F3` · `F4` · `F5`, `persistencia=duravel` | continua a sprintx nessa fase, na mesma branch e no mesmo worktree |
+| `F6`, `estado=aprovado`, `persistencia=duravel` | segue para a F6 (passo 5) |
+| `PARAR`, `estado=orcamento_esgotado`, `persistencia=duravel` | **portão terminal pré-F6** (abaixo) |
+| `CHECKPOINT`, `persistencia=pendente` | pede à sprintx que complete o checkpoint, e **nada mais**: não bloqueia, não mexe no mapa, não roda B5, não começa outra feature |
+| `persistencia_falhou` num checkpoint | **para a orquestração da feature** e relata; preserva worktree e branch. Não é `orcamento_esgotado`, não é `bloqueada`, não é `decisao_humana` |
+
+**O orçamento é contado pela sprintx.** O buildx declarou `3` no briefing; a sprintx registra cada veredito no `historico` do `00-PLANEJAMENTO.md` e decide `replanejar` ou `orcamento_esgotado`. O buildx não conta reprovações, não lê "rodada N" de prosa, não soma linhas `VEREDITO:`, não sobe o teto e não o reinicia numa retomada.
+
+**O buildx não comita artefato da sprintx.** O checkpoint é dela — commit local, só da pasta da feature, com o trailer `Planejamento: checkpoint`. Esse commit não é task concluída, não é E1, não é entrega, não é push e não é PR.
 
 **A F3.5 é opcional.** A estimativa não muda nada no modo autônomo — não há prazo a negociar. Rode se for barata; pule sem cerimônia.
+
+## O portão terminal pré-F6
+
+Quando a sprintx responde `fase=PARAR`, `estado=orcamento_esgotado`, `persistencia=duravel`, a tentativa terminou antes da F6 — e esta feature **não será integrada**. É isso que permite à `CONTROL` avançar. Mas relato de modelo não move a `CONTROL`: o que move é evidência no Git. **Antes de qualquer escrita em `CONTROL`**, havendo remoto `git fetch origin` primeiro, prove:
+
+| # | Prova | Como |
+|---|---|---|
+| **A** | `CONTROL` continua onde a feature nasceu | `git rev-parse HEAD` == `BASE_SHA` |
+| **B** | o remoto da `CONTROL` continua no mesmo ponto, quando houver remoto | `git rev-parse origin/buildx/<projeto_id>` == `BASE_SHA` |
+| **C** | a feature descende da base | `git merge-base --is-ancestor <BASE_SHA> feature/<slug>` |
+| **D** | a árvore de controle está limpa | `git status --porcelain` vazio, em `CONTROL` |
+| **E** | a árvore da feature está limpa | `git status --porcelain` vazio, no worktree da feature |
+| **F** | o estado terminal está **commitado** | `git show feature/<slug>:docs/sprintx/features/<slug>/00-PLANEJAMENTO.md` com `estado: orcamento_esgotado` |
+| **G** | a sprintx não está em checkpoint pendente | `planejamento.sh fase <slug>` responde `PARAR` / `orcamento_esgotado` / `duravel` — nunca `CHECKPOINT` |
+| **H** | não há produto antes da F6 | ver abaixo |
+| **I** | a auditoria da rodada terminal está commitada | o commit mais recente que tocou o `00-PLANEJAMENTO.md` na branch (`git log -1 --format=%H feature/<slug> -- docs/sprintx/features/<slug>/00-PLANEJAMENTO.md`) contém `docs/sprintx/features/<slug>/00-AUDITORIA.md`, esse arquivo não mudou depois dele e termina em `VEREDITO: NÃO` |
+
+**Falhou qualquer uma: pare e relate.** Não marque `bloqueada`, não escreva `MAPA.md`, `PROJETO.md` nem `RECURSAO.md`. Working tree — arquivo no disco que não está no `HEAD` — nunca move a `CONTROL`.
+
+### A prova H — sem produto antes da F6
+
+Não basta olhar o working tree. Compare o **histórico** da feature desde a base:
+
+```
+git log --format= --name-only <BASE_SHA>..feature/<slug>
+git log --format=%B <BASE_SHA>..feature/<slug>
+```
+
+Até `orcamento_esgotado`, a sprintx só commitou checkpoints: **todo** path tocado começa por `docs/sprintx/features/<slug>/` — a pasta que a própria sprintx declara como único conteúdo do checkpoint, e onde também mora o `BUILDX-PREMISSAS.md` — e **todo** commit traz o trailer `Planejamento: checkpoint`. Apareceu `src/`, teste de produto, `package.json`, arquivo funcional qualquer, ou um commit sem o trailer: **pare**. Não avance a `CONTROL`: há trabalho na branch que ninguém auditou, e classificá-lo como "plano esgotado" esconderia isso.
+
+Passado o portão, a janela desta feature se encerra, e só então a `CONTROL` pode receber o commit de estado do bloqueio (a triagem, adiante). A branch da feature continua **local e preservada** — o buildx não a publica, não a apaga e não a reescreve.
 
 ## Passo 5 — A F6 e o acabamento
 
@@ -475,20 +540,20 @@ Feature que não integrou exige uma decisão **na hora**, antes de qualquer outr
 
 | Situação | Classe | O que fazer |
 |---|---|---|
-| achado alto da F5, portão reprovando cobertura, plano inadequado | **replanejável** | replaneje **agora**, na mesma branch e no mesmo worktree |
+| achado alto da F5 com a sprintx respondendo `replanejar` | **replanejável** | a sprintx replaneja **agora**, na mesma branch e no mesmo worktree |
 | regra de negócio não declarada, credencial ausente, acesso que falta | **terminal** (`decisao_humana`, `recurso_externo`) | marque `bloqueada` e siga |
-| terceira reprovação do mesmo plano | **terminal** (teto atingido) | marque `bloqueada` e siga |
+| a sprintx responde `PARAR` / `orcamento_esgotado`, durável | **terminal** (orçamento esgotado) | portão terminal pré-F6; passou, marque `bloqueada` e siga |
 
 ### Replanejável: `CONTROL` não se mexe
 
-O buildx devolve a feature à F3 — apagando o plano dentro do worktree dela, como o B5 já descreve — e **não commita estado nenhum**:
+Replanejar é da sprintx: com `estado: replanejar`, `planejamento.sh fase` responde `F3`, e o buildx continua a sprintx na F3 de dentro do mesmo worktree. O buildx **não apaga, não move e não regera** plano nenhum — quem regera o plano é a F3, lendo o `00-AUDITORIA.md`, e cada versão anterior já está no histórico dos checkpoints. E o buildx **não commita estado nenhum**:
 
 - `MAPA.md` continua `em_andamento`;
 - `CONTROL` continua exatamente em `BASE_SHA`;
 - nenhuma outra feature começa;
 - **as premissas pendentes ficam onde estão**, no `BUILDX-PREMISSAS.md` da feature, e são **reutilizadas** na nova tentativa — mesmo `PR-NN`, sem duplicar e sem renumerar. **Não apague o arquivo no replanejamento:** a F2 e a F3 podem rodar de novo e o `00-DECISOES.md` pode ser regerado pela sprintx, e é justamente por a premissa não morar lá que ela sobrevive. Nenhuma delas vai para o `PREMISSAS.md` global: o plano ainda não virou produto.
 
-**É isto que mantém o fast-forward possível.** Se o buildx commitasse um "FT-NN replanejando" aqui, `CONTROL` andaria para `BASE_SHA+1`, deixaria de ser ancestral da feature, e a integração depois seria impossível — exatamente o beco que a barreira serial existe para evitar. Teto: dois replanejamentos; a terceira reprovação é bloqueio terminal.
+**É isto que mantém o fast-forward possível.** Se o buildx commitasse um "FT-NN replanejando" aqui, `CONTROL` andaria para `BASE_SHA+1`, deixaria de ser ancestral da feature, e a integração depois seria impossível — exatamente o beco que a barreira serial existe para evitar. O teto é o orçamento do briefing, contado pela sprintx: duas voltas de replanejamento, e a reprovação que o atinge leva a `orcamento_esgotado`.
 
 ### Terminal: aí sim o laço segue
 
@@ -518,6 +583,9 @@ Nunca peça confirmação para seguir. Nunca ofereça parar. O usuário fechou o
 - cada feature trabalhada tem worktree e branch próprios, abertos pela F1 — nenhuma segunda branch foi criada para a mesma feature
 - nenhuma feature começou com dependência não integrada
 - toda feature nova nasceu com o tip **exatamente** em `BASE_SHA`
+- todo briefing declarou `max_reprovacoes_f5: 3` e `orcamento_declarado_por: buildx`, e o `00-PLANEJAMENTO.md` commitado de cada feature o confirma
+- nenhuma decisão do buildx sobre o planejamento veio de outra fonte que não `planejamento.sh fase`; nenhuma foi tomada com a sprintx em `CHECKPOINT`
+- o buildx não commitou artefato nenhum da sprintx
 - `CONTROL` recebeu, por feature, no máximo dois commits do buildx: um antes da F1, outro depois da integração (ou o de bloqueio terminal)
 - toda decisão de integrar veio do `ENTREGA.md` **commitado** na branch da feature, não do arquivo da árvore
 - toda feature integrada com remoto estava publicada (`push_feito: true`, `origin/feature/<slug>` igual ao local); o buildx não publicou branch de feature nenhuma
@@ -533,6 +601,10 @@ Nunca peça confirmação para seguir. Nunca ofereça parar. O usuário fechou o
 
 - **Commitar estado no meio da janela.** Uma premissa nova registrada "enquanto está fresco", entre a F1 e a integração, move `CONTROL` e mata o fast-forward. Ela espera o passo 8 — o arquivo é gravado, o commit é que aguarda.
 - **Começar outra feature com um replanejamento pendente.** É a barreira serial. A árvore não pode avançar enquanto uma feature ainda vai voltar para dentro dela.
+- **Contar reprovação por conta própria.** O teto foi declarado no briefing; quem conta é a sprintx. Ler "rodada 3" numa prosa, somar `VEREDITO:` ou lembrar da sessão anterior é decidir por uma evidência que o script não reconhece.
+- **Decidir em cima de `CHECKPOINT`.** O estado do disco ainda não está no `HEAD`: não bloqueie, não avance o mapa, não rode B5, não comece outra feature. Peça à sprintx o checkpoint.
+- **Comitar o checkpoint no lugar da sprintx.** Nem `git add` da pasta, nem `--no-verify` para contornar hook. `persistencia_falhou` é parada e relato.
+- **Tratar checkpoint como entrega.** `Planejamento: checkpoint` não é E1, não é task concluída, não é push nem PR.
 - **Trocar o mecanismo quando o ff falha.** O ff falhando é informação, não obstáculo: ele está dizendo que a invariante quebrou. `--no-ff` esconde; `rebase` e `cherry-pick` destroem a ancestralidade de que os portões dependem.
 - **Aceitar `entregue` no mapa como prova de integração.** Só `git merge-base --is-ancestor` prova. O mapa diz o que o buildx achou que fez.
 - **Resolver divergência de remoto sozinho.** `pull`, merge do remoto, rebase ou força: nenhum. Divergência é decisão humana.

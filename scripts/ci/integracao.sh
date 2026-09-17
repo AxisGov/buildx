@@ -15,13 +15,24 @@
 # entre ciclo não-final e fechamento definitivo no B6 — e o fato de que toda
 # falha é PARADA, nunca troca de mecanismo.
 #
-# Não depende de rede, de jq, nem de nenhum dos repositórios reais.
+# Desde o P0.1 ele também protege o consumo do planejamento durável da sprintx:
+# o orçamento da F5 declarado pelo buildx e contado pela sprintx, o CHECKPOINT
+# pendente que nada decide, o portão terminal pré-F6 que só move a CONTROL com
+# evidência commitada, a máquina de pendências do RECURSAO.md, a feature
+# sucessora, a reserva de PR-NN e a retomada sobre checkpoints.
+#
+# Não depende de rede, de jq, nem de nenhum dos repositórios reais do produto.
+# Os cenários da sprintx usam a skill REAL, no SHA fixado abaixo, extraída com
+# `git archive` para o diretório temporário — a irmã nunca é alterada. Sem o
+# repositório da sprintx, esses cenários são PULADOS e contados como pulo.
 #
 # Uso: bash scripts/ci/integracao.sh
+#      BLOCOS="p0 x1" bash scripts/ci/integracao.sh   # só os blocos nomeados
+#      SPRINTX_REPO=/caminho/da/sprintx bash scripts/ci/integracao.sh
 
 set -uo pipefail
 
-OK=0; FALHOU=0
+OK=0; FALHOU=0; PULOS=0
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 TMP_RAIZ="$(mktemp -d)"
 trap 'rm -rf "$TMP_RAIZ"' EXIT
@@ -35,6 +46,36 @@ caso() { # caso <descricao> <esperado> <obtido>
 }
 
 sim_nao() { if "$@" >/dev/null 2>&1; then echo sim; else echo nao; fi; }
+
+# bloco <nome> — sem BLOCOS, todos rodam; com BLOCOS, só os nomeados.
+bloco() {
+  [ -z "${BLOCOS:-}" ] && return 0
+  case " $BLOCOS " in *" $1 "*) return 0 ;; *) return 1 ;; esac
+}
+
+pulo() { PULOS=$((PULOS+1)); printf '  PULO  %s\n' "$1"; }
+
+# ---------------------------------------------------------------------------
+# A sprintx real, no SHA fixo do contrato P0.1
+# ---------------------------------------------------------------------------
+
+SPRINTX_SHA_FIXO=a4f5495ad8454c548a2e5aa6b07c6006a9e1d7df
+SPRINTX_REPO="${SPRINTX_REPO:-$REPO/../sprintx}"
+PLANEJAMENTO=""
+if git -c safe.directory='*' -C "$SPRINTX_REPO" cat-file -e "$SPRINTX_SHA_FIXO^{commit}" 2>/dev/null; then
+  mkdir -p "$TMP_RAIZ/sprintx"
+  if git -c safe.directory='*' -C "$SPRINTX_REPO" archive "$SPRINTX_SHA_FIXO" .claude/skills/sprintx |
+       tar -x -C "$TMP_RAIZ/sprintx" 2>/dev/null; then
+    PLANEJAMENTO="$TMP_RAIZ/sprintx/.claude/skills/sprintx/scripts/planejamento.sh"
+    [ -f "$PLANEJAMENTO" ] || PLANEJAMENTO=""
+  fi
+fi
+
+com_sprintx() { # com_sprintx <cenario> — pula, e conta o pulo, sem a sprintx real
+  [ -n "$PLANEJAMENTO" ] && return 0
+  pulo "$1: sprintx $SPRINTX_SHA_FIXO indisponivel em $SPRINTX_REPO"
+  return 1
+}
 
 # ---------------------------------------------------------------------------
 # Os portões do contrato, como o B4 os descreve
@@ -236,6 +277,232 @@ artefato_de_metodo() { # <caminho> <slug>
 integrar() { git merge --ff-only "$1" >/dev/null 2>&1; }
 
 # ---------------------------------------------------------------------------
+# P0.1 — o planejamento durável da sprintx, consumido pelo buildx
+# ---------------------------------------------------------------------------
+
+# O orçamento que o briefing de toda feature declara. A F1 da sprintx o repassa
+# a `planejamento.sh criar <slug> 3 buildx`; dali em diante a contagem é dela.
+ORCAMENTO_F5_MAX=3
+ORCAMENTO_F5_POR=buildx
+
+briefing_orcamento() {
+  printf 'max_reprovacoes_f5: %s\norcamento_declarado_por: %s\n' "$ORCAMENTO_F5_MAX" "$ORCAMENTO_F5_POR"
+}
+
+# sprintx <worktree> <args...> — o script real, rodado de dentro da área de trabalho.
+sprintx() {
+  local wt="$1"; shift
+  ( cd "$wt" && bash "$PLANEJAMENTO" "$@" ) 2>/dev/null
+}
+
+chave() { # chave <saida chave=valor> <chave>
+  printf '%s\n' "$1" | tr -d '\r' | awk -v k="$2" 'index($0, k "=") == 1 { print substr($0, length(k) + 2); exit }'
+}
+
+# O orçamento que a F1 persistiu, lido do COMMITADO: é a prova de que a sprintx
+# recebeu o teto do buildx, e não um teto inventado ou nenhum.
+orcamento_confere() { # <slug>
+  local p="docs/sprintx/features/$1/00-PLANEJAMENTO.md" arq
+  arq="$(git show "feature/$1:$p" 2>/dev/null | tr -d '\r')" || return 1
+  printf '%s\n' "$arq" | grep -qx "max_reprovacoes_f5: $ORCAMENTO_F5_MAX" || return 1
+  printf '%s\n' "$arq" | grep -qx "orcamento_declarado_por: $ORCAMENTO_F5_POR"
+}
+
+# O que o buildx faz com a resposta de `planejamento.sh fase`. Ele não abre o
+# 00-PLANEJAMENTO.md para decidir, não conta rodada e não lê prosa: a sprintx é
+# a dona da interpretação, e a saída dela é a única entrada desta decisão.
+buildx_acao() { # <worktree> <slug> -> acao
+  local saida fase estado fonte persist
+  saida="$(sprintx "$1" fase "$2")"                                       # [M10]
+  fase="$(chave "$saida" fase)"; estado="$(chave "$saida" estado)"
+  fonte="$(chave "$saida" fonte)"; persist="$(chave "$saida" persistencia)"
+  case "$fase" in
+    CHECKPOINT) echo completar_checkpoint; return ;;                      # [M1]
+    F1|F2) [ "$estado" = null ] && { echo "continuar_$(printf '%s' "$fase" | tr F f)"; return; } ;;
+  esac
+  [ "$fonte" = planejamento ] && [ "$persist" = duravel ] || { echo parar; return; }
+  case "$fase:$estado" in
+    F3:aguardando_f3|F3:replanejar) echo continuar_f3 ;;
+    F4:aguardando_f4)               echo continuar_f4 ;;
+    F5:aguardando_f5)               echo continuar_f5 ;;
+    F6:aprovado)                    echo f6 ;;
+    PARAR:orcamento_esgotado)       echo terminal_pre_f6 ;;
+    *)                              echo parar ;;
+  esac
+}
+
+# Até a F6, tudo que a branch da feature carrega à frente de BASE_SHA são
+# checkpoints da sprintx: commits com o trailer `Planejamento: checkpoint` e
+# paths só dentro da pasta da feature. Qualquer outra coisa é produto — ou
+# trabalho que ninguém auditou — antes da hora.
+sem_produto_pre_f6() { # <base_sha> <slug>
+  local p c
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    case "$p" in "docs/sprintx/features/$2/"*) ;; *) return 1 ;; esac      # [M3]
+  done <<EOF
+$(git -c core.quotepath=false log --format= --name-only "$1..feature/$2")
+EOF
+  for c in $(git rev-list "$1..feature/$2"); do
+    git log -1 --format=%B "$c" | tr -d '\r' | grep -qx 'Planejamento: checkpoint' || return 1
+  done
+}
+
+# Portão terminal pré-F6, prova F: o terminal está no HEAD da feature.
+prova_f_terminal_commitado() { # <slug>
+  git show "feature/$1:docs/sprintx/features/$1/00-PLANEJAMENTO.md" 2>/dev/null |   # [M2]
+    tr -d '\r' | grep -qx 'estado: orcamento_esgotado'
+}
+
+# Prova G: a sprintx confirma o terminal, durável — nunca CHECKPOINT.
+prova_g_sprintx_terminal() { # <worktree> <slug>
+  local saida; saida="$(sprintx "$1" fase "$2")"
+  [ "$(chave "$saida" fase)" = PARAR ] &&
+    [ "$(chave "$saida" estado)" = orcamento_esgotado ] &&
+    [ "$(chave "$saida" persistencia)" = duravel ]
+}
+
+# Prova I: a auditoria da rodada terminal está no commit que registrou o terminal
+# e não mudou depois dele, e é uma reprovação.
+prova_i_auditoria_commitada() { # <slug>
+  local pasta="docs/sprintx/features/$1" terminal
+  terminal="$(git log -1 --format=%H "feature/$1" -- "$pasta/00-PLANEJAMENTO.md")"
+  [ -n "$terminal" ] || return 1
+  git show "$terminal:$pasta/00-PLANEJAMENTO.md" | tr -d '\r' | grep -qx 'estado: orcamento_esgotado' || return 1
+  git cat-file -e "$terminal:$pasta/00-AUDITORIA.md" 2>/dev/null || return 1
+  [ "$(git rev-parse "$terminal:$pasta/00-AUDITORIA.md")" = \
+    "$(git rev-parse "feature/$1:$pasta/00-AUDITORIA.md" 2>/dev/null)" ] || return 1
+  git show "$terminal:$pasta/00-AUDITORIA.md" | tr -d '\r' | grep -E '^VEREDITO: ' | tail -1 | grep -q '^VEREDITO: NÃO'
+}
+
+# O portão inteiro, A a I. Falhou qualquer uma: nada de escrita na CONTROL.
+gate_terminal_pre_f6() { # <base_sha> <slug> <branch-do-projeto> <worktree>
+  provas_pre_ff "$1" "feature/$2" "$3" || return 1             # A B C D
+  [ -z "$(git -C "$4" status --porcelain)" ] || return 1       # E
+  prova_f_terminal_commitado "$2" || return 1                  # F
+  prova_g_sprintx_terminal "$4" "$2" || return 1               # G
+  sem_produto_pre_f6 "$1" "$2" || return 1                     # H
+  prova_i_auditoria_commitada "$2"                             # I
+}
+
+worktree_da_branch() { # <slug> -> caminho do worktree, se existir de fato no disco
+  local caminho
+  caminho="$(git worktree list --porcelain | tr -d '\r' | awk -v b="branch refs/heads/feature/$1" '
+    /^worktree / { w = substr($0, 10) } $0 == b { print w; exit }')"
+  [ -n "$caminho" ] && [ -d "$caminho" ] && printf '%s\n' "$caminho"
+}
+
+# Worktree perdido: reabre SOBRE A MESMA BRANCH. O `prune` só apaga o registro
+# de worktree cujo diretório já não existe; nada de branch, nada de commit.
+reabre_worktree() { # <slug> <caminho>
+  git worktree prune
+  git rev-parse --verify --quiet "refs/heads/feature/$1" >/dev/null || return 1
+  git worktree add -q "$2" "feature/$1" 2>/dev/null
+}
+
+# A matriz do /buildx-retomar para uma feature, a partir do Git e da sprintx.
+retomada_decide() { # <slug> <base_sha> <status-no-mapa> <branch-do-projeto> -> letra[:acao]
+  local slug="$1" base="$2" status="$3" proj="$4" wt tip acao
+  if git rev-parse --verify --quiet "refs/remotes/origin/$proj" >/dev/null; then
+    git fetch -q origin 2>/dev/null
+    [ "$(git rev-parse HEAD)" = "$(git rev-parse "origin/$proj")" ] || { echo K; return; }
+  fi
+  wt="$(worktree_da_branch "$slug")"
+  if [ "$status" = pendente ]; then
+    if git rev-parse --verify --quiet "refs/heads/feature/$slug" >/dev/null || [ -n "$wt" ]; then
+      echo A; else echo livre; fi
+    return
+  fi
+  git rev-parse --verify --quiet "refs/heads/feature/$slug" >/dev/null || { echo B:f1_nascimento; return; }
+  tip="$(git rev-parse "feature/$slug")"
+  if [ "$tip" != "$base" ] && git merge-base --is-ancestor "$tip" HEAD; then echo J; return; fi
+  git merge-base --is-ancestor "$base" "feature/$slug" || { echo PARE; return; }
+  if [ -z "$wt" ]; then
+    if [ "$tip" = "$base" ]; then echo I; else echo H; fi
+    return
+  fi
+  acao="$(buildx_acao "$wt" "$slug")"
+  case "$acao" in
+    completar_checkpoint) echo D ;;
+    terminal_pre_f6)      echo G ;;
+    f6)                   echo F ;;
+    continuar_*)
+      if [ "$tip" = "$base" ]; then echo "B:$acao"
+      elif sem_produto_pre_f6 "$base" "$slug"; then echo "C:$acao"
+      else echo PARE; fi ;;
+    *) echo PARE ;;
+  esac
+}
+
+# --- a sprintx F1–F5 simulada NOS ARTEFATOS, mas com o script de estado REAL ---
+
+# F1: exclui o rastro localmente (como a F1 real faz) e cria o planejamento com
+# o orçamento que veio do briefing. A F1 não faz checkpoint.
+sx_f1() { # <wt> <slug>
+  local excl
+  excl="$(git -C "$1" rev-parse --git-path info/exclude)"
+  case "$excl" in /*|?:/*) ;; *) excl="$1/$excl" ;; esac
+  mkdir -p "$(dirname "$excl")"
+  grep -qx 'docs/eventos/' "$excl" 2>/dev/null || printf 'docs/eventos/\n' >> "$excl"
+  mkdir -p "$1/docs/sprintx/features/$2/base"
+  printf '# Indice\n' > "$1/docs/sprintx/features/$2/base/00-INDICE.md"
+  sprintx "$1" criar "$2" $(briefing_orcamento | cut -d' ' -f2) >/dev/null
+}
+
+sx_f2() { printf -- '---\nkind: decisoes\n---\n' > "$1/docs/sprintx/features/$2/00-DECISOES.md"; sprintx "$1" avanca "$2" f2 >/dev/null; }
+sx_f3() {
+  mkdir -p "$1/docs/sprintx/features/$2/sprint-01"
+  PLANO_V=$((${PLANO_V:-0} + 1))
+  printf 'plano versao %s\n' "$PLANO_V" > "$1/docs/sprintx/features/$2/sprint-01/tasks.md"
+  sprintx "$1" avanca "$2" f3 >/dev/null
+}
+sx_f4() { printf '# Orquestrador\n' > "$1/docs/sprintx/features/$2/ORQUESTRADOR.md"; sprintx "$1" avanca "$2" f4 >/dev/null; }
+
+# auditoria <arquivo> <sim|nao> [itens ALTA...] — no formato que o script valida.
+auditoria() {
+  local arq="$1" v="$2" i; shift 2
+  {
+    printf '# Auditoria\n\n'
+    if [ "$v" = sim ]; then
+      printf 'Nenhum achado.\n\nVEREDITO: SIM — o plano está pronto para execução autônoma.\n'
+    else
+      printf '| severidade | arquivo | problema | correção sugerida |\n|---|---|---|---|\n'
+      for i in "$@"; do
+        case "$i" in
+          2) printf '| ALTA | sprint-01/tasks.md | [item 2][fraco:criterio] T-01.01 — cláusula: - — passaria com: retorno fixo | endurecer |\n' ;;
+          *) printf '| ALTA | sprint-01/tasks.md | [item %s] achado da classe %s | corrigir |\n' "$i" "$i" ;;
+        esac
+      done
+      printf '\nVEREDITO: NÃO — o plano não está pronto para execução autônoma.\n'
+    fi
+  } > "$arq"
+}
+
+sx_f5() { # <wt> <slug> <sim|nao> [itens ALTA...] -> a saida do avanca; codigo do script
+  local wt="$1" slug="$2"; shift 2
+  auditoria "$wt/docs/sprintx/features/$slug/00-AUDITORIA.md" "$@"
+  sprintx "$wt" avanca "$slug" f5
+}
+
+# Um ciclo F3 → F4 → F5 reprovado, na mesma branch e no mesmo worktree.
+sx_rodada_nao() { # <wt> <slug> [itens ALTA...]
+  local wt="$1" slug="$2"; shift 2
+  [ $# -gt 0 ] || set -- 9
+  sx_f3 "$wt" "$slug"; sx_f4 "$wt" "$slug"; sx_f5 "$wt" "$slug" nao "$@" >/dev/null
+}
+
+# Hook do projeto que recusa commit enquanto a marca existir: é o que faz o
+# checkpoint da sprintx cair em persistencia_falhou.
+hook_recusa() { # <liga|desliga>
+  local comum; comum="$(git rev-parse --git-common-dir)"
+  mkdir -p "$comum/hooks"
+  printf '#!/bin/sh\n[ -f "$(git rev-parse --git-common-dir)/recusar-commit" ] && { echo recusado >&2; exit 1; }\nexit 0\n' \
+    > "$comum/hooks/pre-commit"
+  chmod +x "$comum/hooks/pre-commit"
+  if [ "$1" = liga ]; then : > "$comum/recusar-commit"; else rm -f "$comum/recusar-commit"; fi
+}
+
+# ---------------------------------------------------------------------------
 # Montagem de cenário
 # ---------------------------------------------------------------------------
 
@@ -312,6 +579,8 @@ mergex_publica() { git push -q origin "feature/$1" 2>/dev/null; }
 # ---------------------------------------------------------------------------
 # Cenários
 # ---------------------------------------------------------------------------
+
+if bloco p0; then
 
 echo
 echo "integração — caminho feliz e idempotência"
@@ -752,6 +1021,293 @@ caso "60. e a fonte continua citada"                      sim \
   "$(sim_nao grep -q 'BUILDX-PREMISSAS.md#PR-07' <<< "$(motivo_yaml "$DEC" D-01)")"
 
 echo
+fi  # p0
+
+SX_REF="$REPO/.claude/skills/buildx/references/integracao/sprintx.md"
+B4_REF="$REPO/.claude/skills/buildx/references/05-construcao.md"
+
+if bloco orcamento; then
+echo
+echo "P0.1 — o briefing declara o orçamento, a sprintx persiste e conta"
+
+caso "P01.1 briefing declara max_reprovacoes_f5: 3" sim \
+  "$(sim_nao grep -qx 'max_reprovacoes_f5: 3' <(briefing_orcamento))"
+caso "P01.1 e orcamento_declarado_por: buildx"      sim \
+  "$(sim_nao grep -qx 'orcamento_declarado_por: buildx' <(briefing_orcamento))"
+for doc in "$SX_REF" "$B4_REF"; do
+  caso "P01.1 o contrato $(basename "$doc") declara o teto 3"   sim "$(sim_nao grep -qx 'max_reprovacoes_f5: 3' <(tr -d '\r' < "$doc"))"
+  caso "P01.1 o contrato $(basename "$doc") declara o dono"     sim "$(sim_nao grep -qx 'orcamento_declarado_por: buildx' <(tr -d '\r' < "$doc"))"
+done
+caso "P01.1 e aponta a interface real da F1: criar <slug> 3 buildx" sim \
+  "$(sim_nao grep -q 'planejamento.sh criar <slug> 3 buildx' "$SX_REF")"
+
+if com_sprintx "P01.1 orcamento persistido"; then
+  C="$(novo_projeto o1 sim)"; cd "$C"
+  BASE="$(git rev-parse HEAD)"
+  feature_nasce ft-01 "$BASE" o1; WT="$TMP_RAIZ/o1/wt-ft-01"
+  sx_f1 "$WT" ft-01
+  caso "P01.1 a F1 grava o teto do briefing"          "max_reprovacoes_f5: 3" \
+    "$(grep '^max_reprovacoes_f5:' "$WT/docs/sprintx/features/ft-01/00-PLANEJAMENTO.md")"
+  caso "P01.1 a F1 nao commita: branch ainda em BASE_SHA" "$BASE" "$(git rev-parse feature/ft-01)"
+  sx_f2 "$WT" ft-01
+  caso "P01.1 depois do checkpoint da F2, o orcamento esta commitado" sim "$(sim_nao orcamento_confere ft-01)"
+  caso "P01.1 orcamento diferente numa retomada: a sprintx recusa" nao \
+    "$(sim_nao sprintx "$WT" criar ft-01 5 buildx)"
+  caso "P01.1 e o teto commitado nao muda"            sim "$(sim_nao orcamento_confere ft-01)"
+fi
+fi  # orcamento
+
+if bloco checkpoint; then
+echo
+echo "P0.1 — checkpoint da sprintx é estado legítimo da feature, não E1"
+
+if com_sprintx "P01.2 checkpoints"; then
+  C="$(novo_projeto k1 sim)"; cd "$C"
+  BASE="$(git rev-parse HEAD)"
+  feature_nasce ft-01 "$BASE" k1; WT="$TMP_RAIZ/k1/wt-ft-01"
+  caso "P01.2 caminho A: nasce exatamente em BASE_SHA" "$BASE" "$(git rev-parse feature/ft-01)"
+  sx_f1 "$WT" ft-01; sx_f2 "$WT" ft-01; sx_f3 "$WT" ft-01; sx_f4 "$WT" ft-01
+  caso "P01.2 checkpoints deixam a feature a frente de BASE_SHA" nao \
+    "$(sim_nao test "$BASE" = "$(git rev-parse feature/ft-01)")"
+  caso "P01.2 e ela continua descendendo da base"   sim "$(sim_nao git merge-base --is-ancestor "$BASE" feature/ft-01)"
+  caso "P01.2 os commits a frente sao so checkpoints, sem produto" sim "$(sim_nao sem_produto_pre_f6 "$BASE" ft-01)"
+  caso "P01.2 nenhum deles e commit de task (E1)"   "" \
+    "$(git log --format=%B "$BASE..feature/ft-01" | grep '^Task:' || true)"
+  caso "P01.2 a CONTROL nao se moveu na janela"     "$BASE" "$(git rev-parse HEAD)"
+  caso "P01.2 e segue limpa"                        sim "$(sim_nao test -z "$(git status --porcelain)")"
+  caso "P01.2 a worktree da feature termina limpa (rastro excluido localmente)" sim \
+    "$(sim_nao test -z "$(git -C "$WT" status --porcelain)")"
+
+  caso "P01.28 retomada so com checkpoints: legitima, na fase da sprintx" "C:continuar_f5" \
+    "$(retomada_decide ft-01 "$BASE" em_andamento buildx/k1)"
+
+  # F5 reprova uma vez: a sprintx manda replanejar, o buildx continua na F3.
+  sx_f5 "$WT" ft-01 nao 9 >/dev/null
+  caso "P01.fase replanejar: o buildx continua a sprintx na F3" continuar_f3 "$(buildx_acao "$WT" ft-01)"
+  caso "P01.fase e a CONTROL continua em BASE_SHA"             "$BASE" "$(git rev-parse HEAD)"
+
+  # A sessão morre e leva o worktree. A branch, com os checkpoints, fica.
+  TIP="$(git rev-parse feature/ft-01)"
+  rm -rf "$WT"
+  caso "P01.29 worktree perdido, branch checkpointada"      H "$(retomada_decide ft-01 "$BASE" em_andamento buildx/k1)"
+  caso "P01.29 recriar a branch existente e recusado"        nao "$(sim_nao git branch feature/ft-01 "$BASE")"
+  caso "P01.29 reabre o worktree sobre a mesma branch"       sim "$(sim_nao reabre_worktree ft-01 "$WT")"
+  caso "P01.29 a branch nao mudou"                           "$TIP" "$(git rev-parse feature/ft-01)"
+  caso "P01.29 e o planejamento voltou do commit"            continuar_f3 "$(buildx_acao "$WT" ft-01)"
+
+  C="$(novo_projeto k2 sim)"; cd "$C"
+  BASE="$(git rev-parse HEAD)"
+  feature_nasce ft-01 "$BASE" k2; WT="$TMP_RAIZ/k2/wt-ft-01"
+  sx_f1 "$WT" ft-01
+  caso "P01.30 so a F1 rodou: retomada em BASE_SHA segue a sprintx" "B:continuar_f2" \
+    "$(retomada_decide ft-01 "$BASE" em_andamento buildx/k2)"
+  git worktree remove --force "$WT"
+  caso "P01.30 worktree perdido, branch == BASE_SHA"  I "$(retomada_decide ft-01 "$BASE" em_andamento buildx/k2)"
+  caso "P01.30 reabre sobre a mesma branch"           sim "$(sim_nao reabre_worktree ft-01 "$WT")"
+  caso "P01.30 e a sprintx retoma da F1 (nada era duravel)" "B:continuar_f1" \
+    "$(retomada_decide ft-01 "$BASE" em_andamento buildx/k2)"
+  caso "P01.30 a branch nao foi recriada"             "$BASE" "$(git rev-parse feature/ft-01)"
+fi
+
+# A contagem é da sprintx. Prosa com "rodada 3" e várias linhas VEREDITO não
+# termina a tentativa: só o estado que o script devolve decide.
+if com_sprintx "P01.M10 prosa"; then
+  C="$(novo_projeto k3 sim)"; cd "$C"
+  BASE="$(git rev-parse HEAD)"
+  feature_nasce ft-01 "$BASE" k3; WT="$TMP_RAIZ/k3/wt-ft-01"
+  sx_f1 "$WT" ft-01; sx_f2 "$WT" ft-01; sx_rodada_nao "$WT" ft-01 9
+  sx_f3 "$WT" ft-01; sx_f4 "$WT" ft-01
+  AUD="$WT/docs/sprintx/features/ft-01/00-AUDITORIA.md"
+  auditoria "$AUD" nao 9
+  printf '\nRodada 3 de 3. Historico: VEREDITO: NÃO\nVEREDITO: NÃO\nVEREDITO: NÃO — terceira rodada.\n' >> "$AUD"
+  sprintx "$WT" avanca ft-01 f5 >/dev/null
+  caso "P01.M10 tres linhas VEREDITO e 'rodada 3' na prosa: a sprintx diz 2 reprovacoes" "reprovacoes: 2" \
+    "$(git show feature/ft-01:docs/sprintx/features/ft-01/00-PLANEJAMENTO.md | grep '^reprovacoes:')"
+  caso "P01.M10 e o buildx segue replanejando, sem contar texto" continuar_f3 "$(buildx_acao "$WT" ft-01)"
+fi
+fi  # checkpoint
+
+if bloco x2; then
+echo
+echo "P0.1 — X2: CHECKPOINT pendente não decide nada; depois dele, ff-only"
+
+if com_sprintx "X2"; then
+  C="$(novo_projeto x2 sim)"; cd "$C"
+  BASE="$(git rev-parse HEAD)"
+  feature_nasce ft-01 "$BASE" x2; WT="$TMP_RAIZ/x2/wt-ft-01"
+  sx_f1 "$WT" ft-01; sx_f2 "$WT" ft-01; sx_rodada_nao "$WT" ft-01 9
+  sx_f3 "$WT" ft-01; sx_f4 "$WT" ft-01
+  ANTES="$(git rev-parse feature/ft-01)"
+
+  hook_recusa liga
+  SAIDA="$(sx_f5 "$WT" ft-01 nao 9; printf 'codigo=%s\n' "$?")"
+  caso "X2 o hook recusa o checkpoint: persistencia_falhou" persistencia_falhou "$(chave "$SAIDA" checkpoint)"
+  caso "X2 com codigo 3"                                   3 "$(chave "$SAIDA" codigo)"
+  caso "X2 a branch nao recebeu a rodada"                  "$ANTES" "$(git rev-parse feature/ft-01)"
+  caso "P01.3 sprintx responde CHECKPOINT"                 CHECKPOINT "$(chave "$(sprintx "$WT" fase ft-01)" fase)"
+  caso "P01.3 o buildx so completa o checkpoint"           completar_checkpoint "$(buildx_acao "$WT" ft-01)"
+  caso "P01.27 retomada em CHECKPOINT"                     D "$(retomada_decide ft-01 "$BASE" em_andamento buildx/x2)"
+  caso "P01.3 nao avanca a sprintx por cima"               nao "$(sim_nao sprintx "$WT" avanca ft-01 f3)"
+  caso "P01.3 e a CONTROL nao se move"                     "$BASE" "$(git rev-parse HEAD)"
+  caso "P01.3 nem o remoto"                                "$BASE" "$(git rev-parse origin/buildx/x2)"
+  caso "P01.3 o buildx nao commitou por conta propria"    "$ANTES" "$(git rev-parse feature/ft-01)"
+
+  # A retomada cai de novo em CHECKPOINT até a sprintx persistir.
+  caso "X2 ainda recusado: continua CHECKPOINT"            nao "$(sim_nao sprintx "$WT" checkpoint ft-01)"
+  caso "X2 e a retomada continua em D"                     D "$(retomada_decide ft-01 "$BASE" em_andamento buildx/x2)"
+  hook_recusa desliga
+  caso "X2 a sprintx completa o checkpoint"                commitado "$(chave "$(sprintx "$WT" checkpoint ft-01)" checkpoint)"
+  caso "X2 e o estado volta a governar: replanejar"        continuar_f3 "$(buildx_acao "$WT" ft-01)"
+
+  # A F5 aprova antes do teto: F6.
+  sx_f3 "$WT" ft-01; sx_f4 "$WT" ft-01; sx_f5 "$WT" ft-01 sim >/dev/null
+  caso "P01.fase aprovado: F6"                               f6 "$(buildx_acao "$WT" ft-01)"
+  caso "P01.fase e a retomada tambem"                        F "$(retomada_decide ft-01 "$BASE" em_andamento buildx/x2)"
+
+  # F6 simulada: E1 com produto e o registro do E8, commitados e publicados.
+  mkdir -p "$WT/src" "$WT/docs/entregas/ft-01"
+  printf 'codigo\n' > "$WT/src/ft-01.ts"
+  git -C "$WT" add -A; git -C "$WT" commit -q -m "feat: T-01.01" -m "Task: T-01.01"
+  printf 'estado: entregue\nportao: pronto\npush_feito: true\n' > "$WT/docs/entregas/ft-01/ENTREGA.md"
+  git -C "$WT" add -A; git -C "$WT" commit -q -m "chore(mergex): E8"
+  mergex_publica ft-01
+  caso "P01.31 depois da F6 ha produto: nao e mais so checkpoint" nao "$(sim_nao sem_produto_pre_f6 "$BASE" ft-01)"
+  caso "P01.31 a branch com checkpoints e E1 descende da base"   sim "$(sim_nao git merge-base --is-ancestor "$BASE" feature/ft-01)"
+  caso "P01.31 as seis provas passam"                             sim "$(sim_nao provas_abcdef "$BASE" ft-01 buildx/x2 "$WT")"
+  caso "P01.31 publicada"                                         sim "$(sim_nao prova_publicacao ft-01 true)"
+  caso "P01.31 ff-only integra, com os checkpoints anteriores"    sim "$(sim_nao integrar feature/ft-01)"
+  caso "P01.31 e os checkpoints entram na arvore do projeto"      sim \
+    "$(sim_nao git cat-file -e HEAD:docs/sprintx/features/ft-01/00-PLANEJAMENTO.md)"
+fi
+fi  # x2
+
+if bloco terminal; then
+echo
+echo "P0.1 — portão terminal pré-F6: só o commitado move a CONTROL"
+
+# Checkpoint de planejamento sintético, no formato da sprintx — para montar
+# estados que a sprintx real nunca produziria sozinha.
+commit_checkpoint() { # <wt> <mensagem>
+  git -C "$1" add -A
+  git -C "$1" commit -q -m "$2" -m "Planejamento: checkpoint"
+}
+
+C="$(novo_projeto t1 sim)"; cd "$C"
+BASE="$(git rev-parse HEAD)"
+feature_nasce ft-01 "$BASE" t1; WT="$TMP_RAIZ/t1/wt-ft-01"
+P="$WT/docs/sprintx/features/ft-01"; mkdir -p "$P"
+printf 'estado: replanejar\n' > "$P/00-PLANEJAMENTO.md"
+auditoria "$P/00-AUDITORIA.md" nao 9
+commit_checkpoint "$WT" "chore(sprintx): checkpoint de planejamento ft-01 — f5 rodada 2"
+caso "P01.7 so checkpoints na pasta da feature: sem produto"  sim "$(sim_nao sem_produto_pre_f6 "$BASE" ft-01)"
+printf 'estado: orcamento_esgotado\n' > "$P/00-PLANEJAMENTO.md"
+git -C "$WT" add -A; git -C "$WT" commit -q -m "chore(sprintx): checkpoint de planejamento ft-01 — f5 rodada 3" -m "Planejamento: checkpoint"
+caso "P01.5 terminal commitado: prova F passa"               sim "$(sim_nao prova_f_terminal_commitado ft-01)"
+caso "P01.6 auditoria da rodada terminal no mesmo commit: prova I passa" sim "$(sim_nao prova_i_auditoria_commitada ft-01)"
+auditoria "$P/00-AUDITORIA.md" nao 7
+caso "P01.6 auditoria reescrita depois do terminal, no worktree: o portao barra" nao \
+  "$(sim_nao gate_terminal_pre_f6 "$BASE" ft-01 buildx/t1 "$WT")"
+git -C "$WT" checkout -q -- docs/sprintx/features/ft-01/00-AUDITORIA.md
+
+mkdir -p "$WT/src"; printf 'produto\n' > "$WT/src/antes-da-f6.ts"
+commit_checkpoint "$WT" "chore(sprintx): checkpoint de planejamento ft-01 — f5 rodada 3"
+caso "P01.7 produto commitado pre-F6, mesmo com trailer: barra" nao "$(sim_nao sem_produto_pre_f6 "$BASE" ft-01)"
+
+C="$(novo_projeto t2 sim)"; cd "$C"
+BASE="$(git rev-parse HEAD)"
+feature_nasce ft-01 "$BASE" t2; WT="$TMP_RAIZ/t2/wt-ft-01"
+P="$WT/docs/sprintx/features/ft-01"; mkdir -p "$P"
+printf 'estado: orcamento_esgotado\n' > "$P/00-PLANEJAMENTO.md"
+git -C "$WT" add -A; git -C "$WT" commit -q -m "chore(buildx): escrito por quem nao e a sprintx"
+caso "P01.7 commit sem o trailer de checkpoint: barra" nao "$(sim_nao sem_produto_pre_f6 "$BASE" ft-01)"
+
+C="$(novo_projeto t3 sim)"; cd "$C"
+BASE="$(git rev-parse HEAD)"
+feature_nasce ft-01 "$BASE" t3; WT="$TMP_RAIZ/t3/wt-ft-01"
+P="$WT/docs/sprintx/features/ft-01"; mkdir -p "$P"
+printf 'estado: orcamento_esgotado\n' > "$P/00-PLANEJAMENTO.md"
+commit_checkpoint "$WT" "chore(sprintx): checkpoint de planejamento ft-01 — f5 rodada 3"
+auditoria "$P/00-AUDITORIA.md" nao 9
+caso "P01.6 00-AUDITORIA so no worktree: prova I barra" nao "$(sim_nao prova_i_auditoria_commitada ft-01)"
+caso "P01.6 e o portao inteiro barra"                   nao "$(sim_nao gate_terminal_pre_f6 "$BASE" ft-01 buildx/t3 "$WT")"
+caso "P01.6 com a CONTROL parada"                       "$BASE" "$(git rev-parse HEAD)"
+fi  # terminal
+
+if bloco x1; then
+echo
+echo "P0.1 — X1: terminal pré-F6 sobrevive à morte da sessão"
+
+if com_sprintx "X1"; then
+  C="$(novo_projeto x1 sim)"; cd "$C"
+  BASE="$(git rev-parse HEAD)"
+  feature_nasce ft-01 "$BASE" x1; WT="$TMP_RAIZ/x1/wt-ft-01"
+  PASTA="docs/sprintx/features/ft-01"
+  caso "X1 feature nasce exatamente em BASE_SHA"      "$BASE" "$(git rev-parse feature/ft-01)"
+  sx_f1 "$WT" ft-01; sx_f2 "$WT" ft-01
+  sx_rodada_nao "$WT" ft-01 9
+  caso "X1 primeira reprovacao: replanejar"            continuar_f3 "$(buildx_acao "$WT" ft-01)"
+  sx_rodada_nao "$WT" ft-01 2 9
+  caso "X1 segunda reprovacao: replanejar de novo"     continuar_f3 "$(buildx_acao "$WT" ft-01)"
+  sx_f3 "$WT" ft-01; sx_f4 "$WT" ft-01
+
+  # Terceira F5 NÃO com o checkpoint recusado: o terminal existe só no disco.
+  hook_recusa liga
+  sx_f5 "$WT" ft-01 nao 7 9 >/dev/null
+  caso "P01.4 orcamento_esgotado no working tree"      sim "$(sim_nao grep -qx 'estado: orcamento_esgotado' "$WT/$PASTA/00-PLANEJAMENTO.md")"
+  caso "P01.4 mas nao no HEAD: prova F barra"          nao "$(sim_nao prova_f_terminal_commitado ft-01)"
+  caso "P01.4 a sprintx responde CHECKPOINT: prova G barra" nao "$(sim_nao prova_g_sprintx_terminal "$WT" ft-01)"
+  caso "P01.4 o portao inteiro barra"                  nao "$(sim_nao gate_terminal_pre_f6 "$BASE" ft-01 buildx/x1 "$WT")"
+  caso "P01.9 a CONTROL nao se move sem evidencia duravel" "$BASE" "$(git rev-parse HEAD)"
+  caso "P01.9 nem o remoto"                            "$BASE" "$(git rev-parse origin/buildx/x1)"
+  caso "P01.10 nada de RECURSAO na janela"             nao "$(sim_nao test -e docs/projeto/RECURSAO.md)"
+  hook_recusa desliga
+  caso "X1 a sprintx completa o checkpoint terminal"   commitado "$(chave "$(sprintx "$WT" checkpoint ft-01)" checkpoint)"
+
+  caso "P01.5 terminal duravel: o buildx vai ao portao" terminal_pre_f6 "$(buildx_acao "$WT" ft-01)"
+  caso "P01.5 orcamento_esgotado commitado + worktree limpa: portao passa" sim \
+    "$(sim_nao gate_terminal_pre_f6 "$BASE" ft-01 buildx/x1 "$WT")"
+  caso "X1 as tres reprovacoes contadas pela sprintx"  "reprovacoes: 3" \
+    "$(git show "feature/ft-01:$PASTA/00-PLANEJAMENTO.md" | grep '^reprovacoes:')"
+  caso "X1 teto declarado pelo buildx"                 sim "$(sim_nao orcamento_confere ft-01)"
+  caso "X1 a sprintx nao avanca mais"                  nao "$(sim_nao sprintx "$WT" avanca ft-01 f3)"
+  TIP="$(git rev-parse feature/ft-01)"
+
+  # Morte da sessão: o worktree some.
+  git worktree remove "$WT"
+  caso "X1 sem worktree, o git ainda devolve o PLANEJAMENTO" sim \
+    "$(sim_nao git cat-file -e "feature/ft-01:$PASTA/00-PLANEJAMENTO.md")"
+  caso "X1 e a AUDITORIA terminal"                     sim "$(sim_nao git show "feature/ft-01:$PASTA/00-AUDITORIA.md")"
+  caso "X1 retomada: worktree perdido, branch checkpointada" H \
+    "$(retomada_decide ft-01 "$BASE" em_andamento buildx/x1)"
+  reabre_worktree ft-01 "$WT"
+  caso "X1 reaberto sobre a mesma branch"              "$TIP" "$(git -C "$WT" rev-parse HEAD)"
+  caso "X1 retomada reconhece o terminal"              G "$(retomada_decide ft-01 "$BASE" em_andamento buildx/x1)"
+  caso "X1 e o portao passa de novo, sem nada refeito" sim "$(sim_nao gate_terminal_pre_f6 "$BASE" ft-01 buildx/x1 "$WT")"
+  caso "X1 a CONTROL ainda em BASE_SHA ate o registro" "$BASE" "$(git rev-parse HEAD)"
+fi
+fi  # x1
+
+if bloco contrato; then
+echo
+echo "P0.1 — o contrato vivo diz o que o harness prova"
+
+RETOMAR="$REPO/.claude/commands/buildx-retomar.md"
+caso "P01.espelho commands do Claude e do OpenCode identicos" sim \
+  "$(sim_nao diff -r "$REPO/.claude/commands" "$REPO/.opencode/commands")"
+for l in A B C D E F G H I J K; do
+  caso "P01.retomar a matriz tem a linha $l" sim "$(sim_nao grep -q "^| \*\*$l\*\* |" "$RETOMAR")"
+done
+caso "P01.retomar CHECKPOINT antes de qualquer decisao" sim \
+  "$(sim_nao grep -qE '^\| \*\*D\*\* \| .*fase=CHECKPOINT.*complete o checkpoint antes de qualquer decis' "$RETOMAR")"
+caso "P01.retomar worktree perdido reabre sobre a mesma branch" sim \
+  "$(sim_nao grep -qE '^\| \*\*H\*\* \| .*sobre a mesma branch' "$RETOMAR")"
+caso "P01.13 persistencia_falhou nao vira conclusao metodologica" sim \
+  "$(sim_nao grep -q 'Não é conclusão metodológica: \*\*não\*\* vira `orcamento_esgotado`, \*\*não\*\* vira `bloqueada`' "$SX_REF")"
+caso "P01.33 checkpoint nao e entrega, no contrato" sim \
+  "$(sim_nao grep -q 'não é task concluída, não é commit E1, não é entrega, não é push e não é PR' "$SX_REF")"
+fi  # contrato
+
+
 echo "---------------------------------------------"
-printf '%d ok, %d falha(s)\n' "$OK" "$FALHOU"
+printf '%d ok, %d falha(s), %d pulo(s)\n' "$OK" "$FALHOU" "$PULOS"
 [ "$FALHOU" = "0" ]
