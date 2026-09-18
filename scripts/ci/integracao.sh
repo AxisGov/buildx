@@ -138,10 +138,30 @@ prova_publicacao() { # <slug> <push_feito: true|false>
   [ "$(git rev-parse "feature/$1")" = "$(git rev-parse "origin/feature/$1")" ]
 }
 
+# O valor de uma chave `campo: valor` de um registro, lido do stdin.
+campo_registro() { tr -d '\r' | grep "^$1: " | head -1 | cut -d' ' -f2; }
+
 # O que o buildx lê: o commitado, nunca a worktree.
 campo_commitado() { # <slug> <campo>
-  git show "feature/$1:docs/entregas/$1/ENTREGA.md" 2>/dev/null |
-    grep "^$2: " | head -1 | cut -d' ' -f2
+  git show "feature/$1:docs/entregas/$1/ENTREGA.md" 2>/dev/null | campo_registro "$2"
+}
+
+# A entrega terminal da feature, pelo ENTREGA.md COMMITADO no HEAD dela (D-35).
+# Terminais são as duas combinações que o E8 da mergex grava ao fechar; `aberto`
+# é entrega em curso. Qualquer outra coisa é inconsistência — ninguém infere
+# bloqueio de um registro que não o declara inteiro.
+entrega_terminal() { # <slug> -> ausente | aberta | entregue | bloqueada | invalida
+  local e k
+  e="$(git show "feature/$1:docs/entregas/$1/ENTREGA.md" 2>/dev/null)" || { echo ausente; return; }   # [M18]
+  for k in estado portao; do
+    [ "$(printf '%s\n' "$e" | tr -d '\r' | grep -c "^$k: ")" = 1 ] || { echo invalida; return; }
+  done
+  case "$(printf '%s\n' "$e" | campo_registro estado):$(printf '%s\n' "$e" | campo_registro portao)" in
+    entregue:pronto)                            echo entregue ;;
+    bloqueado:bloqueado)                        echo bloqueada ;;
+    aberto:pronto|aberto:bloqueado|aberto:null) echo aberta ;;
+    *)                                          echo invalida ;;             # [M19]
+  esac
 }
 
 # A worktree contradizendo o commitado é parada, não escolha.
@@ -401,6 +421,8 @@ reabre_worktree() { # <slug> <caminho>
 }
 
 # A matriz do /buildx-retomar para uma feature, a partir do Git e da sprintx.
+# A entrega terminal commitada é lida antes de qualquer linha que dependa do
+# worktree ou da sprintx: um planejamento que ficou F6/aprovado não a apaga.
 retomada_decide() { # <slug> <base_sha> <status-no-mapa> <branch-do-projeto> -> letra[:acao]
   local slug="$1" base="$2" status="$3" proj="$4" wt tip acao
   if git rev-parse --verify --quiet "refs/remotes/origin/$proj" >/dev/null; then
@@ -417,6 +439,11 @@ retomada_decide() { # <slug> <base_sha> <status-no-mapa> <branch-do-projeto> -> 
   tip="$(git rev-parse "feature/$slug")"
   if [ "$tip" != "$base" ] && git merge-base --is-ancestor "$tip" HEAD; then echo J; return; fi
   git merge-base --is-ancestor "$base" "feature/$slug" || { echo PARE; return; }
+  case "$(entrega_terminal "$slug")" in                                    # [M17]
+    entregue)  echo L; return ;;
+    bloqueada) echo R:entrega_bloqueada; return ;;
+    invalida)  echo PARE; return ;;
+  esac
   if [ -z "$wt" ]; then
     if [ "$tip" = "$base" ]; then echo I; else echo H; fi
     return
