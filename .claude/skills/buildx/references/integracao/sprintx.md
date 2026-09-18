@@ -161,12 +161,14 @@ e decide só pela saída (`fase=`, `estado=`, `fonte=`, `persistencia=`):
 | `F3` | `aguardando_f3` · `replanejar` | `duravel` | continua a sprintx na F3 |
 | `F4` | `aguardando_f4` | `duravel` | continua a sprintx na F4 |
 | `F5` | `aguardando_f5` | `duravel` | continua a sprintx na F5 |
-| `F6` | `aprovado` | `duravel` | segue para a F6 |
+| `F6` | `aprovado` | `duravel` | segue para a F6 — **salvo** `ENTREGA.md` terminal commitado na feature, que precede esta tabela (abaixo) |
 | `PARAR` | `orcamento_esgotado` | `duravel` | **portão terminal pré-F6** (`references/05-construcao.md`) |
 | `CHECKPOINT` | qualquer | `pendente` | **só completar o checkpoint** — ver abaixo |
 | qualquer outra combinação, `fonte=legado` depois da F2, `persistencia=disco`, `INCONSISTENTE`, saída vazia | — | — | **pare e relate** |
 
 `persistencia=disco` sob o buildx é parada: significa que o worktree não está na `feature/<slug>` ou não é a raiz do repositório — e o buildx sempre roda a feature com Git, na branch da F1.
+
+**A única leitura que precede esta tabela é a da entrega terminal.** Depois do E8 a sprintx continua respondendo `F6` / `aprovado`: o planejamento terminou aprovado, e é isso que ela descreve. O resultado da execução está no `ENTREGA.md` **commitado** no `HEAD` da feature, e uma entrega terminal — `entregue` com `pronto`, ou `bloqueado` com `bloqueado` — vence a linha `F6`: a feature não volta à F6 e o E0 não roda de novo (`references/05-construcao.md`, passo 6; D-35). Essa leitura não interpreta o planejamento: lê o que a mergex fechou.
 
 ### `CHECKPOINT` pendente
 

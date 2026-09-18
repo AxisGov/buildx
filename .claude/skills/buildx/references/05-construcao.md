@@ -314,7 +314,7 @@ Rodam sem intervenção do buildx. Os pontos de atenção:
 | A sprintx responde | O buildx |
 |---|---|
 | `F3` · `F4` · `F5`, `persistencia=duravel` | continua a sprintx nessa fase, na mesma branch e no mesmo worktree |
-| `F6`, `estado=aprovado`, `persistencia=duravel` | segue para a F6 (passo 5) |
+| `F6`, `estado=aprovado`, `persistencia=duravel` | segue para a F6 (passo 5) — **salvo** se a feature já tem `ENTREGA.md` terminal commitado: a entrega terminal precede esta tabela (passo 6, "A entrega terminal commitada precede a sprintx") |
 | `PARAR`, `estado=orcamento_esgotado`, `persistencia=duravel` | **portão terminal pré-F6** (abaixo) |
 | `CHECKPOINT`, `persistencia=pendente` | pede à sprintx que complete o checkpoint, e **nada mais**: não bloqueia, não mexe no mapa, não roda B5, não começa outra feature |
 | `persistencia_falhou` num checkpoint | **para a orquestração da feature** e relata; preserva worktree e branch. Não é `orcamento_esgotado`, não é `bloqueada`, não é `decisao_humana` |
@@ -422,6 +422,28 @@ Então, numa feature bloqueada:
 | o `ENTREGA.md` commitado na branch, com o bloqueio | **é a evidência**, e é o que a triagem lê |
 
 Não trate a ausência de PR ou de push como problema a mais: é o portão funcionando. O que a triagem decide é outra coisa — se aquilo se resolve replanejando agora.
+
+### A entrega terminal commitada precede a sprintx
+
+Depois do E8, a sprintx continua respondendo `fase=F6`, `estado=aprovado`, `persistencia=duravel`. Isso está certo: o `planejamento.sh` descreve a máquina de planejamento da sprintx, e ela terminou em `aprovado`. Quem descreve o **resultado** da execução e da entrega é o `ENTREGA.md` terminal. As duas respostas são verdadeiras ao mesmo tempo — e só uma delas diz que a tentativa acabou. Um planejamento que permaneceu `aprovado` não apaga uma entrega terminal commitada.
+
+Por isso, **antes de seguir a linha `F6` / `aprovado` / `duravel`** — numa retomada (`/buildx-retomar`) ou no caminho contínuo —, o buildx lê o `ENTREGA.md` do `HEAD` da feature (D-35):
+
+```
+git show feature/<slug>:docs/entregas/<slug>/ENTREGA.md
+```
+
+| `estado` · `portao` commitados | O que é | O que o buildx faz |
+|---|---|---|
+| arquivo ausente no `HEAD` da feature | a F6 ainda não abriu a entrega | segue a sprintx |
+| `aberto` · `pronto`, `bloqueado` ou `null` | entrega em curso: o E8 não fechou | segue a sprintx |
+| `entregue` · `pronto` | **terminal** | o caminho de sempre: passo 7, sem reexecutar portão, PR ou QA |
+| `bloqueado` · `bloqueado` | **terminal** | a triagem terminal, gatilho `entrega_bloqueada` — sem voltar à F6 |
+| qualquer outra coisa: `estado` ou `portao` ausente ou repetido, valor fora do enum, `entregue` sem `pronto`, `bloqueado` sem `bloqueado` | inconsistente | **pare e relate.** Não infira bloqueio, não siga para a F6 |
+
+As duas combinações terminais são as que o E8 da mergex grava ao fechar — o fechamento normal e o fechamento bloqueado do `kind: entrega` —, e nenhuma outra. Arquivo que existe só na árvore de trabalho não conta, em linha nenhuma.
+
+Com a entrega `bloqueado` · `bloqueado`, o buildx **não** reentra na F6, **não** deixa o E0 rodar — ele retomaria o registro existente e o devolveria a `aberto`, apagando o terminal —, **não** reabre o `ENTREGA.md`, **não** reexecuta E2 a E8 e **não** publica a branch. Vai direto à triagem terminal (adiante), com o `ENTREGA.md` commitado como evidência. É o mesmo destino do caminho contínuo, que chega ali pela regra de decisão acima assim que a F6 devolve o controle.
 
 ### Quando os artefatos não estão lá
 

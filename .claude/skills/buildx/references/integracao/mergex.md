@@ -35,6 +35,8 @@ Ler o arquivo da worktree seria decidir por uma evidência que pode não estar n
 
 **O E0 é idempotente.** Feature replanejada roda a F6 de novo, e o E0 **retoma** o `ENTREGA.md` existente em vez de recriá-lo: `estado` volta a `aberto`, `portao` a `null`, `push_feito` a `false`, e `commits` e `criado_em` são **preservados**. Para o buildx isso significa que o histórico de execução de uma feature replanejada continua legível depois da integração — e que ver `commits` com mais entradas que tasks não é defeito.
 
+**Por isso o buildx nunca devolve à F6 uma feature com `ENTREGA.md` terminal commitado.** O E0 retoma qualquer registro existente — inclusive um `entregue` / `pronto` ou `bloqueado` / `bloqueado` — e o devolve a `aberto`: rodado sobre um terminal, ele apagaria o resultado histórico e faria a entrega recomeçar. No buildx, feature com entrega terminal não volta (D-30): a entrega terminal commitada precede a resposta `F6` / `aprovado` da sprintx (`references/05-construcao.md`, passo 6; D-35).
+
 ## O que o buildx lê depois da F6
 
 Dois artefatos, na branch da feature. Só o que os contratos das duas skills declaram — nada inventado:
