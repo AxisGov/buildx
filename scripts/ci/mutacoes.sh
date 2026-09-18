@@ -12,7 +12,8 @@
 # cláusula, repetir ciclo sem conversão, disparar o detector com entrega, e
 # resolver destino que o MAPA não tem — e, desde o P0.2, deixar o planejamento
 # F6 vencer a ENTREGA terminal commitada, aceitar ENTREGA só no working tree e
-# inferir bloqueio de registro inconsistente — e exige que o harness FALHE.
+# inferir bloqueio de registro inconsistente, e deixar o CHECKPOINT pendente
+# vencer a ENTREGA terminal — e exige que o harness FALHE.
 # Mutação que sobrevive é teste que falta.
 #
 # O repositório real nunca é alterado: a cópia vive num diretório temporário e é
@@ -160,6 +161,12 @@ EOF
     *)                                          echo invalida ;;
 EOF
       ;;
+    M20) # o CHECKPOINT pendente (linha D) vence a ENTREGA terminal commitada
+      troca "$d/$HARNESS" '# [M17]' <<'EOF'
+  [ -n "$wt" ] && [ "$(buildx_acao "$wt" "$slug")" = completar_checkpoint ] && { echo D; return; }
+  case "$(entrega_terminal "$slug")" in                                    # [M17]
+EOF
+      ;;
     *) echo "mutacao desconhecida: $1" >&2; return 1 ;;
   esac
 }
@@ -179,7 +186,7 @@ blocos() {
     M10) echo "checkpoint" ;;
     M11|M12|M14|M15|M16) echo "convergencia" ;;
     M13) echo "recursao convergencia" ;;
-    M17|M18|M19) echo "entrega" ;;
+    M17|M18|M19|M20) echo "entrega" ;;
   esac
 }
 
@@ -187,7 +194,7 @@ roda() { # roda <nome> <arvore> <blocos> -> grava <nome>.log e <nome>.rc
   ( cd "$TMP" && BLOCOS="$3" bash "$2/$HARNESS" > "$TMP/$1.log" 2>&1; echo $? > "$TMP/$1.rc" )
 }
 
-MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19}"
+MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20}"
 TODOS_BLOCOS="$(for m in $MUTACOES; do blocos "$m"; done | tr ' ' '\n' | sort -u | tr '\n' ' ')"
 
 echo "controle — a árvore sem mutação passa nos blocos: $TODOS_BLOCOS"

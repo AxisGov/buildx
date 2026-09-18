@@ -2292,6 +2292,10 @@ caso "P02.contrato a linha F exige ENTREGA nao terminal" sim \
   "$(sim_nao grep -qE '^\| \*\*F\*\* \| .*\*\*sem\*\* `ENTREGA` terminal' "$RETOMAR")"
 caso "P02.contrato a ENTREGA terminal vem antes da SPRINTX e do worktree" sim \
   "$(sim_nao grep -qF 'A `ENTREGA` terminal vem **antes** de qualquer linha que dependa da `SPRINTX` ou do worktree' "$RETOMAR")"
+caso "P02.contrato a linha D so vale sem ENTREGA terminal" sim \
+  "$(sim_nao grep -qE '^\| \*\*D\*\* \| .*\*\*sem\*\* `ENTREGA` terminal.*a linha é L ou R, nunca D' "$RETOMAR")"
+caso "P02.contrato a D-35 refina a D-27: checkpoint so sem ENTREGA terminal" sim \
+  "$(sim_nao grep -qF 'vale **somente quando não existe `ENTREGA` terminal commitada**' "$REPO/.claude/skills/buildx/DECISOES-DA-SKILL.md")"
 caso "P02.contrato o B4 declara a precedencia" sim \
   "$(sim_nao grep -qxF '### A entrega terminal commitada precede a sprintx' <(tr -d '\r' < "$B4_REF"))"
 caso "P02.contrato a D-35 esta registrada" sim \
@@ -2363,6 +2367,41 @@ if com_sprintx "P02 entrega terminal"; then
   caso "P02.neg5 estado repetido: inconsistente"           invalida "$(entrega_terminal ft-01)"
   caso "P02.neg5 estado repetido: pare"                    PARE "$(retomada_decide ft-01 "$BASE" em_andamento buildx/e1)"
   caso "P02.neg5 a CONTROL nao se moveu"                   "$BASE" "$(git rev-parse HEAD)"
+
+  # CHECKPOINT pendente com ENTREGA terminal commitada: a linha D casaria, e a
+  # entrega terminal vence mesmo assim (D-35). O checkpoint fica como está.
+  C="$(novo_projeto e5 sim)"; cd "$C"
+  BASE="$(git rev-parse HEAD)"
+  feature_nasce ft-01 "$BASE" e5; WT="$TMP_RAIZ/e5/wt-ft-01"
+  PL="docs/sprintx/features/ft-01/00-PLANEJAMENTO.md"
+  sx_f1 "$WT" ft-01; sx_f2 "$WT" ft-01; sx_f3 "$WT" ft-01; sx_f4 "$WT" ft-01
+  hook_recusa liga
+  SAIDA="$(sx_f5 "$WT" ft-01 sim)"
+  hook_recusa desliga
+  FASE="$(sprintx "$WT" fase ft-01)"
+  caso "P02.ck a F5 aprovada nao persistiu: persistencia_falhou" persistencia_falhou "$(chave "$SAIDA" checkpoint)"
+  caso "P02.ck a sprintx responde CHECKPOINT pendente"  "CHECKPOINT pendente" \
+    "$(chave "$FASE" fase) $(chave "$FASE" persistencia)"
+  caso "P02.ck sem ENTREGA: a retomada casa com a linha D" D "$(retomada_decide ft-01 "$BASE" em_andamento buildx/e5)"
+  PLAN_HEAD="$(git rev-parse "feature/ft-01:$PL")"
+  entrega_md "$WT/docs/entregas/ft-01/ENTREGA.md" bloqueado bloqueado
+  # O checkpoint recusado deixou o planejamento no índice: o commit leva só a entrega.
+  git -C "$WT" add docs/entregas && git -C "$WT" commit -q -m "chore(mergex): registro do bloqueio" -- docs/entregas
+  TIP="$(git rev-parse feature/ft-01)"
+  caso "P02.ck o planejamento pendente ficou fora do commit" sim \
+    "$(sim_nao test -n "$(git -C "$WT" status --porcelain -- "$PL")")"
+  caso "P02.ck a sprintx continua em CHECKPOINT: a linha D casaria" completar_checkpoint "$(buildx_acao "$WT" ft-01)"
+  caso "P02.ck ENTREGA commitada bloqueado/bloqueado: terminal" bloqueada "$(entrega_terminal ft-01)"
+  caso "P02.ck a retomada devolve R, nunca D"           R:entrega_bloqueada \
+    "$(retomada_decide ft-01 "$BASE" em_andamento buildx/e5)"
+  caso "P02.ck segue a triagem entrega_bloqueada"       triagem_entrega_bloqueada \
+    "$(retomada_segue ft-01 "$BASE" buildx/e5 "$WT")"
+  caso "P02.ck o buildx nao completou o checkpoint"     "$PLAN_HEAD" "$(git rev-parse "feature/ft-01:$PL")"
+  caso "P02.ck nem commitou nada na feature"            "$TIP" "$(git rev-parse feature/ft-01)"
+  caso "P02.ck a sprintx continua em CHECKPOINT"        CHECKPOINT "$(chave "$(sprintx "$WT" fase ft-01)" fase)"
+  caso "P02.ck a ENTREGA commitada nao foi reaberta"    "bloqueado bloqueado" \
+    "$(campo_commitado ft-01 estado) $(campo_commitado ft-01 portao)"
+  caso "P02.ck a CONTROL continua em BASE_SHA"          "$BASE" "$(git rev-parse HEAD)"
 
   # Entregue/pronto: o caminho terminal de sempre, e só ele.
   C="$(novo_projeto e4 sim)"; cd "$C"
