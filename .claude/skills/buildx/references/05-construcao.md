@@ -316,7 +316,7 @@ Rodam sem intervenção do buildx. Os pontos de atenção:
 | `F3` · `F4` · `F5`, `persistencia=duravel` | continua a sprintx nessa fase, na mesma branch e no mesmo worktree |
 | `F6`, `estado=aprovado`, `persistencia=duravel` | segue para a F6 (passo 5) — **salvo** se a feature já tem `ENTREGA.md` terminal commitado: a entrega terminal precede esta tabela (passo 6, "A entrega terminal commitada precede a sprintx") |
 | `PARAR`, `estado=orcamento_esgotado`, `persistencia=duravel` | **portão terminal pré-F6** (abaixo) |
-| `CHECKPOINT`, `persistencia=pendente` | pede à sprintx que complete o checkpoint, e **nada mais**: não bloqueia, não mexe no mapa, não roda B5, não começa outra feature |
+| `CHECKPOINT`, `persistencia=pendente` | **sem** `ENTREGA.md` terminal commitado: pede à sprintx que complete o checkpoint, e **nada mais**. Com ele, a entrega terminal vence também aqui (passo 6). Sem ele: não bloqueia, não mexe no mapa, não roda B5, não começa outra feature |
 | `persistencia_falhou` num checkpoint | **para a orquestração da feature** e relata; preserva worktree e branch. Não é `orcamento_esgotado`, não é `bloqueada`, não é `decisao_humana` |
 
 **O orçamento é contado pela sprintx.** O buildx declarou `3` no briefing; a sprintx registra cada veredito no `historico` do `00-PLANEJAMENTO.md` e decide `replanejar` ou `orcamento_esgotado`. O buildx não conta reprovações, não lê "rodada N" de prosa, não soma linhas `VEREDITO:`, não sobe o teto e não o reinicia numa retomada.
@@ -444,6 +444,8 @@ git show feature/<slug>:docs/entregas/<slug>/ENTREGA.md
 As duas combinações terminais são as que o E8 da mergex grava ao fechar — o fechamento normal e o fechamento bloqueado do `kind: entrega` —, e nenhuma outra. Arquivo que existe só na árvore de trabalho não conta, em linha nenhuma.
 
 Com a entrega `bloqueado` · `bloqueado`, o buildx **não** reentra na F6, **não** deixa o E0 rodar — ele retomaria o registro existente e o devolveria a `aberto`, apagando o terminal —, **não** reabre o `ENTREGA.md`, **não** reexecuta E2 a E8 e **não** publica a branch. Vai direto à triagem terminal (adiante), com o `ENTREGA.md` commitado como evidência. É o mesmo destino do caminho contínuo, que chega ali pela regra de decisão acima assim que a F6 devolve o controle.
+
+**Vale também com `CHECKPOINT` pendente.** "Complete o checkpoint antes de qualquer decisão" é a regra **somente quando não existe `ENTREGA.md` terminal commitado**. Existindo, a entrega terminal decide — `entregue` · `pronto` ou `bloqueado` · `bloqueado` —, o buildx não completa nem pede o checkpoint para decidir, e a transição pendente da sprintx fica como está, na branch preservada. O `CHECKPOINT` protege contra decidir por planejamento ainda não durável; a entrega fechada já é durável, e nenhuma transição pendente do planejamento a desfaz (D-35).
 
 ### Quando os artefatos não estão lá
 
@@ -657,7 +659,7 @@ Nunca peça confirmação para seguir. Nunca ofereça parar. O usuário fechou o
 - **Commitar estado no meio da janela.** Uma premissa nova registrada "enquanto está fresco", entre a F1 e a integração, move `CONTROL` e mata o fast-forward. Ela espera o passo 8 — o arquivo é gravado, o commit é que aguarda.
 - **Começar outra feature com um replanejamento pendente.** É a barreira serial. A árvore não pode avançar enquanto uma feature ainda vai voltar para dentro dela.
 - **Contar reprovação por conta própria.** O teto foi declarado no briefing; quem conta é a sprintx. Ler "rodada 3" numa prosa, somar `VEREDITO:` ou lembrar da sessão anterior é decidir por uma evidência que o script não reconhece.
-- **Decidir em cima de `CHECKPOINT`.** O estado do disco ainda não está no `HEAD`: não bloqueie, não avance o mapa, não rode B5, não comece outra feature. Peça à sprintx o checkpoint.
+- **Decidir em cima de `CHECKPOINT`.** O estado do disco ainda não está no `HEAD`: não bloqueie, não avance o mapa, não rode B5, não comece outra feature. Peça à sprintx o checkpoint — salvo `ENTREGA.md` terminal commitado, que decide por si (passo 6).
 - **Comitar o checkpoint no lugar da sprintx.** Nem `git add` da pasta, nem `--no-verify` para contornar hook. `persistencia_falhou` é parada e relato.
 - **Tratar checkpoint como entrega.** `Planejamento: checkpoint` não é E1, não é task concluída, não é push nem PR.
 - **Trocar o mecanismo quando o ff falha.** O ff falhando é informação, não obstáculo: ele está dizendo que a invariante quebrou. `--no-ff` esconde; `rebase` e `cherry-pick` destroem a ancestralidade de que os portões dependem.

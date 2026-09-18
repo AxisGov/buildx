@@ -163,7 +163,7 @@ e decide só pela saída (`fase=`, `estado=`, `fonte=`, `persistencia=`):
 | `F5` | `aguardando_f5` | `duravel` | continua a sprintx na F5 |
 | `F6` | `aprovado` | `duravel` | segue para a F6 — **salvo** `ENTREGA.md` terminal commitado na feature, que precede esta tabela (abaixo) |
 | `PARAR` | `orcamento_esgotado` | `duravel` | **portão terminal pré-F6** (`references/05-construcao.md`) |
-| `CHECKPOINT` | qualquer | `pendente` | **só completar o checkpoint** — ver abaixo |
+| `CHECKPOINT` | qualquer | `pendente` | **só completar o checkpoint** — ver abaixo; salvo `ENTREGA.md` terminal commitado, que precede esta tabela |
 | qualquer outra combinação, `fonte=legado` depois da F2, `persistencia=disco`, `INCONSISTENTE`, saída vazia | — | — | **pare e relate** |
 
 `persistencia=disco` sob o buildx é parada: significa que o worktree não está na `feature/<slug>` ou não é a raiz do repositório — e o buildx sempre roda a feature com Git, na branch da F1.
@@ -181,6 +181,8 @@ e decide só pela saída (`fase=`, `estado=`, `fonte=`, `persistencia=`):
 - lê o `estado` do arquivo como se fosse durável.
 
 A ação é uma só: ficar no worktree da feature e pedir à sprintx que complete o checkpoint (`planejamento.sh checkpoint <slug>`, pelo roteiro dela). Só com `fase` voltando a responder um estado durável o buildx decide o próximo passo pela tabela acima.
+
+**A exceção é a entrega terminal commitada.** Com `ENTREGA.md` `entregue` · `pronto` ou `bloqueado` · `bloqueado` no `HEAD` da feature, ela decide mesmo com `CHECKPOINT` pendente: o buildx não completa nem pede o checkpoint para decidir, e a transição pendente fica como está. O que o `CHECKPOINT` impede é decidir pelo planejamento não durável — e aqui quem decide é a entrega, já durável (`references/05-construcao.md`, passo 6; D-35).
 
 **O buildx nunca faz o `git commit` do checkpoint**, nem `git add` da pasta da feature, nem `--no-verify`: o checkpoint é da sprintx (DS-131), e um commit do buildx ali criaria dois donos para o mesmo estado.
 
