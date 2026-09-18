@@ -2252,6 +2252,145 @@ caso "P01.40 o enum vivo de classe tem so as tres" sim \
   "$(sim_nao grep -q '^| `classe` (pendência) | `trabalho_novo` · `decisao_humana` · `recurso_externo` ' "$REPO/.claude/skills/buildx/references/00-schema.md")"
 fi  # vivos
 
+if bloco entrega; then
+echo
+echo "P0.2 — a entrega terminal commitada precede a matriz da sprintx"
+
+# entrega_md <arquivo> <estado> <portao> — o registro no formato do kind: entrega.
+entrega_md() {
+  mkdir -p "$(dirname "$1")"
+  printf -- '---\nexpx_schema: 1\nexpx_tool: sprintx\nkind: entrega\ntrabalho_id: %s\nentregue_por: mergex\nestado: %s\nportao: %s\npush_feito: false\npr_url: null\npr_estado: null\nentregue_em: null\n---\n\n# Entrega\n\n- Portao de prontidao: %s\n' \
+    "$(basename "$(dirname "$1")")" "$2" "$3" "$3" > "$1"
+}
+commita() { git -C "$1" add -A && git -C "$1" commit -q "${@:2}"; }
+
+# O E0 da mergex sobre um registro que já existe: retoma, e o devolve a `aberto`
+# (mergex 00-abertura, CASO 2). É a primeira coisa que a F6 faz.
+e0_simulado() { # <wt> <slug>
+  sed -i 's/^estado: .*/estado: aberto/; s/^portao: .*/portao: null/; s/^push_feito: .*/push_feito: false/' \
+    "$1/docs/entregas/$2/ENTREGA.md"
+  commita "$1" -m "chore(mergex): E0 retomado"
+}
+
+# O que a retomada faz com a decisão: F devolve a feature à F6 — e a F6 começa
+# pelo E0 —; R vai à triagem terminal sem tocar na feature.
+retomada_segue() { # <slug> <base> <branch-do-projeto> <wt> -> o que foi feito
+  local d; d="$(retomada_decide "$1" "$2" em_andamento "$3")"
+  case "$d" in
+    F) e0_simulado "$4" "$1"; echo f6_com_e0 ;;
+    R:entrega_bloqueada) echo triagem_entrega_bloqueada ;;
+    *) echo "$d" ;;
+  esac
+}
+
+RETOMAR="$REPO/.claude/commands/buildx-retomar.md"
+caso "P02.contrato a matriz tem a linha R, pela triagem entrega_bloqueada" sim \
+  "$(sim_nao grep -qE '^\| \*\*R\*\* \| .*estado: bloqueado.*portao: bloqueado.*gatilho `entrega_bloqueada`' "$RETOMAR")"
+caso "P02.contrato a linha R proibe F6, E0 e reabertura" sim \
+  "$(sim_nao grep -qE '^\| \*\*R\*\* \| .*\*\*Não\*\* volte à F6, \*\*não\*\* deixe o E0 rodar, \*\*não\*\* reabra o `ENTREGA.md`' "$RETOMAR")"
+caso "P02.contrato a linha F exige ENTREGA nao terminal" sim \
+  "$(sim_nao grep -qE '^\| \*\*F\*\* \| .*\*\*sem\*\* `ENTREGA` terminal' "$RETOMAR")"
+caso "P02.contrato a ENTREGA terminal vem antes da SPRINTX e do worktree" sim \
+  "$(sim_nao grep -qF 'A `ENTREGA` terminal vem **antes** de qualquer linha que dependa da `SPRINTX` ou do worktree' "$RETOMAR")"
+caso "P02.contrato o B4 declara a precedencia" sim \
+  "$(sim_nao grep -qxF '### A entrega terminal commitada precede a sprintx' <(tr -d '\r' < "$B4_REF"))"
+caso "P02.contrato a D-35 esta registrada" sim \
+  "$(sim_nao grep -qF '## D-35 — ENTREGA terminal commitada precede a matriz da sprintx' "$REPO/.claude/skills/buildx/DECISOES-DA-SKILL.md")"
+
+if com_sprintx "P02 entrega terminal"; then
+  C="$(novo_projeto e1 sim)"; cd "$C"
+  BASE="$(git rev-parse HEAD)"
+  feature_nasce ft-01 "$BASE" e1; WT="$TMP_RAIZ/e1/wt-ft-01"
+  E="$WT/docs/entregas/ft-01/ENTREGA.md"
+  sx_f1 "$WT" ft-01; sx_f2 "$WT" ft-01; sx_f3 "$WT" ft-01; sx_f4 "$WT" ft-01
+  sx_f5 "$WT" ft-01 sim >/dev/null
+
+  caso "P02.neg1 sem ENTREGA: nada terminal"                ausente "$(entrega_terminal ft-01)"
+  caso "P02.neg1 e F6/aprovado continua levando a F6"       F "$(retomada_decide ft-01 "$BASE" em_andamento buildx/e1)"
+
+  entrega_md "$E" aberto null; commita "$WT" -m "chore(mergex): E0"
+  caso "P02.neg3 ENTREGA aberta commitada: nao e terminal"  aberta "$(entrega_terminal ft-01)"
+  caso "P02.neg3 e a F6 continua"                           F "$(retomada_decide ft-01 "$BASE" em_andamento buildx/e1)"
+  mkdir -p "$WT/src"; printf 'codigo\n' > "$WT/src/ft-01.ts"
+  commita "$WT" -m "feat: T-01.01" -m "Task: T-01.01"
+  entrega_md "$E" aberto bloqueado; commita "$WT" -m "chore(mergex): E2 gravou o portao"
+  caso "P02.neg3 aberto com portao bloqueado, E8 sem fechar: nao e terminal" aberta "$(entrega_terminal ft-01)"
+  caso "P02.neg3 e nao vira bloqueio"                       F "$(retomada_decide ft-01 "$BASE" em_andamento buildx/e1)"
+
+  entrega_md "$E" bloqueado bloqueado
+  caso "P02.neg2 bloqueio so no working tree: nao e terminal" aberta "$(entrega_terminal ft-01)"
+  caso "P02.neg2 e a retomada nao o aceita"                 F "$(retomada_decide ft-01 "$BASE" em_andamento buildx/e1)"
+
+  # O E8 fecha bloqueado e commita; a sprintx segue F6/aprovado. É o piloto.
+  commita "$WT" -m "chore(mergex): registro do bloqueio"
+  TIP="$(git rev-parse feature/ft-01)"
+  caso "P02.1 a sprintx continua respondendo F6/aprovado"   f6 "$(buildx_acao "$WT" ft-01)"
+  caso "P02.1 ENTREGA commitada bloqueado/bloqueado: terminal" bloqueada "$(entrega_terminal ft-01)"
+  caso "P02.1 a retomada NAO devolve F: reconhece o terminal" R:entrega_bloqueada \
+    "$(retomada_decide ft-01 "$BASE" em_andamento buildx/e1)"
+  caso "P02.1 segue direto para a triagem entrega_bloqueada" triagem_entrega_bloqueada \
+    "$(retomada_segue ft-01 "$BASE" buildx/e1 "$WT")"
+  caso "P02.1 o E0 nao rodou: a feature nao recebeu commit" "$TIP" "$(git rev-parse feature/ft-01)"
+  caso "P02.1 nenhum E0 retomado no historico"              "" \
+    "$(git log --format=%s "$BASE..feature/ft-01" | grep 'E0 retomado' || true)"
+  caso "P02.1 a ENTREGA commitada nao foi reaberta"         "bloqueado bloqueado false null" \
+    "$(campo_commitado ft-01 estado) $(campo_commitado ft-01 portao) $(campo_commitado ft-01 push_feito) $(campo_commitado ft-01 pr_url)"
+  caso "P02.1 nem a da worktree"                            sim "$(sim_nao worktree_concorda ft-01 "$WT")"
+  caso "P02.1 a branch da feature nao foi publicada"        nao \
+    "$(sim_nao git rev-parse --verify --quiet refs/remotes/origin/feature/ft-01)"
+  caso "P02.1 a CONTROL continua em BASE_SHA ate a triagem" "$BASE" "$(git rev-parse HEAD)"
+  caso "P02.1 decidir de novo da o mesmo terminal"          R:entrega_bloqueada \
+    "$(retomada_decide ft-01 "$BASE" em_andamento buildx/e1)"
+
+  git worktree remove "$WT"
+  caso "P02.1 worktree perdido: continua terminal, nao H"   R:entrega_bloqueada \
+    "$(retomada_decide ft-01 "$BASE" em_andamento buildx/e1)"
+  reabre_worktree ft-01 "$WT"
+  caso "P02.1 reaberto sobre a mesma branch, sem commit novo" "$TIP" "$(git rev-parse feature/ft-01)"
+
+  # Registro inconsistente: falha fechada, nunca bloqueio inferido, nunca F6.
+  for v in "bloqueado null" "bloqueado pronto" "entregue bloqueado" "entregue null" "concluido pronto" "bloqueado BLOQUEADO"; do
+    set -- $v
+    entrega_md "$E" "$1" "$2"; commita "$WT" -m "fixture: $1/$2"
+    caso "P02.neg5 $1/$2 e inconsistente"                  invalida "$(entrega_terminal ft-01)"
+    caso "P02.neg5 $1/$2: pare, sem inferir bloqueio"      PARE "$(retomada_decide ft-01 "$BASE" em_andamento buildx/e1)"
+  done
+  entrega_md "$E" bloqueado bloqueado; sed -i '/^portao: /d' "$E"; commita "$WT" -m "fixture: sem portao"
+  caso "P02.neg5 portao ausente: inconsistente"            invalida "$(entrega_terminal ft-01)"
+  caso "P02.neg5 portao ausente: pare"                     PARE "$(retomada_decide ft-01 "$BASE" em_andamento buildx/e1)"
+  entrega_md "$E" bloqueado bloqueado; sed -i 's/^portao: bloqueado$/portao: bloqueado\nestado: aberto/' "$E"
+  commita "$WT" -m "fixture: estado repetido"
+  caso "P02.neg5 estado repetido: inconsistente"           invalida "$(entrega_terminal ft-01)"
+  caso "P02.neg5 estado repetido: pare"                    PARE "$(retomada_decide ft-01 "$BASE" em_andamento buildx/e1)"
+  caso "P02.neg5 a CONTROL nao se moveu"                   "$BASE" "$(git rev-parse HEAD)"
+
+  # Entregue/pronto: o caminho terminal de sempre, e só ele.
+  C="$(novo_projeto e4 sim)"; cd "$C"
+  BASE="$(git rev-parse HEAD)"
+  feature_nasce ft-01 "$BASE" e4; WT="$TMP_RAIZ/e4/wt-ft-01"
+  sx_f1 "$WT" ft-01; sx_f2 "$WT" ft-01; sx_f3 "$WT" ft-01; sx_f4 "$WT" ft-01
+  sx_f5 "$WT" ft-01 sim >/dev/null
+  mkdir -p "$WT/src"; printf 'codigo\n' > "$WT/src/ft-01.ts"
+  commita "$WT" -m "feat: T-01.01" -m "Task: T-01.01"
+  entrega_md "$WT/docs/entregas/ft-01/ENTREGA.md" entregue pronto
+  sed -i 's/^push_feito: false$/push_feito: true/' "$WT/docs/entregas/ft-01/ENTREGA.md"
+  commita "$WT" -m "chore(mergex): E8"
+  mergex_publica ft-01
+  caso "P02.neg4 entregue/pronto commitado: terminal"      entregue "$(entrega_terminal ft-01)"
+  caso "P02.neg4 com a sprintx em F6/aprovado"             f6 "$(buildx_acao "$WT" ft-01)"
+  caso "P02.neg4 a retomada vai a L, nao a F"              L "$(retomada_decide ft-01 "$BASE" em_andamento buildx/e4)"
+  git worktree remove "$WT"
+  caso "P02.neg4 worktree perdido: continua L"             L "$(retomada_decide ft-01 "$BASE" em_andamento buildx/e4)"
+  reabre_worktree ft-01 "$WT"
+  caso "P02.neg4 as seis provas passam"                    sim "$(sim_nao provas_abcdef "$BASE" ft-01 buildx/e4 "$WT")"
+  caso "P02.neg4 publicada"                                sim "$(sim_nao prova_publicacao ft-01 true)"
+  caso "P02.neg4 ff-only integra"                          sim "$(sim_nao integrar feature/ft-01)"
+  git push -q origin buildx/e4
+  caso "P02.neg4 integrada: J continua vencendo"          J "$(retomada_decide ft-01 "$BASE" em_andamento buildx/e4)"
+fi
+cd "$REPO"
+fi  # entrega
+
 if bloco decisoes; then
 echo
 echo "P0.1 — decisões append-only, D-26 em diante"

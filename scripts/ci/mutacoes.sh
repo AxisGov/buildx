@@ -10,8 +10,10 @@
 # deixar o item 8 vencer o item 7, contar reprovação por texto, deixar a raiz de
 # fora da entrega da sucessora ou resolvê-la cedo, ignorar o laço de mesma
 # cláusula, repetir ciclo sem conversão, disparar o detector com entrega, e
-# resolver destino que o MAPA não tem — e exige que o harness FALHE. Mutação que
-# sobrevive é teste que falta.
+# resolver destino que o MAPA não tem — e, desde o P0.2, deixar o planejamento
+# F6 vencer a ENTREGA terminal commitada, aceitar ENTREGA só no working tree e
+# inferir bloqueio de registro inconsistente — e exige que o harness FALHE.
+# Mutação que sobrevive é teste que falta.
 #
 # O repositório real nunca é alterado: a cópia vive num diretório temporário e é
 # apagada no fim. Antes das mutações, a mesma cópia sem mutação precisa passar.
@@ -142,6 +144,22 @@ EOF
       "") entregues="$entregues $ft" ;;                                     # [M16]
 EOF
       ;;
+    M17) # o planejamento F6/aprovado vence a ENTREGA terminal commitada
+      troca "$d/$HARNESS" '# [M17]' <<'EOF'
+  case "" in                                                               # [M17]
+EOF
+      ;;
+    M18) # aceitar a ENTREGA do working tree como terminal
+      troca "$d/$HARNESS" '# [M18]' <<'EOF'
+  e="$(cat "$(worktree_da_branch "$1")/docs/entregas/$1/ENTREGA.md" 2>/dev/null)" || { echo ausente; return; }   # [M18]
+EOF
+      ;;
+    M19) # inferir bloqueio de um registro inconsistente
+      troca "$d/$HARNESS" '# [M19]' <<'EOF'
+    *bloqueado*)                                echo bloqueada ;;            # [M19]
+    *)                                          echo invalida ;;
+EOF
+      ;;
     *) echo "mutacao desconhecida: $1" >&2; return 1 ;;
   esac
 }
@@ -161,6 +179,7 @@ blocos() {
     M10) echo "checkpoint" ;;
     M11|M12|M14|M15|M16) echo "convergencia" ;;
     M13) echo "recursao convergencia" ;;
+    M17|M18|M19) echo "entrega" ;;
   esac
 }
 
@@ -168,7 +187,7 @@ roda() { # roda <nome> <arvore> <blocos> -> grava <nome>.log e <nome>.rc
   ( cd "$TMP" && BLOCOS="$3" bash "$2/$HARNESS" > "$TMP/$1.log" 2>&1; echo $? > "$TMP/$1.rc" )
 }
 
-MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16}"
+MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19}"
 TODOS_BLOCOS="$(for m in $MUTACOES; do blocos "$m"; done | tr ' ' '\n' | sort -u | tr '\n' ' ')"
 
 echo "controle — a árvore sem mutação passa nos blocos: $TODOS_BLOCOS"
