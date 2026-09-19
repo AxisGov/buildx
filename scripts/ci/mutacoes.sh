@@ -16,8 +16,12 @@
 # vencer a ENTREGA terminal — e, no P0.2-A7, voltar a inferir `falha_tecnica` da
 # descrição do B-NN, escolher a primeira classe quando há classes diferentes,
 # tratar B-NN legado como tipado, aceitar `indeterminada` como causa conhecida,
-# ignorar a V7 sem B-NN aberto e ler os B-NN do working tree — e exige que o
-# harness FALHE.
+# ignorar a V7 sem B-NN aberto e ler os B-NN do working tree — e, no P0.2-B,
+# criar o planejamento sem o teto da F6, inventar teto para o legado, deixar
+# `defeito_de_plano -> trabalho_novo` vencer o esgotamento, criar sucessora depois
+# de 1/1, retomar a F6 com a rodada aberta, gastar a rodada de novo na retomada,
+# abrir task depois da recusa, tratar contrato como pendência e passar o teto da F6
+# a um legado na retomada da F1 — e exige que o harness FALHE.
 # Mutação que sobrevive é teste que falta.
 #
 # O repositório real nunca é alterado: a cópia vive num diretório temporário e é
@@ -205,6 +209,52 @@ EOF
   if cat "$(worktree_da_branch "$2")/$pasta/00-BLOQUEIOS.md" > "$raiz/$pasta/00-BLOQUEIOS.md" 2>/dev/null; then   # [M26]
 EOF
       ;;
+    M27) # criar o planejamento novo sem o quarto argumento `1`
+      troca "$d/$HARNESS" '# [M27]' <<'EOF'
+  printf '%s %s\n' "$ORCAMENTO_F5_MAX" "$ORCAMENTO_F5_POR"                   # [M27]
+EOF
+      ;;
+    M28) # inventar orçamento 1 para o planejamento legado
+      troca "$d/$HARNESS" '# [M28]' <<'EOF'
+  [ "$(chave "$saida" orcamento_f6)" = legado ] && saida="$(printf '%s\nmax_replanejamentos_f6=1\nreplanejamentos_f6=0\n' "$saida")"   # [M28]
+EOF
+      ;;
+    M29) # deixar defeito_de_plano -> trabalho_novo vencer o retorno esgotado ou recusado
+      troca "$d/$HARNESS" '# [M29]' <<'EOF'
+    "nunca")   # [M29]
+EOF
+      ;;
+    M30) # criar sucessora depois da rodada 1/1
+      troca "$d/$HARNESS" '# [M30]' <<'EOF'
+    replanejamento_execucao_esgotado) echo "trabalho_novo replanejamento_execucao_esgotado" ;;   # [M30]
+EOF
+      ;;
+    M31) # retomar a F6 normal com o estado em replanejar_execucao
+      troca "$d/$HARNESS" '# [M31]' <<'EOF'
+    F3:replanejar_execucao)         echo f6 ;;   # [M31]
+EOF
+      ;;
+    M32) # a retomada refaz o passo da F6 que abriu a rodada, e a gasta de novo
+      troca "$d/$HARNESS" '# [M32]' <<'EOF'
+    S:continuar_*) sx_bloqueia "$4" "$1" "$(SPRINTX_RAIZ="$4" bash "$SPRINTX_BLOQUEIOS" listar "$1" | tr -d '\r' | awk -F'\t' '$3 == "defeito_de_plano" { print $2; exit }')" defeito_de_plano
+                   sprintx "$4" replanejar-execucao "$1" >/dev/null; echo "sprintx_${d#S:continuar_}" ;;   # [M32]
+EOF
+      ;;
+    M33) # continuar abrindo task quando o retorno foi recusado
+      troca "$d/$HARNESS" '# [M33]' <<'EOF'
+    *) echo F ;;   # [M33]
+EOF
+      ;;
+    M34) # tratar contradição, fronteira ou contrato como pendência normal
+      troca "$d/$HARNESS" '# [M34]' <<'EOF'
+  echo "decisao_humana replanejamento_execucao_recusado/${1#recusado:}"   # [M34]
+EOF
+      ;;
+    M35) # passar o teto da F6 a um planejamento legado na retomada da F1
+      troca "$d/$HARNESS" '# [M35]' <<'EOF'
+    printf '%s %s %s\n' "$ORCAMENTO_F5_MAX" "$ORCAMENTO_F5_POR" "$ORCAMENTO_F6_MAX"   # [M35]
+EOF
+      ;;
     *) echo "mutacao desconhecida: $1" >&2; return 1 ;;
   esac
 }
@@ -226,6 +276,8 @@ blocos() {
     M13) echo "recursao convergencia" ;;
     M17|M18|M19|M20) echo "entrega" ;;
     M21|M22|M23|M24|M25|M26) echo "causa" ;;
+    M27) echo "orcamento f6" ;;
+    M28|M29|M30|M31|M32|M33|M34|M35) echo "f6" ;;
   esac
 }
 
@@ -233,7 +285,7 @@ roda() { # roda <nome> <arvore> <blocos> -> grava <nome>.log e <nome>.rc
   ( cd "$TMP" && BLOCOS="$3" bash "$2/$HARNESS" > "$TMP/$1.log" 2>&1; echo $? > "$TMP/$1.rc" )
 }
 
-MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23 M24 M25 M26}"
+MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23 M24 M25 M26 M27 M28 M29 M30 M31 M32 M33 M34 M35}"
 TODOS_BLOCOS="$(for m in $MUTACOES; do blocos "$m"; done | tr ' ' '\n' | sort -u | tr '\n' ' ')"
 
 echo "controle — a árvore sem mutação passa nos blocos: $TODOS_BLOCOS"
