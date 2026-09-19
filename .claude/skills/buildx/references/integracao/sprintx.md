@@ -61,26 +61,31 @@ Mais duas chaves no frontmatter de todo artefato da feature: `origem_buildx` (o 
 
 ### O orçamento da F5, declarado no briefing
 
-Além dos seis campos de conteúdo, o briefing de **toda** feature declara o orçamento de reprovações da F5, literalmente:
+Além dos seis campos de conteúdo, o briefing de **toda** feature declara o orçamento de reprovações da F5 e o do retorno da F6 ao planejamento, literalmente:
 
 ```
 max_reprovacoes_f5: 3
 orcamento_declarado_por: buildx
+max_replanejamentos_f6: 1
 ```
 
-**A forma de passagem é a que a sprintx P0.1 já tem**, sem campo novo em artefato nenhum: o pedido que aciona a sprintx traz as duas linhas, e a F1 as repassa ao script dono do estado do planejamento, ao criar o `00-PLANEJAMENTO.md` (`references/01-ingestao.md` da sprintx, Passo 1):
+**A forma de passagem é a do script da sprintx**, sem campo novo em artefato nenhum: o pedido que aciona a sprintx traz as três linhas, e a F1 as repassa ao script dono do estado do planejamento, ao criar o `00-PLANEJAMENTO.md` — o teto da F6 é o quarto argumento (sprintx `references/00-schema.md`, `kind: planejamento`, e DS-141):
 
 ```
-bash <raiz-da-sprintx>/scripts/planejamento.sh criar <slug> 3 buildx
+bash <raiz-da-sprintx>/scripts/planejamento.sh criar <slug> 3 buildx 1
 ```
 
 O buildx **não** cria o `00-PLANEJAMENTO.md`, não o edita e não escreve o orçamento em nenhum outro arquivo — nem no `00-DECISOES.md`, nem no `ORQUESTRADOR.md`, cujos schemas não têm esse campo. O `kind: planejamento` é exclusivo da sprintx e só o script o grava.
 
 `3` significa três **vereditos NÃO**: duas voltas de replanejamento, e a terceira reprovação termina a tentativa. É o mesmo limite que o buildx sempre teve — agora contado por quem roda o laço.
 
-**Depois da F1, a contagem é só da sprintx.** O buildx não incrementa contador, não interpreta "rodada 1/2/3" de prosa nenhuma, não soma linhas `VEREDITO:`, não aumenta o teto e não o reinicia numa retomada (orçamento diferente numa retomada é erro de contrato do próprio script, código `4`).
+`1` significa **uma** rodada de replanejamento da execução: a F6 que descobre um `defeito_de_plano` pode devolver o plano à revisão uma vez; a segunda necessidade leva ao terminal `replanejamento_execucao_esgotado` (abaixo). O `1` é declarado pelo buildx e passado explicitamente — a sprintx não o esconde no script, e sem o quarto argumento ela grava `max_replanejamentos_f6: null`, que é "não declarado": o retorno não abre.
 
-**Conferência.** Depois do primeiro checkpoint (fim da F2), o buildx confere o orçamento **no commitado** — `git show feature/<slug>:docs/sprintx/features/<slug>/00-PLANEJAMENTO.md` com `max_reprovacoes_f5: 3` e `orcamento_declarado_por: buildx`. Outro teto, ou `null`: **pare e relate** — a feature estaria rodando com um orçamento que o buildx não declarou.
+**Planejamento que já existe não ganha teto.** Um `00-PLANEJAMENTO.md` gravado antes do eixo da F6 não tem nenhuma das cinco chaves dele (`max_replanejamentos_f6`, `replanejamentos_f6`, `bloqueios_replanejamento_f6`, `tasks_congeladas`, `assinatura_congeladas`) e é **legado**: continua assim. Numa retomada da F1 sobre ele, o pedido repassa só os dois primeiros argumentos, `3` e `buildx` — pedir o teto da F6 a um arquivo legado é erro de contrato do script (código `4`), e nenhum `1` é acrescentado retroativamente. Arquivo novo nasce sempre com as cinco chaves.
+
+**Depois da F1, a contagem é só da sprintx.** O buildx não incrementa contador, não interpreta "rodada 1/2/3" de prosa nenhuma, não soma linhas `VEREDITO:`, não aumenta o teto e não o reinicia numa retomada (orçamento diferente numa retomada é erro de contrato do próprio script, código `4`). O mesmo vale para `replanejamentos_f6`: quem o consome é a sprintx, uma vez por rodada aceita.
+
+**Conferência.** Depois do primeiro checkpoint (fim da F2), o buildx confere o orçamento **no commitado** — `git show feature/<slug>:docs/sprintx/features/<slug>/00-PLANEJAMENTO.md` com `max_reprovacoes_f5: 3`, `orcamento_declarado_por: buildx` e `max_replanejamentos_f6: 1` (ou, num planejamento legado, nenhuma das cinco chaves do eixo da F6). Outro teto, ou `null`: **pare e relate** — a feature estaria rodando com um orçamento que o buildx não declarou.
 
 **O briefing não contém decisão técnica** — a mesma fronteira do prodx (regra 10 dele). Arquitetura, camada e biblioteca são do sprintx. A exceção é o `CONVENCOES.md`, que não é decisão desta feature: é o dialeto que o projeto inteiro já adotou no B2, e todas as features o respeitam igualmente.
 
@@ -133,7 +138,7 @@ A R8 merece nota: ela já foi escrita pensando em execução autônoma, e é o q
 
 | Fase | Sob o buildx |
 |---|---|
-| F1 ingestão | normal, com o briefing do buildx como entrada. **É ela que abre a área de trabalho**: worktree `../<repo>--<slug>` e branch `feature/<slug>` (regra 21). É ela também que cria o `00-PLANEJAMENTO.md` com o orçamento do briefing (`criar <slug> 3 buildx`), sem checkpoint |
+| F1 ingestão | normal, com o briefing do buildx como entrada. **É ela que abre a área de trabalho**: worktree `../<repo>--<slug>` e branch `feature/<slug>` (regra 21). É ela também que cria o `00-PLANEJAMENTO.md` com o orçamento do briefing (`criar <slug> 3 buildx 1`), sem checkpoint |
 | F2 descoberta | **respondida pelo buildx**, quatro degraus |
 | F3 plano | normal. A pergunta da R11 é respondida pelo mesmo procedimento |
 | F3.5 estimativa | **opcional.** Não há prazo a negociar; rode se for barata |
@@ -159,10 +164,14 @@ e decide só pela saída (`fase=`, `estado=`, `fonte=`, `persistencia=`):
 |---|---|---|---|
 | `F1` · `F2` | `null` | qualquer | continua a sprintx nessa fase — nada durável ainda |
 | `F3` | `aguardando_f3` · `replanejar` | `duravel` | continua a sprintx na F3 |
+| `F3` | `replanejar_execucao` | `duravel` | continua a sprintx na F3 — a feature **continua em execução**: é a rodada de replanejamento da execução (abaixo), nunca bloqueio nem terminal |
 | `F4` | `aguardando_f4` | `duravel` | continua a sprintx na F4 |
 | `F5` | `aguardando_f5` | `duravel` | continua a sprintx na F5 |
-| `F6` | `aprovado` | `duravel` | segue para a F6 — **salvo** `ENTREGA.md` terminal commitado na feature, que precede esta tabela (abaixo) |
+| `F6` | `aprovado` | `duravel` | segue para a F6 — **salvo** `ENTREGA.md` terminal commitado na feature, que precede esta tabela (abaixo), e salvo `B-NN` `defeito_de_plano` aberto, que restringe a F6 ao retorno ou ao fechamento (abaixo) |
 | `PARAR` | `orcamento_esgotado` | `duravel` | **portão terminal pré-F6** (`references/05-construcao.md`) |
+| `PARAR` | `replanejamento_execucao_esgotado` | `duravel` | **portão terminal da F6** (`references/05-construcao.md`) |
+
+Com `replanejamento_execucao=ativo` na saída, as linhas `F3`, `F4` e `F5` — inclusive `replanejar`, de uma F5 reprovada dentro da rodada — são a mesma rodada: a sprintx continua de onde parou, e nada muda para o buildx.
 | `CHECKPOINT` | qualquer | `pendente` | **só completar o checkpoint** — ver abaixo; salvo `ENTREGA.md` terminal commitado, que precede esta tabela |
 | qualquer outra combinação, `fonte=legado` depois da F2, `persistencia=disco`, `INCONSISTENTE`, saída vazia | — | — | **pare e relate** |
 
@@ -193,6 +202,31 @@ Quando o commit do checkpoint é rejeitado (hook do projeto, código `3`, `check
 ### `orcamento_esgotado`
 
 Só é terminal quando `fase` responde `fase=PARAR`, `estado=orcamento_esgotado` **e** `persistencia=duravel`. Mesmo assim, a `CONTROL` só se move depois do portão terminal pré-F6 provar tudo pelo Git — inclusive o `00-PLANEJAMENTO.md` com `estado: orcamento_esgotado` e o `00-AUDITORIA.md` da rodada terminal **commitados** no `HEAD` da feature (`references/05-construcao.md`, "O portão terminal pré-F6"). Working tree não move a `CONTROL`.
+
+### O retorno da F6 ao planejamento
+
+Desde a sprintx P0.2-B (DS-140 a DS-146), quando a F6 registra um `B-NN` `defeito_de_plano` — o plano aprovado é que está errado —, ela grava a task como `bloqueada` e chama `planejamento.sh replanejar-execucao <slug>`. Com orçamento, a sprintx abre uma **rodada**: estado `replanejar_execucao` (fase `F3`), `replanejamentos_f6` consumido, as tasks concluídas congeladas, e o plano volta à revisão pelos portões de sempre — `aguardando_f4`, `aguardando_f5`, F5. A F5 que aprova fecha a rodada: resolve os `B-NN` dela, devolve a task bloqueada a `pendente`, e `fase` volta a `F6` / `aprovado`. Tudo em checkpoints da sprintx; o buildx não conta e não chama nada disso.
+
+**O que o buildx faz com isso** (D-37):
+
+- **Rodada ativa** (`replanejamento_execucao=ativo`): a feature **continua em execução**. Nenhum bloqueio, nenhuma pendência, nenhuma feature nova, e a `CONTROL` fica em `BASE_SHA`. A retomada segue a sprintx na fase que `fase` devolve — a F3 da revisão, nunca F1 ou F2, nunca a F6 (linha **S** do `/buildx-retomar`). Como há produto concluído antes da rodada, a branch não é "só checkpoints desde a base": o que se prova é que ela só tem checkpoints **desde o checkpoint que abriu a rodada**, e que `replanejamentos_f6` é exatamente o número de rodadas abertas.
+- **`F6` / `aprovado` com `B-NN` `defeito_de_plano` aberto**: a F6 não retoma a execução normal. Se a sprintx ainda abriria a rodada, ou se ela já gastou o orçamento, o único passo é o `replanejar-execucao` da própria F6 — a sprintx decide. Se ela recusou (família operacional, abaixo), a F6 só faz o **fechamento** que materializa o terminal — o E0 → E8 da mergex, que fecha a entrega bloqueada: nenhuma task nova, nenhuma task concluída tocada, nenhum plano inventado, nenhum orçamento consumido de novo. Nenhum dos dois aparece no Git antes do fechamento — a recusa não grava nada —; por isso esta restrição lê o `00-BLOQUEIOS.md` do worktree. Ela só restringe: nunca move a `CONTROL`.
+- **`replanejamento_execucao_esgotado`**: terminal próprio da F6 — a única rodada autorizada já foi consumida e surgiu nova necessidade. Não é `orcamento_esgotado`: vai ao portão terminal da F6 e ao gatilho `replanejamento_execucao_esgotado`, que o B5 classifica `decisao_humana`. Nenhuma segunda rodada, nenhuma sucessora.
+
+**Os motivos da recusa.** `replanejar-execucao` responde `replanejamento=recusado` com um `motivo=` — estes, e só estes, no script fixado (`5cdde90`). O buildx pergunta só quando há `defeito_de_plano` aberto, e os lê em duas famílias:
+
+| `motivo` | Código | Família | O que o buildx faz |
+|---|---|---|---|
+| `classes_mistas` | `5` | **operacional** | `decisao_humana`: há outro bloqueio aberto (ou legado) junto do defeito, e ninguém escolhe um. Na entrega bloqueada a tabela do B5 já o diz: `classes_divergentes` |
+| `orcamento_f6_legado` | `5` | **operacional** | `decisao_humana`: o planejamento é anterior ao eixo da F6 e continua sem ele |
+| `orcamento_f6_nao_declarado` | `5` | **operacional** | `decisao_humana`: `max_replanejamentos_f6: null`. Numa feature do buildx isso já teria parado na conferência |
+| `planejamento_legado` | `5` | **operacional** | `decisao_humana`: feature sem `00-PLANEJAMENTO.md`, anterior ao P0.1 |
+| `estado` | `5` | **contrato** | **pare e relate**: com `defeito_de_plano` aberto, o planejamento não está em `aprovado` nem numa rodada |
+| `sem_bloqueio_aberto` | `5` | **contrato** | **pare e relate**: o buildx viu um defeito aberto que a sprintx não vê no mesmo commit |
+| `sem_defeito_de_plano` | `5` | **contrato** | **pare e relate**: idem — as duas leituras discordam |
+| `fronteira_insegura` | `2` | **contrato** | **pare e relate**: há produto sujo no worktree (DS-145). Nada é limpo, stashado nem descartado |
+
+`replanejamento=esgotado` não é recusa: é o terminal acima. Os códigos `3` (checkpoint ou fechamento pendente) e `4` (contrato inválido: planejamento malformado, task do `B-NN` que não está `bloqueada`, task concluída alterada durante a rodada) também não são recusa: `3` é a linha **D**, `4` é **pare e relate**. A família **contrato** nunca vira pendência: nada é gravado na `CONTROL`, e o erro fica com quem o produziu.
 
 ### Checkpoint de planejamento não é entrega
 

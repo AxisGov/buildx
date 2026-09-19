@@ -59,9 +59,11 @@ pulo() { PULOS=$((PULOS+1)); printf '  PULO  %s\n' "$1"; }
 # A sprintx real, no SHA fixo do contrato P0.1
 # ---------------------------------------------------------------------------
 
-# P0.2-A5 (7300e47): o B-NN ganha `classe`. O planejamento.sh é o mesmo do
-# a4f5495 do P0.1; o que entra é o bloqueios.sh, o leitor dos B-NN.
-SPRINTX_SHA_FIXO=7300e4754907207ca77084c39ffdefef4a0cbbfb
+# P0.2-B (5cdde90): o retorno da F6 ao planejamento — o estado `replanejar_execucao`,
+# o orçamento `max_replanejamentos_f6` no quarto argumento do `criar`, o terminal
+# `replanejamento_execucao_esgotado` — e o `bloqueios.sh resolver`. O `classe` do
+# B-NN (P0.2-A5, 7300e47) continua o mesmo.
+SPRINTX_SHA_FIXO=5cdde90dabae86fd6f5c0238a90ffd83454495f8
 SPRINTX_REPO="${SPRINTX_REPO:-$REPO/../sprintx}"
 PLANEJAMENTO=""
 SPRINTX_BLOQUEIOS=""
@@ -326,12 +328,16 @@ integrar() { git merge --ff-only "$1" >/dev/null 2>&1; }
 # ---------------------------------------------------------------------------
 
 # O orçamento que o briefing de toda feature declara. A F1 da sprintx o repassa
-# a `planejamento.sh criar <slug> 3 buildx`; dali em diante a contagem é dela.
+# a `planejamento.sh criar <slug> 3 buildx 1`; dali em diante a contagem é dela.
+# O quarto argumento é o teto do retorno da F6 ao planejamento (D-37): uma rodada,
+# com o mesmo dono do teto da F5.
 ORCAMENTO_F5_MAX=3
 ORCAMENTO_F5_POR=buildx
+ORCAMENTO_F6_MAX=1
 
 briefing_orcamento() {
-  printf 'max_reprovacoes_f5: %s\norcamento_declarado_por: %s\n' "$ORCAMENTO_F5_MAX" "$ORCAMENTO_F5_POR"
+  printf 'max_reprovacoes_f5: %s\norcamento_declarado_por: %s\nmax_replanejamentos_f6: %s\n' \
+    "$ORCAMENTO_F5_MAX" "$ORCAMENTO_F5_POR" "$ORCAMENTO_F6_MAX"
 }
 
 # sprintx <worktree> <args...> — o script real, rodado de dentro da área de trabalho.
@@ -345,12 +351,16 @@ chave() { # chave <saida chave=valor> <chave>
 }
 
 # O orçamento que a F1 persistiu, lido do COMMITADO: é a prova de que a sprintx
-# recebeu o teto do buildx, e não um teto inventado ou nenhum.
+# recebeu o teto do buildx, e não um teto inventado ou nenhum. O teto da F6 é o
+# declarado — ou nenhuma das chaves do eixo, num planejamento legado, anterior a
+# ele (sprintx DS-146): `max_replanejamentos_f6: null` é a F1 sem o quarto argumento.
 orcamento_confere() { # <slug>
   local p="docs/sprintx/features/$1/00-PLANEJAMENTO.md" arq
   arq="$(git show "feature/$1:$p" 2>/dev/null | tr -d '\r')" || return 1
   printf '%s\n' "$arq" | grep -qx "max_reprovacoes_f5: $ORCAMENTO_F5_MAX" || return 1
-  printf '%s\n' "$arq" | grep -qx "orcamento_declarado_por: $ORCAMENTO_F5_POR"
+  printf '%s\n' "$arq" | grep -qx "orcamento_declarado_por: $ORCAMENTO_F5_POR" || return 1
+  printf '%s\n' "$arq" | grep -qx "max_replanejamentos_f6: $ORCAMENTO_F6_MAX" ||
+    ! printf '%s\n' "$arq" | grep -qE '^(max_replanejamentos_f6|replanejamentos_f6|bloqueios_replanejamento_f6|tasks_congeladas|assinatura_congeladas):'
 }
 
 # O que o buildx faz com a resposta de `planejamento.sh fase`. Ele não abre o
@@ -368,10 +378,12 @@ buildx_acao() { # <worktree> <slug> -> acao
   [ "$fonte" = planejamento ] && [ "$persist" = duravel ] || { echo parar; return; }
   case "$fase:$estado" in
     F3:aguardando_f3|F3:replanejar) echo continuar_f3 ;;
+    F3:replanejar_execucao)         echo continuar_f3 ;;                    # [M31]
     F4:aguardando_f4)               echo continuar_f4 ;;
     F5:aguardando_f5)               echo continuar_f5 ;;
     F6:aprovado)                    echo f6 ;;
     PARAR:orcamento_esgotado)       echo terminal_pre_f6 ;;
+    PARAR:replanejamento_execucao_esgotado) echo terminal_f6 ;;
     *)                              echo parar ;;
   esac
 }
@@ -445,6 +457,128 @@ reabre_worktree() { # <slug> <caminho>
   git worktree add -q "$2" "feature/$1" 2>/dev/null
 }
 
+# ---------------------------------------------------------------------------
+# P0.2-B — o retorno da F6 ao planejamento, consumido pelo buildx (D-37)
+# ---------------------------------------------------------------------------
+
+# O trailer do checkpoint com que a sprintx abre uma rodada (DS-140).
+rodadas_abertas() { # <slug> -> quantos checkpoints abriram rodada na branch
+  git log --format=%H --all-match --grep='^Planejamento: checkpoint$' --grep='^Fase: f6$' \
+    --grep='^Estado: replanejar_execucao$' "feature/$1" | wc -l | tr -d ' '
+}
+
+rodada_f6_ativa() { # <wt> <slug> — a saída de `fase` diz que há rodada aberta
+  [ "$(chave "$(sprintx "$1" fase "$2")" replanejamento_execucao)" = ativo ]
+}
+
+# A rodada ativa é legítima: a sprintx a abriu num checkpoint; dali em diante a branch
+# só tem checkpoints, só na pasta da feature — o produto é o que foi concluído antes
+# da rodada —; e o orçamento gasto é exatamente o das rodadas abertas.
+rodada_f6_legitima() { # <slug> <wt>
+  local ab
+  ab="$(git log -1 --format=%H --all-match --grep='^Planejamento: checkpoint$' --grep='^Fase: f6$' \
+        --grep='^Estado: replanejar_execucao$' "feature/$1")"
+  [ -n "$ab" ] || return 1
+  sem_produto_pre_f6 "$ab" "$1" || return 1
+  [ "$(chave "$(sprintx "$2" fase "$1")" replanejamentos_f6)" = "$(rodadas_abertas "$1")" ]
+}
+
+# A fronteira segura da sprintx (DS-145): nenhum produto editado, novo ou staged no
+# worktree — só os artefatos de método da feature.
+fronteira_limpa() { # <wt> <slug>
+  local p
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    p="${p#???}"; case "$p" in *" -> "*) p="${p##* -> }" ;; esac
+    p="${p#\"}"; p="${p%\"}"
+    case "$p" in
+      "docs/sprintx/features/$2/"*|docs/sprintx/estimativas/HISTORICO.md|"docs/entregas/$2/"*) ;;
+      *) return 1 ;;
+    esac
+  done <<EOF
+$(git -C "$1" -c core.quotepath=false status --porcelain --untracked-files=all)
+EOF
+}
+
+# Os `motivo=` de `replanejar-execucao` recusado (sprintx 5cdde90), nas duas famílias
+# do D-37. Operacional: um resultado durável, que o humano resolve. Contrato: o buildx
+# só pergunta com um `defeito_de_plano` aberto, então esses motivos são a sprintx e o
+# buildx lendo o mesmo commit de formas diferentes, ou a árvore insegura — nunca PEND.
+familia_do_motivo() { # <motivo> -> operacional | contrato
+  case "$1" in
+    classes_mistas|orcamento_f6_legado|orcamento_f6_nao_declarado|planejamento_legado) echo operacional ;;
+    estado|sem_bloqueio_aberto|sem_defeito_de_plano|fronteira_insegura)               echo contrato ;;
+    *) return 1 ;;
+  esac
+}
+
+# O retorno da F6 numa raiz — o worktree, vivo, ou a extração de um sha —, pelos dois
+# leitores da sprintx: `bloqueios.sh listar` e `planejamento.sh fase`. Nada é
+# executado: é a resposta que `replanejar-execucao` daria, na ordem dele (DS-141,
+# DS-142, DS-146). Só se aplica com algum B-NN `defeito_de_plano` aberto.
+# Saída: nao_se_aplica | ativo | esgotado | disponivel | recusado:<motivo>.
+# Registro que a sprintx recusa: código 1.
+retorno_f6_em() { # <raiz> <slug>
+  local raiz="$1" slug="$2" pasta lista="" abertas saida estado max n
+  pasta="$raiz/docs/sprintx/features/$slug"
+  if [ -f "$pasta/00-BLOQUEIOS.md" ]; then
+    lista="$(SPRINTX_RAIZ="$raiz" bash "$SPRINTX_BLOQUEIOS" listar "$slug" 2>/dev/null)" || return 1
+  fi
+  abertas="$(printf '%s\n' "$lista" | tr -d '\r' | awk -F'\t' '$4 == "aberto" { print $3 }')"
+  printf '%s\n' "$abertas" | grep -qx defeito_de_plano || { echo nao_se_aplica; return 0; }
+  [ -f "$pasta/00-PLANEJAMENTO.md" ] || { echo recusado:planejamento_legado; return 0; }
+  saida="$(SPRINTX_RAIZ="$raiz" bash "$PLANEJAMENTO" fase "$slug" 2>/dev/null)" || return 1
+  estado="$(chave "$saida" estado)"
+  [ "$(chave "$saida" replanejamento_execucao)" = ativo ] && { echo ativo; return 0; }
+  [ "$estado" = replanejamento_execucao_esgotado ] && { echo esgotado; return 0; }
+  [ "$estado" = aprovado ] || { echo recusado:estado; return 0; }
+  [ "$(printf '%s\n' "$abertas" | sort -u)" = defeito_de_plano ] || { echo recusado:classes_mistas; return 0; }
+  [ "$(chave "$saida" orcamento_f6)" = legado ] && { echo recusado:orcamento_f6_legado; return 0; }   # [M28]
+  max="$(chave "$saida" max_replanejamentos_f6)"; n="$(chave "$saida" replanejamentos_f6)"
+  [ "$max" = null ] && { echo recusado:orcamento_f6_nao_declarado; return 0; }
+  case "$max$n" in ""|*[!0-9]*) return 1 ;; esac
+  [ "$n" -ge "$max" ] && { echo esgotado; return 0; }
+  echo disponivel
+}
+
+# O mesmo, sobre a pasta da feature COMMITADA num sha, extraída numa raiz sem Git.
+retorno_f6_commitado() { # <sha> <slug>
+  local raiz rc
+  raiz="$(mktemp -d)"
+  git archive "$1" -- "docs/sprintx/features/$2" 2>/dev/null | tar -x -C "$raiz" 2>/dev/null
+  retorno_f6_em "$raiz" "$2"; rc=$?
+  rm -rf "$raiz"
+  return "$rc"
+}
+
+# O retorno recusado ou esgotado, na classe do B5 (D-37). Só a família operacional
+# classifica; o resto — ativo, disponível, contradição, fronteira, contrato — não é
+# terminal nenhum: código 1, e quem chama para.
+classe_do_retorno_f6() { # <veredito> -> "classe regra"
+  case "$1" in
+    esgotado) echo "decisao_humana replanejamento_execucao_esgotado"; return 0 ;;
+    recusado:*) [ "$(familia_do_motivo "${1#recusado:}")" = operacional ] &&
+                  { echo "decisao_humana replanejamento_execucao_recusado/${1#recusado:}"; return 0; } ;;
+  esac
+  return 1                                                                  # [M34]
+}
+
+# A linha F com um `defeito_de_plano` aberto no worktree: a F6 não retoma a execução
+# normal. Disponível ou esgotado: só o passo 3 da F6 (`replanejar-execucao`), e a
+# sprintx decide — com a fronteira segura, que ela exige para abrir a rodada.
+# Recusado, família operacional: só o fechamento que materializa o terminal. O resto:
+# parada. O worktree conta aqui porque a recusa não grava nada — e isto só restringe.
+retomada_f6() { # <wt> <slug> -> F | F:replanejar_execucao | F:so_fechamento | PARE
+  local v
+  v="$(retorno_f6_em "$1" "$2")" || { echo PARE; return; }
+  case "$v" in
+    nao_se_aplica) echo F ;;
+    disponivel) if fronteira_limpa "$1" "$2"; then echo F:replanejar_execucao; else echo PARE; fi ;;
+    esgotado)   echo F:replanejar_execucao ;;
+    *) if classe_do_retorno_f6 "$v" >/dev/null; then echo F:so_fechamento; else echo PARE; fi ;;   # [M33]
+  esac
+}
+
 # A matriz do /buildx-retomar para uma feature, a partir do Git e da sprintx.
 # A entrega terminal commitada é lida antes de qualquer linha que dependa do
 # worktree ou da sprintx: um planejamento que ficou F6/aprovado não a apaga.
@@ -477,13 +611,34 @@ retomada_decide() { # <slug> <base_sha> <status-no-mapa> <branch-do-projeto> -> 
   case "$acao" in
     completar_checkpoint) echo D ;;
     terminal_pre_f6)      echo G ;;
-    f6)                   echo F ;;
+    terminal_f6)          echo T ;;
+    f6)                   retomada_f6 "$wt" "$slug" ;;
     continuar_*)
+      # A rodada de replanejamento da execução (S) tem produto concluído antes dela:
+      # não é a linha C, e também não é trabalho estranho.
       if [ "$tip" = "$base" ]; then echo "B:$acao"
+      elif rodada_f6_ativa "$wt" "$slug"; then
+        if rodada_f6_legitima "$slug" "$wt"; then echo "S:$acao"; else echo PARE; fi
       elif sem_produto_pre_f6 "$base" "$slug"; then echo "C:$acao"
       else echo PARE; fi ;;
     *) echo PARE ;;
   esac
+}
+
+# O que a retomada faz na linha S: segue a sprintx na fase que `fase` devolve. A F6 já
+# chamou o `replanejar-execucao` que abriu a rodada; a retomada não o repete, não
+# registra bloqueio e não conta nada.
+retomada_na_rodada() { # <slug> <base> <branch-do-projeto> <wt> -> sprintx_<fase> | a linha
+  local d; d="$(retomada_decide "$1" "$2" em_andamento "$3")"
+  case "$d" in
+    S:continuar_*) echo "sprintx_${d#S:continuar_}" ;;                      # [M32]
+    *) echo "$d" ;;
+  esac
+}
+
+# A F6 só abre task nova na linha F pura.
+f6_pode_abrir_task() { # <slug> <base> <branch-do-projeto>
+  [ "$(retomada_decide "$1" "$2" em_andamento "$3")" = F ]
 }
 
 # ---------------------------------------------------------------------------
@@ -735,6 +890,45 @@ registra_terminal_pre_f6() { # <base> <slug> <FT> <branch-do-projeto> <worktree>
   if git rev-parse --verify --quiet "refs/remotes/origin/$proj" >/dev/null; then git push -q origin "$proj" || return 1; fi
 }
 
+# Portão terminal da F6 (D-37): o retorno ao planejamento esgotou. Há produto
+# concluído na branch — não é pré-F6, e a prova H não se aplica. Prova-se que o
+# terminal é da sprintx, commitado e durável, sem entrega terminal por cima (D-35),
+# com o `defeito_de_plano` que o esgotou aberto no mesmo HEAD, e o orçamento gasto
+# uma vez por rodada aberta.
+gate_terminal_f6() { # <base_sha> <slug> <branch-do-projeto> <worktree>
+  local s
+  provas_pre_ff "$1" "feature/$2" "$3" || return 1                         # A B C D
+  [ -z "$(git -C "$4" status --porcelain)" ] || return 1                   # E
+  case "$(entrega_terminal "$2")" in ausente|aberta) ;; *) return 1 ;; esac
+  git show "feature/$2:docs/sprintx/features/$2/00-PLANEJAMENTO.md" 2>/dev/null | tr -d '\r' |
+    grep -qx 'estado: replanejamento_execucao_esgotado' || return 1        # F
+  s="$(sprintx "$4" fase "$2")"                                            # G
+  [ "$(chave "$s" fase):$(chave "$s" estado):$(chave "$s" persistencia)" = \
+    PARAR:replanejamento_execucao_esgotado:duravel ] || return 1
+  [ "$(retorno_f6_commitado "$(git rev-parse "feature/$2")" "$2")" = esgotado ] || return 1
+  [ "$(chave "$s" replanejamentos_f6)" = "$(rodadas_abertas "$2")" ]
+}
+
+registra_terminal_f6() { # <base> <slug> <FT> <branch-do-projeto> <worktree> [raiz]
+  local base="$1" slug="$2" ft="$3" proj="$4" wt="$5" raiz="${6:-null}"
+  local pasta="docs/sprintx/features/$2" rec=docs/projeto/RECURSAO.md head defeitos id
+  gate_terminal_f6 "$base" "$slug" "$proj" "$wt" || return 1
+  head="$(git rev-parse "feature/$slug")"
+  defeitos="$(bloqueios_commitados "$head" "$slug" | tr -d '\r' |
+    awk -F'\t' '$3 == "defeito_de_plano" && $4 == "aberto" { print $1 }' | paste -sd, -)"
+  [ -n "$defeitos" ] || return 1
+  [ -f "$rec" ] || recursao_nova "$rec" "${proj#buildx/}"
+  id="$(pend_nova "$rec" "$ft esgotou o replanejamento da execucao" replanejamento_execucao_esgotado "$ft" \
+        "feature/$slug@$head:$pasta/00-PLANEJAMENTO.md ; feature/$slug@$head:$pasta/00-BLOQUEIOS.md" \
+        "$defeitos" "$(pr_ids_commitados "$slug")" "$raiz" null)" || return 1
+  mapa_define docs/projeto/MAPA.md "$ft" Status bloqueada
+  mapa_define docs/projeto/MAPA.md "$ft" "Bloqueada por" replanejamento_execucao_esgotado
+  mapa_define docs/projeto/MAPA.md "$ft" "Pendência" "$id"
+  fm_incrementa docs/projeto/PROJETO.md features_bloqueadas
+  git add docs/projeto && git commit -q -m "chore(buildx): $ft bloqueada" || return 1
+  if git rev-parse --verify --quiet "refs/remotes/origin/$proj" >/dev/null; then git push -q origin "$proj" || return 1; fi
+}
+
 # --- B5: a tabela gatilho -> classe, determinística ---
 
 classe_orcamento() { # stdin: a 00-AUDITORIA.md terminal -> "classe regra"
@@ -766,6 +960,7 @@ classe_da_tabela() { # <gatilho> <argumento: ref da auditoria | causa | classe d
       esac
       echo "decisao_humana $g/raiz_ambigua" ;;
     entrega_bloqueada) classe_da_entrega "$a" ;;
+    replanejamento_execucao_esgotado) classe_do_esgotamento_f6 "$a" ;;      # [M30]
     entrega_interrompida)
       case " $GATILHOS_DIRETOS " in
         *" $a "*) [ -n "$a" ] && { r="$(classe_da_tabela "$a")"; echo "${r% *} $g/causa_$a"; return; } ;;
@@ -856,13 +1051,35 @@ bloqueios_commitados() { # <sha> <slug>
 }
 
 classe_da_entrega() { # <sha>:docs/entregas/<slug>/ENTREGA.md -> "classe regra"
-  local ref="$1" causa sha slug lista
+  local ref="$1" causa sha slug lista r v
   causa="$(causa_commitada "$ref")" || return 1
   [ "$causa" = bloqueio_aberto ] || { classe_da_causa "$causa"; return; }
   sha="${ref%%:*}"; slug="${ref#*:docs/entregas/}"; slug="${slug%/ENTREGA.md}"
   [ "$ref" = "$sha:docs/entregas/$slug/ENTREGA.md" ] || return 1
   lista="$(bloqueios_commitados "$sha" "$slug")" || return 1                # [M21]
-  printf '%s\n' "$lista" | classe_dos_abertos
+  r="$(printf '%s\n' "$lista" | classe_dos_abertos)" || return 1
+  # D-37: `defeito_de_plano -> trabalho_novo` só vale enquanto o retorno da F6 ao
+  # planejamento, no mesmo HEAD, não foi recusado nem esgotado. Nenhuma sucessora
+  # nasce para contornar o teto de replanejamento da própria feature.
+  case "$r" in
+    "trabalho_novo entrega_bloqueada/causa_bloqueio_aberto/classe_defeito_de_plano")   # [M29]
+      v="$(retorno_f6_commitado "$sha" "$slug")" || return 1
+      if [ "$v" != disponivel ]; then
+        r="$(classe_do_retorno_f6 "$v")" || return 1
+        r="${r% *} entrega_bloqueada/causa_bloqueio_aberto/${r#* }"
+      fi ;;
+  esac
+  printf '%s\n' "$r"
+}
+
+# A pendência do terminal da F6: a evidência commitada que ela cita ainda diz
+# `replanejamento_execucao_esgotado`, com o defeito aberto no mesmo HEAD.
+classe_do_esgotamento_f6() { # <sha>:docs/sprintx/features/<slug>/00-PLANEJAMENTO.md -> "classe regra"
+  local sha="${1%%:*}" slug
+  slug="${1#*:docs/sprintx/features/}"; slug="${slug%/00-PLANEJAMENTO.md}"
+  [ -n "$slug" ] && [ "$1" = "$sha:docs/sprintx/features/$slug/00-PLANEJAMENTO.md" ] || return 1
+  [ "$(retorno_f6_commitado "$sha" "$slug")" = esgotado ] || return 1
+  classe_do_retorno_f6 esgotado
 }
 
 # A causa como a pendência a grava: a da mergex, e `null` quando não commitada.
@@ -997,6 +1214,7 @@ b5_classifica() { # <RECURSAO.md> <PEND-NN> <MAPA.md> [FT-sucessora slug-sucesso
       arg="$(ref_da_evidencia "$(pend_campo "$rec" "$id" evidencia)" ENTREGA.md)"
       causa="$(causa_commitada "$arg")" || return 1
       [ "$(pend_campo "$rec" "$id" causa)" = "$(causa_da_pendencia "$causa")" ] || return 1 ;;
+    replanejamento_execucao_esgotado) arg="$(ref_da_evidencia "$(pend_campo "$rec" "$id" evidencia)" 00-PLANEJAMENTO.md)" ;;
     *) arg="$(pend_campo "$rec" "$id" causa)" ;;
   esac
   read -r classe regra <<EOF
@@ -1087,17 +1305,33 @@ projeto_p01() { # <nome> <PR-NN globais...> -> ecoa o caminho do controle
 
 # --- a sprintx F1–F5 simulada NOS ARTEFATOS, mas com o script de estado REAL ---
 
+# Os argumentos do `criar` da F1: os tetos do briefing, na ordem do script —
+# `3 buildx 1`. Um 00-PLANEJAMENTO.md que já existe e é legado (anterior ao eixo da
+# F6) continua legado: numa retomada da F1 o teto da F6 não é acrescentado (DS-146).
+args_criar() { # <wt> <slug>
+  if [ -f "$1/docs/sprintx/features/$2/00-PLANEJAMENTO.md" ] &&
+     [ "$(chave "$(sprintx "$1" fase "$2")" orcamento_f6)" = legado ]; then
+    printf '%s %s\n' "$ORCAMENTO_F5_MAX" "$ORCAMENTO_F5_POR"                     # [M35]
+    return
+  fi
+  briefing_orcamento | cut -d' ' -f2 | tr '\n' ' ' | sed 's/ $//'           # [M27]
+}
+
 # F1: exclui o rastro localmente (como a F1 real faz) e cria o planejamento com
 # o orçamento que veio do briefing. A F1 não faz checkpoint.
 sx_f1() { # <wt> <slug>
-  local excl
-  excl="$(git -C "$1" rev-parse --git-path info/exclude)"
-  case "$excl" in /*|?:/*) ;; *) excl="$1/$excl" ;; esac
+  sx_f1_com "$PLANEJAMENTO" "$1" "$2" $(args_criar "$1" "$2")
+}
+
+sx_f1_com() { # <planejamento.sh> <wt> <slug> [argumentos do criar...]
+  local script="$1" wt="$2" slug="$3" excl; shift 3
+  excl="$(git -C "$wt" rev-parse --git-path info/exclude)"
+  case "$excl" in /*|?:/*) ;; *) excl="$wt/$excl" ;; esac
   mkdir -p "$(dirname "$excl")"
   grep -qx 'docs/eventos/' "$excl" 2>/dev/null || printf 'docs/eventos/\n' >> "$excl"
-  mkdir -p "$1/docs/sprintx/features/$2/base"
-  printf '# Indice\n' > "$1/docs/sprintx/features/$2/base/00-INDICE.md"
-  sprintx "$1" criar "$2" $(briefing_orcamento | cut -d' ' -f2) >/dev/null
+  mkdir -p "$wt/docs/sprintx/features/$slug/base"
+  printf '# Indice\n' > "$wt/docs/sprintx/features/$slug/base/00-INDICE.md"
+  ( cd "$wt" && bash "$script" criar "$slug" "$@" ) >/dev/null 2>&1
 }
 
 sx_f2() { printf -- '---\nkind: decisoes\n---\n' > "$1/docs/sprintx/features/$2/00-DECISOES.md"; sprintx "$1" avanca "$2" f2 >/dev/null; }
@@ -2904,8 +3138,8 @@ for n in $(seq 1 36); do
   printf '%s\n' "$IDS" | grep -qx "$(printf 'D-%02d' "$n")" || FALTA="$FALTA D-$n"
 done
 caso "P01.36 D-01 a D-36 presentes" "" "$FALTA"
-caso "P01.36 as decisoes P0.1 vem depois da D-25, em ordem" "D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36" \
-  "$(printf '%s\n' "$IDS" | tail -12 | tr '\n' ' ' | sed 's/ $//')"
+caso "P01.36 as decisoes P0.1 e P0.2 vem depois da D-25, em ordem" "D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36 D-37" \
+  "$(printf '%s\n' "$IDS" | tail -13 | tr '\n' ' ' | sed 's/ $//')"
 for t in 'O orçamento da F5 é do caller; a contagem é da sprintx' \
          'Checkpoint da sprintx é estado legítimo da feature' \
          'Terminal pré-F6 só move a CONTROL com evidência commitada' \

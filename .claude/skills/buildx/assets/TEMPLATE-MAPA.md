@@ -39,8 +39,8 @@ Verificável, sem adjetivo, numa frase.>
 **Pendência:** <PEND-NN que ela resolve, em_resolucao no RECURSAO.md>
 
 <Se bloqueada — escrito só depois da evidência commitada:>
-**Bloqueada por:** <o gatilho — orcamento_f5_esgotado, entrega_bloqueada,
-entrega_interrompida, incompatibilidade_de_versao, dependencia_nao_integrada… —
+**Bloqueada por:** <o gatilho — orcamento_f5_esgotado, replanejamento_execucao_esgotado,
+entrega_bloqueada, entrega_interrompida, incompatibilidade_de_versao, dependencia_nao_integrada… —
 e o motivo exato que a evidência commitada registra>
 **Pendência:** <PEND-NN no RECURSAO.md, nascida aguardando_classificacao>
 

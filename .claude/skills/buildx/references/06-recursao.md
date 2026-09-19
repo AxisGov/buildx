@@ -78,7 +78,7 @@ As classes finais do B5 são **três**, e só estas são escritas:
 | `decisao_humana` | fica no `RECURSAO.md`, vai para a primeira seção do relatório. **Nunca vira feature** |
 | `recurso_externo` | fica no `RECURSAO.md`, vai para a segunda seção do relatório |
 
-**Replanejar não é classe do B5.** Replanejar a mesma feature existe **só** dentro do B4, pela sprintx, enquanto o orçamento da F5 não terminou — na mesma branch e no mesmo worktree. Quando a pendência chega ao B5, aquela tentativa já acabou: o que continua é trabalho novo, em feature nova.
+**Replanejar não é classe do B5.** Replanejar a mesma feature existe **só** dentro do B4, pela sprintx, enquanto o orçamento da F5 não terminou — na mesma branch e no mesmo worktree. O retorno da F6 ao planejamento (`replanejar_execucao`, sprintx P0.2-B) também: é da sprintx, dentro do B4, com orçamento próprio de uma rodada, e enquanto dura a feature continua em execução. Quando a pendência chega ao B5, aquela tentativa já acabou: o que continua é trabalho novo, em feature nova — ou decisão humana, quando o que acabou foi a própria rodada de replanejamento.
 
 ### A tabela gatilho → classe
 
@@ -92,7 +92,8 @@ Determinística: a mesma evidência commitada dá sempre a mesma classe. Nenhuma
 | `incompatibilidade_de_versao` | `decisao_humana` | `incompatibilidade_de_versao` |
 | `violacao_de_convencao` | `trabalho_novo` | `violacao_de_convencao` |
 | `dependencia_nao_integrada` | a classe da pendência raiz — a da dependência que não integrou —, quando identificável; senão `decisao_humana`, com a ambiguidade na `evidencia` | `dependencia_nao_integrada/segue_raiz` · `/raiz_ambigua` |
-| `entrega_bloqueada` | pela `causa` enumerada do `ENTREGA.md` commitado e, com `bloqueio_aberto`, pela `classe` dos `B-NN` abertos no mesmo `HEAD` — abaixo | `entrega_bloqueada/causa_<causa>` · `/causa_bloqueio_aberto/classe_<classe>` · `/causa_bloqueio_aberto/classes_divergentes` · `/causa_bloqueio_aberto/bloqueio_legado` · `/causa_nao_commitada` |
+| `entrega_bloqueada` | pela `causa` enumerada do `ENTREGA.md` commitado e, com `bloqueio_aberto`, pela `classe` dos `B-NN` abertos no mesmo `HEAD` — abaixo | `entrega_bloqueada/causa_<causa>` · `/causa_bloqueio_aberto/classe_<classe>` · `/causa_bloqueio_aberto/classes_divergentes` · `/causa_bloqueio_aberto/bloqueio_legado` · `/causa_bloqueio_aberto/replanejamento_execucao_esgotado` · `/causa_bloqueio_aberto/replanejamento_execucao_recusado/<motivo>` · `/causa_nao_commitada` |
+| `replanejamento_execucao_esgotado` | `decisao_humana` | `replanejamento_execucao_esgotado` |
 | `entrega_interrompida` | pela `causa` commitada, quando ela é um gatilho desta tabela; senão `trabalho_novo` — tecnicamente resolvível sem decisão | `entrega_interrompida/causa_<gatilho>` · `/resolvivel_sem_decisao` |
 
 ### `orcamento_f5_esgotado` — os prefixos `[item N]` da sprintx
@@ -148,7 +149,22 @@ Os `B-NN` abertos, nesta ordem:
 1. **nenhum aberto** — a entrega diz V7 e a sprintx não tem bloqueio aberto: **inconsistência**. Pare e relate; nenhuma classe é inventada;
 2. **algum aberto sem `classe`** (legado, sozinho ou misturado a tipados) → `decisao_humana`, `entrega_bloqueada/causa_bloqueio_aberto/bloqueio_legado`. A descrição do legado não é lida;
 3. **abertos de classes diferentes** → `decisao_humana`, `entrega_bloqueada/causa_bloqueio_aberto/classes_divergentes`. Não há precedência entre classes de bloqueio — nem quando as duas levariam à mesma classe do B5;
-4. **um ou vários abertos, todos da mesma classe** → a classe do B5 dela, `entrega_bloqueada/causa_bloqueio_aberto/classe_<classe>`.
+4. **um ou vários abertos, todos da mesma classe** → a classe do B5 dela, `entrega_bloqueada/causa_bloqueio_aberto/classe_<classe>` — com a precedência abaixo quando a classe é `defeito_de_plano`.
+
+**O retorno da F6 recusado ou esgotado vence `defeito_de_plano` → `trabalho_novo`.** (D-37) Um `defeito_de_plano` é o que a sprintx devolve ao planejamento dentro da própria feature, com orçamento de uma rodada. A linha `defeito_de_plano` → `trabalho_novo` só vale quando **nada** no mesmo `HEAD` diz que esse retorno foi recusado ou esgotado — senão a sucessora seria só um jeito de contornar o teto da feature. Quando todos os abertos são `defeito_de_plano`, leia a pasta da feature **commitada** naquele `HEAD` pela sprintx — `bloqueios.sh listar` e `planejamento.sh fase`, numa raiz sem Git — e decida pela ordem do `replanejar-execucao` dela:
+
+| No mesmo `HEAD` | Classe | `regra_aplicada` |
+|---|---|---|
+| `estado: replanejamento_execucao_esgotado`, ou `aprovado` com `replanejamentos_f6` já no teto | `decisao_humana` | `entrega_bloqueada/causa_bloqueio_aberto/replanejamento_execucao_esgotado` |
+| planejamento legado (sem o eixo da F6), `max_replanejamentos_f6: null`, ou nenhum `00-PLANEJAMENTO.md` | `decisao_humana` | `entrega_bloqueada/causa_bloqueio_aberto/replanejamento_execucao_recusado/<motivo>` — `orcamento_f6_legado` · `orcamento_f6_nao_declarado` · `planejamento_legado` |
+| `aprovado`, com orçamento restante e nenhuma rodada ativa | `trabalho_novo` | `entrega_bloqueada/causa_bloqueio_aberto/classe_defeito_de_plano` — a regra de sempre |
+| rodada ainda ativa, outro estado, planejamento que a sprintx recusa | — | **pare e relate**: contradição ou contrato inválido, nada é gravado |
+
+Classes mistas já são `decisao_humana` pela linha 3 (`classes_divergentes`) — é o `classes_mistas` com que a sprintx recusa o retorno —, e nenhuma outra classe é afetada: `prerequisito_ausente` sozinho continua `recurso_externo`. O motivo de recusa da família contrato (`estado`, `sem_bloqueio_aberto`, `sem_defeito_de_plano`, `fronteira_insegura`) nunca vira pendência (`references/integracao/sprintx.md`, "O retorno da F6 ao planejamento").
+
+### `replanejamento_execucao_esgotado` — o terminal da F6
+
+Registrado pelo portão terminal da F6 (`references/05-construcao.md`): a sprintx gravou `replanejamento_execucao_esgotado` — a única rodada já tinha sido consumida e surgiu outro `defeito_de_plano`. A classe é **`decisao_humana`**, `regra_aplicada: replanejamento_execucao_esgotado`, depois de reler a evidência: o `00-PLANEJAMENTO.md` citado, com a pasta da feature do mesmo `HEAD`, ainda diz esgotado pela sprintx; não diz, **pare e relate**. Nenhuma segunda rodada, nenhuma sucessora — o que falta é decidir o que fazer com uma feature cujo plano precisou mudar duas vezes. Não é `orcamento_f5_esgotado`: a tabela `[item N]` não se aplica, e os dois gatilhos nunca se confundem.
 
 **Falha fechada.** Nestes casos nada é classificado, nada é gravado, e o B5 **para e relata**: `ENTREGA.md` que a ref não alcança, ou que não é `bloqueado`/`bloqueado`; registro que a mergex recusa — causa fora do enum, só uma das duas chaves, causa que não é a derivada de `falhas_portao`; `causa` da pendência diferente da commitada; com `bloqueio_aberto`, `00-BLOQUEIOS.md` ausente no mesmo `HEAD`, ou recusado pela sprintx (entrada malformada, classe fora do enum, `classe: null`, legado depois de tipado), ou sem nenhum aberto. Ausente e `indeterminada` não são inconsistência: são causa não commitada, e vão a `decisao_humana`.
 
@@ -168,7 +184,7 @@ O que continua é uma **feature sucessora**:
 - **slug novo** — nunca o da bloqueada;
 - `origem: recursao`, com `**Sucede:** FT-XX` e `**Pendência:** PEND-NN` no bloco dela;
 - nasce, no B4, do `HEAD` **atual** de `buildx/<projeto_id>` — enxergando tudo que foi entregue desde a tentativa antiga;
-- passa por uma F1 nova, com worktree novo e branch nova, e com o briefing de sempre — inclusive o orçamento da F5.
+- passa por uma F1 nova, com worktree novo e branch nova, e com o briefing de sempre — inclusive os orçamentos da F5 e da F6 (`criar <slug> 3 buildx 1`).
 
 **Nunca** volte a feature velha para `pendente`; **nunca** `rebase`, `cherry-pick`, `merge --no-ff` ou `--force` sobre a branch antiga. Ela fica como está, local, para o relatório apontar.
 

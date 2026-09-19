@@ -22,7 +22,7 @@ CONTROL = checkout de controle = buildx/<projeto_id>
   │
   5. sprintx F1 ── nasce de BASE_SHA ──► worktree ../<repo>--<slug>
   │                                      branch  feature/<slug>  (tip == BASE_SHA)
-  │                                      00-PLANEJAMENTO.md  criar <slug> 3 buildx
+  │                                      00-PLANEJAMENTO.md  criar <slug> 3 buildx 1
   │                                           │
   │   ┌─ JANELA FECHADA ─────────────┐        ├─ F2 → F5   plano e auditoria
   │   │ CONTROL não recebe commit    │        │            + checkpoints locais da sprintx
@@ -33,6 +33,10 @@ CONTROL = checkout de controle = buildx/<projeto_id>
   │                                                        + entrega inteira:
   │                                                        E0 · E1 por task ·
   │                                           │            FECHAMENTO.md · E2→E8
+  │                                           │            defeito_de_plano: a sprintx volta
+  │                                           │            à F3 (replanejar_execucao, 1 rodada);
+  │                                           │            de novo: PARAR/replanejamento_
+  │                                           │            execucao_esgotado → portão da F6
   ◄──────── volta ao checkout de controle ────┘
   6. lê ENTREGA.md + FECHAMENTO.md COMMITADOS (git show feature/<slug>:...)
   7. PROVAS: A HEAD==BASE_SHA · B origin==BASE_SHA · C ancestral · D CONTROL limpa
@@ -199,14 +203,15 @@ O briefing da feature carrega:
 | premissas aplicáveis | as `PR-NN` que esta feature realiza |
 | convenções | ponteiro para `docs/stack/CONVENCOES.md` |
 
-E, sempre, o orçamento da F5, literalmente:
+E, sempre, o orçamento da F5 e o do retorno da F6 ao planejamento, literalmente:
 
 ```
 max_reprovacoes_f5: 3
 orcamento_declarado_por: buildx
+max_replanejamentos_f6: 1
 ```
 
-A F1 o repassa ao criar o estado do planejamento — `planejamento.sh criar <slug> 3 buildx` — e dali em diante **a sprintx é a única dona da contagem** (`references/integracao/sprintx.md`, "O orçamento da F5, declarado no briefing"). O buildx não cria nem edita o `00-PLANEJAMENTO.md`.
+A F1 os repassa ao criar o estado do planejamento — `planejamento.sh criar <slug> 3 buildx 1`, o teto da F6 como quarto argumento — e dali em diante **a sprintx é a única dona da contagem** (`references/integracao/sprintx.md`, "O orçamento da F5, declarado no briefing"). O buildx não cria nem edita o `00-PLANEJAMENTO.md`. Toda feature nova nasce assim — a do `MAPA.md` original e a sucessora do B5. Um planejamento que já existe e é legado, anterior ao eixo da F6, continua legado: a retomada da F1 sobre ele repassa só os dois primeiros, e nenhum `1` lhe é acrescentado.
 
 Acrescente `origem_buildx` e `feature_id` ao frontmatter dos artefatos da feature (`references/00-schema.md`).
 
@@ -314,8 +319,10 @@ Rodam sem intervenção do buildx. Os pontos de atenção:
 | A sprintx responde | O buildx |
 |---|---|
 | `F3` · `F4` · `F5`, `persistencia=duravel` | continua a sprintx nessa fase, na mesma branch e no mesmo worktree |
-| `F6`, `estado=aprovado`, `persistencia=duravel` | segue para a F6 (passo 5) — **salvo** se a feature já tem `ENTREGA.md` terminal commitado: a entrega terminal precede esta tabela (passo 6, "A entrega terminal commitada precede a sprintx") |
+| `F3`, `estado=replanejar_execucao` — e `F3` · `F4` · `F5` com `replanejamento_execucao=ativo` | a feature **continua em execução**: é a rodada de replanejamento da execução. Continua a sprintx nessa fase; não bloqueia, não registra pendência, não cria feature, não volta à F1/F2 nem à F6 (`references/integracao/sprintx.md`, "O retorno da F6 ao planejamento") |
+| `F6`, `estado=aprovado`, `persistencia=duravel` | segue para a F6 (passo 5) — **salvo** se a feature já tem `ENTREGA.md` terminal commitado: a entrega terminal precede esta tabela (passo 6, "A entrega terminal commitada precede a sprintx"); e salvo `B-NN` `defeito_de_plano` aberto: aí a F6 só faz o `replanejar-execucao` ou, recusado, o fechamento |
 | `PARAR`, `estado=orcamento_esgotado`, `persistencia=duravel` | **portão terminal pré-F6** (abaixo) |
+| `PARAR`, `estado=replanejamento_execucao_esgotado`, `persistencia=duravel` | **portão terminal da F6** (abaixo) |
 | `CHECKPOINT`, `persistencia=pendente` | **sem** `ENTREGA.md` terminal commitado: pede à sprintx que complete o checkpoint, e **nada mais**. Com ele, a entrega terminal vence também aqui (passo 6). Sem ele: não bloqueia, não mexe no mapa, não roda B5, não começa outra feature |
 | `persistencia_falhou` num checkpoint | **para a orquestração da feature** e relata; preserva worktree e branch. Não é `orcamento_esgotado`, não é `bloqueada`, não é `decisao_humana` |
 
@@ -355,6 +362,23 @@ git log --format=%B <BASE_SHA>..feature/<slug>
 Até `orcamento_esgotado`, a sprintx só commitou checkpoints: **todo** path tocado começa por `docs/sprintx/features/<slug>/` — a pasta que a própria sprintx declara como único conteúdo do checkpoint, e onde também mora o `BUILDX-PREMISSAS.md` — e **todo** commit traz o trailer `Planejamento: checkpoint`. Apareceu `src/`, teste de produto, `package.json`, arquivo funcional qualquer, ou um commit sem o trailer: **pare**. Não avance a `CONTROL`: há trabalho na branch que ninguém auditou, e classificá-lo como "plano esgotado" esconderia isso.
 
 Passado o portão, a janela desta feature se encerra, e só então a `CONTROL` pode receber o commit de estado do bloqueio (a triagem, adiante). A branch da feature continua **local e preservada** — o buildx não a publica, não a apaga e não a reescreve.
+
+## O portão terminal da F6
+
+Quando a sprintx responde `fase=PARAR`, `estado=replanejamento_execucao_esgotado`, `persistencia=duravel`, a F6 achou um `defeito_de_plano` depois de a única rodada de replanejamento da execução já ter sido consumida (D-37). A tentativa terminou **depois** de produto concluído — então a prova H do portão pré-F6 não se aplica, e este portão prova outra coisa. **Antes de qualquer escrita em `CONTROL`**, havendo remoto `git fetch origin` primeiro:
+
+| # | Prova | Como |
+|---|---|---|
+| **A**–**E** | as mesmas do portão pré-F6 | `CONTROL` em `BASE_SHA`, remoto no mesmo ponto, ancestralidade, as duas árvores limpas |
+| **F** | o terminal está **commitado** | `git show feature/<slug>:docs/sprintx/features/<slug>/00-PLANEJAMENTO.md` com `estado: replanejamento_execucao_esgotado` |
+| **G** | a sprintx confirma, durável | `planejamento.sh fase <slug>` responde `PARAR` / `replanejamento_execucao_esgotado` / `duravel` |
+| **H6** | nenhuma entrega terminal por cima | o `ENTREGA.md` do `HEAD` da feature ausente ou `aberto` — terminal, é a linha **L** ou **R**, que vencem (D-35) |
+| **I6** | o defeito que esgotou está no mesmo `HEAD` | a pasta da feature commitada, lida pela sprintx (`bloqueios.sh listar` e `planejamento.sh fase` numa raiz sem Git), tem `B-NN` `defeito_de_plano` aberto e diz esgotado |
+| **J6** | o orçamento foi gasto uma vez por rodada | `replanejamentos_f6` de `fase` == o número de checkpoints da branch com `Fase: f6` e `Estado: replanejar_execucao` |
+
+**Falhou qualquer uma: pare e relate.** Passou: um único commit de estado — pendência `aguardando_classificacao` no `RECURSAO.md` com o gatilho `replanejamento_execucao_esgotado`, a `evidencia` apontando o `00-PLANEJAMENTO.md` e o `00-BLOQUEIOS.md` do mesmo `HEAD`, a `clausula_central` com os `B-NN` `defeito_de_plano` abertos e os `PR-NN` reservados; feature `bloqueada` no `MAPA.md`, `Bloqueada por: replanejamento_execucao_esgotado`; `features_bloqueadas` no `PROJETO.md`. O B5 a classifica `decisao_humana` — nenhuma sucessora nasce para contornar o teto da própria feature.
+
+Se o fechamento da F6 também gravou o `ENTREGA.md` bloqueado, a entrega terminal vence este portão, e a triagem é a de sempre, gatilho `entrega_bloqueada` — onde o mesmo esgotamento, commitado no mesmo `HEAD`, vence a regra `defeito_de_plano` → `trabalho_novo` (`references/06-recursao.md`).
 
 ## Passo 5 — A F6 e o acabamento
 
@@ -641,8 +665,9 @@ Nunca peça confirmação para seguir. Nunca ofereça parar. O usuário fechou o
 - cada feature trabalhada tem worktree e branch próprios, abertos pela F1 — nenhuma segunda branch foi criada para a mesma feature
 - nenhuma feature começou com dependência não integrada
 - toda feature nova nasceu com o tip **exatamente** em `BASE_SHA`
-- todo briefing declarou `max_reprovacoes_f5: 3` e `orcamento_declarado_por: buildx`, e o `00-PLANEJAMENTO.md` commitado de cada feature o confirma
-- nenhuma decisão do buildx sobre o planejamento veio de outra fonte que não `planejamento.sh fase`; nenhuma foi tomada com a sprintx em `CHECKPOINT`
+- todo briefing declarou `max_reprovacoes_f5: 3`, `orcamento_declarado_por: buildx` e `max_replanejamentos_f6: 1`, e o `00-PLANEJAMENTO.md` commitado de cada feature o confirma — salvo o legado, que continua sem o eixo da F6
+- nenhuma decisão do buildx sobre o planejamento veio de outra fonte que não os leitores da sprintx — `planejamento.sh fase` e, para o retorno da F6, `bloqueios.sh listar`; nenhuma foi tomada com a sprintx em `CHECKPOINT`
+- nenhuma feature em rodada de replanejamento da execução foi bloqueada, e nenhuma com o retorno recusado ou esgotado ganhou sucessora
 - o buildx não commitou artefato nenhum da sprintx
 - `CONTROL` recebeu, por feature, no máximo dois commits do buildx: um antes da F1, outro depois da integração (ou o de bloqueio terminal)
 - toda decisão de integrar veio do `ENTREGA.md` **commitado** na branch da feature, não do arquivo da árvore

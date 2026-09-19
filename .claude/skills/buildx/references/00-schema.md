@@ -167,7 +167,7 @@ ciclos_recursao: 2
 | `veredito` (validação) | `aprovado` · `aprovado_com_pendencia` · `reprovado` |
 | `estado` (pendência) | `aguardando_classificacao` · `em_resolucao` · `decisao_humana` · `recurso_externo` · `resolvida` |
 | `classe` (pendência) | `trabalho_novo` · `decisao_humana` · `recurso_externo` — `null` enquanto `aguardando_classificacao`. Valor legado de arquivo antigo é lido como `trabalho_novo` e nunca escrito |
-| `gatilho` (pendência) | `orcamento_f5_esgotado` · `regra_de_negocio_nao_declarada` · `recurso_externo_ausente` · `incompatibilidade_de_versao` · `violacao_de_convencao` · `dependencia_nao_integrada` · `entrega_bloqueada` · `entrega_interrompida` |
+| `gatilho` (pendência) | `orcamento_f5_esgotado` · `regra_de_negocio_nao_declarada` · `recurso_externo_ausente` · `incompatibilidade_de_versao` · `violacao_de_convencao` · `dependencia_nao_integrada` · `entrega_bloqueada` · `entrega_interrompida` · `replanejamento_execucao_esgotado` |
 
 ## O que o buildx grava nos artefatos das outras camadas
 
