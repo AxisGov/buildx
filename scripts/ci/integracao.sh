@@ -59,21 +59,46 @@ pulo() { PULOS=$((PULOS+1)); printf '  PULO  %s\n' "$1"; }
 # A sprintx real, no SHA fixo do contrato P0.1
 # ---------------------------------------------------------------------------
 
-SPRINTX_SHA_FIXO=a4f5495ad8454c548a2e5aa6b07c6006a9e1d7df
+# P0.2-A5 (7300e47): o B-NN ganha `classe`. O planejamento.sh é o mesmo do
+# a4f5495 do P0.1; o que entra é o bloqueios.sh, o leitor dos B-NN.
+SPRINTX_SHA_FIXO=7300e4754907207ca77084c39ffdefef4a0cbbfb
 SPRINTX_REPO="${SPRINTX_REPO:-$REPO/../sprintx}"
 PLANEJAMENTO=""
+SPRINTX_BLOQUEIOS=""
 if git -c safe.directory='*' -C "$SPRINTX_REPO" cat-file -e "$SPRINTX_SHA_FIXO^{commit}" 2>/dev/null; then
   mkdir -p "$TMP_RAIZ/sprintx"
   if git -c safe.directory='*' -C "$SPRINTX_REPO" archive "$SPRINTX_SHA_FIXO" .claude/skills/sprintx |
        tar -x -C "$TMP_RAIZ/sprintx" 2>/dev/null; then
     PLANEJAMENTO="$TMP_RAIZ/sprintx/.claude/skills/sprintx/scripts/planejamento.sh"
     [ -f "$PLANEJAMENTO" ] || PLANEJAMENTO=""
+    SPRINTX_BLOQUEIOS="$TMP_RAIZ/sprintx/.claude/skills/sprintx/scripts/bloqueios.sh"
+    [ -f "$SPRINTX_BLOQUEIOS" ] || SPRINTX_BLOQUEIOS=""
   fi
 fi
 
 com_sprintx() { # com_sprintx <cenario> — pula, e conta o pulo, sem a sprintx real
   [ -n "$PLANEJAMENTO" ] && return 0
   pulo "$1: sprintx $SPRINTX_SHA_FIXO indisponivel em $SPRINTX_REPO"
+  return 1
+}
+
+# A mergex real, no SHA do P0.2-A4 (b51ba94): `falhas_portao` e `causa` no
+# ENTREGA.md, e o causa-do-portao.sh que as deriva e as lê.
+MERGEX_SHA_FIXO=b51ba94305ba6857653f0636813ebd6823c5b082
+MERGEX_REPO="${MERGEX_REPO:-$REPO/../mergex}"
+MERGEX_CAUSA=""
+if git -c safe.directory='*' -C "$MERGEX_REPO" cat-file -e "$MERGEX_SHA_FIXO^{commit}" 2>/dev/null; then
+  mkdir -p "$TMP_RAIZ/mergex"
+  if git -c safe.directory='*' -C "$MERGEX_REPO" archive "$MERGEX_SHA_FIXO" .claude/skills/mergex |
+       tar -x -C "$TMP_RAIZ/mergex" 2>/dev/null; then
+    MERGEX_CAUSA="$TMP_RAIZ/mergex/.claude/skills/mergex/scripts/causa-do-portao.sh"
+    [ -f "$MERGEX_CAUSA" ] || MERGEX_CAUSA=""
+  fi
+fi
+
+com_causa() { # com_causa <cenario> — a mergex e a sprintx reais, ou pulo contado
+  [ -n "$MERGEX_CAUSA" ] && [ -n "$SPRINTX_BLOQUEIOS" ] && [ -n "$PLANEJAMENTO" ] && return 0
+  pulo "$1: mergex $MERGEX_SHA_FIXO em $MERGEX_REPO ou sprintx $SPRINTX_SHA_FIXO em $SPRINTX_REPO indisponivel"
   return 1
 }
 
@@ -2549,6 +2574,323 @@ if com_sprintx "P02 entrega terminal"; then
 fi
 cd "$REPO"
 fi  # entrega
+
+if bloco causa; then
+echo
+echo "P0.2 — a causa da entrega bloqueada é enumerada, e o B-NN é lido pela classe"
+
+# A tabela pura: causa da mergex -> classe do B5, e classe do B-NN -> classe do B5.
+for c in suite_reprovada teste_nao_declarado arquivo_fora_do_plano; do
+  caso "P02.causa $c -> trabalho_novo"          "trabalho_novo entrega_bloqueada/causa_$c" "$(classe_da_causa "$c")"
+done
+for c in segredo_no_diff auditoria_reprovada legado_incompleto tarefa_nao_concluida regressao_nao_declarada qa_nao_aprovado; do
+  caso "P02.causa $c -> decisao_humana"         "decisao_humana entrega_bloqueada/causa_$c" "$(classe_da_causa "$c")"
+done
+caso "P02.causa indeterminada e causa nao commitada" "decisao_humana entrega_bloqueada/causa_nao_commitada" "$(classe_da_causa indeterminada)"
+caso "P02.causa ausente (legado) e causa nao commitada" "decisao_humana entrega_bloqueada/causa_nao_commitada" "$(classe_da_causa ausente)"
+caso "P02.causa bloqueio_aberto nao tem classe sem os B-NN" nao "$(sim_nao classe_da_causa bloqueio_aberto)"
+for c in falha_tecnica null "" BLOQUEIO_ABERTO decisao_humana trabalho_novo; do
+  caso "P02.causa '$c' fora do enum: nao classifica" nao "$(sim_nao classe_da_causa "$c")"
+done
+caso "P02.bloqueio defeito_de_plano -> trabalho_novo"       trabalho_novo   "$(classe_do_bloqueio defeito_de_plano)"
+caso "P02.bloqueio suite_vermelha -> trabalho_novo"         trabalho_novo   "$(classe_do_bloqueio suite_vermelha)"
+caso "P02.bloqueio prerequisito_ausente -> recurso_externo" recurso_externo "$(classe_do_bloqueio prerequisito_ausente)"
+caso "P02.bloqueio lacuna_de_decisao -> decisao_humana"     decisao_humana  "$(classe_do_bloqueio lacuna_de_decisao)"
+caso "P02.bloqueio task_reivindicada -> decisao_humana"     decisao_humana  "$(classe_do_bloqueio task_reivindicada)"
+for c in legado null "" falha_tecnica; do
+  caso "P02.bloqueio classe '$c' nao traduz"                nao "$(sim_nao classe_do_bloqueio "$c")"
+done
+
+# A regra dos abertos, sobre a saída de `bloqueios.sh listar` (id, task, classe, aberto|resolvido).
+lst() { local l; for l in "$@"; do printf '%s\n' "$l" | tr '|' '\t'; done; }
+R=entrega_bloqueada/causa_bloqueio_aberto
+caso "P02.abertos um so aberto: a classe dele" "trabalho_novo $R/classe_defeito_de_plano" \
+  "$(lst 'B-01|T-04.03|defeito_de_plano|aberto' | classe_dos_abertos)"
+caso "P02.abertos varios abertos da mesma classe: a classe deles" "trabalho_novo $R/classe_suite_vermelha" \
+  "$(lst 'B-01|null|suite_vermelha|aberto' 'B-02|null|suite_vermelha|aberto' | classe_dos_abertos)"
+caso "P02.abertos resolvido nao conta" "recurso_externo $R/classe_prerequisito_ausente" \
+  "$(lst 'B-01|T-01.01|lacuna_de_decisao|resolvido' 'B-02|T-01.02|prerequisito_ausente|aberto' | classe_dos_abertos)"
+caso "P02.abertos nenhum aberto: inconsistencia" nao \
+  "$(sim_nao eval "lst 'B-01|T-01.01|defeito_de_plano|resolvido' | classe_dos_abertos")"
+caso "P02.abertos lista vazia: inconsistencia" nao "$(sim_nao eval "printf '' | classe_dos_abertos")"
+caso "P02.abertos classes diferentes: decisao_humana" "decisao_humana $R/classes_divergentes" \
+  "$(lst 'B-01|T-01.01|defeito_de_plano|aberto' 'B-02|T-01.02|prerequisito_ausente|aberto' | classe_dos_abertos)"
+caso "P02.abertos a ordem nao importa" "decisao_humana $R/classes_divergentes" \
+  "$(lst 'B-01|T-01.01|prerequisito_ausente|aberto' 'B-02|T-01.02|defeito_de_plano|aberto' | classe_dos_abertos)"
+caso "P02.abertos classes diferentes de mesmo destino: sem precedencia" "decisao_humana $R/classes_divergentes" \
+  "$(lst 'B-01|T-01.01|defeito_de_plano|aberto' 'B-02|null|suite_vermelha|aberto' | classe_dos_abertos)"
+caso "P02.abertos legado: decisao_humana" "decisao_humana $R/bloqueio_legado" \
+  "$(lst 'B-01|T-01.01|legado|aberto' | classe_dos_abertos)"
+caso "P02.abertos legado + tipado: decisao_humana" "decisao_humana $R/bloqueio_legado" \
+  "$(lst 'B-01|T-01.01|legado|aberto' 'B-02|T-01.02|defeito_de_plano|aberto' | classe_dos_abertos)"
+caso "P02.abertos legado resolvido nao conta" "trabalho_novo $R/classe_defeito_de_plano" \
+  "$(lst 'B-01|T-01.01|legado|resolvido' 'B-02|T-01.02|defeito_de_plano|aberto' | classe_dos_abertos)"
+caso "P02.abertos classe desconhecida: inconsistencia" nao \
+  "$(sim_nao eval "lst 'B-01|T-01.01|bug_misterioso|aberto' | classe_dos_abertos")"
+
+caso "P02.contrato falha_tecnica saiu da tabela do B5" "" \
+  "$(tr -d '\r' < "$REPO/.claude/skills/buildx/references/06-recursao.md" | grep -n '/falha_tecnica' || true)"
+caso "P02.contrato a linha entrega_bloqueada le a causa enumerada e a classe do B-NN" sim \
+  "$(sim_nao grep -qF '| `entrega_bloqueada` | pela `causa` enumerada do `ENTREGA.md` commitado e, com `bloqueio_aberto`, pela `classe` dos `B-NN` abertos no mesmo `HEAD`' "$REPO/.claude/skills/buildx/references/06-recursao.md")"
+caso "P02.contrato a D-36 esta registrada" sim \
+  "$(sim_nao grep -qF '## D-36 — A causa da entrega bloqueada é enumerada, e o B-NN é lido pela classe' "$REPO/.claude/skills/buildx/DECISOES-DA-SKILL.md")"
+for c in segredo_no_diff auditoria_reprovada bloqueio_aberto legado_incompleto arquivo_fora_do_plano tarefa_nao_concluida suite_reprovada teste_nao_declarado regressao_nao_declarada qa_nao_aprovado indeterminada; do
+  caso "P02.contrato a tabela do B5 tem a causa $c" sim \
+    "$(sim_nao grep -qE "^\| \`$c\` \|" "$REPO/.claude/skills/buildx/references/06-recursao.md")"
+done
+for c in defeito_de_plano suite_vermelha prerequisito_ausente lacuna_de_decisao task_reivindicada; do
+  caso "P02.contrato a tabela do B5 tem a classe $c" "$(classe_do_bloqueio "$c")" \
+    "$(tr -d '\r' < "$REPO/.claude/skills/buildx/references/06-recursao.md" | awk -F'|' -v c=" \`$c\` " '$2 == c { v = $3; gsub(/[ `]/, "", v); print v }')"
+done
+
+if com_causa "P02 causa"; then
+  # Os contratos reais: o enum da mergex e o da sprintx são os que a tabela traduz.
+  caso "P02.pin o enum de causa da mergex e o que a tabela conhece" \
+    "arquivo_fora_do_plano auditoria_reprovada bloqueio_aberto indeterminada legado_incompleto qa_nao_aprovado regressao_nao_declarada segredo_no_diff suite_reprovada tarefa_nao_concluida teste_nao_declarado" \
+    "$(bash "$MERGEX_CAUSA" --causas | cut -d'|' -f2 | sort | tr '\n' ' ' | sed 's/ $//')"
+  caso "P02.pin o enum de classe da sprintx e o que a tabela conhece" \
+    "defeito_de_plano lacuna_de_decisao prerequisito_ausente suite_vermelha task_reivindicada" \
+    "$(bash "$SPRINTX_BLOQUEIOS" classes | sort | tr '\n' ' ' | sed 's/ $//')"
+  for c in $(bash "$SPRINTX_BLOQUEIOS" classes); do
+    caso "P02.pin toda classe da sprintx traduz: $c" sim "$(sim_nao classe_do_bloqueio "$c")"
+  done
+  for c in $(bash "$MERGEX_CAUSA" --causas | cut -d'|' -f2 | grep -vx bloqueio_aberto); do
+    caso "P02.pin toda causa da mergex traduz: $c" sim "$(sim_nao classe_da_causa "$c")"
+  done
+
+  cm() { git -C "$1" add -A && git -C "$1" commit -q "${@:2}"; }
+  # entrega_reg <arquivo> <estado> <portao> <falhas_portao|-> <causa|-> — `-` é chave ausente.
+  entrega_reg() {
+    mkdir -p "$(dirname "$1")"
+    {
+      printf -- '---\nexpx_schema: 1\nexpx_tool: sprintx\nkind: entrega\ntrabalho_id: %s\nentregue_por: mergex\nestado: %s\nportao: %s\n' \
+        "$(basename "$(dirname "$1")")" "$2" "$3"
+      [ "$4" = - ] || printf 'falhas_portao: %s\n' "$4"
+      [ "$5" = - ] || printf 'causa: %s\n' "$5"
+      printf 'desvios: []\npush_feito: false\npr_url: null\npr_estado: null\nentregue_em: null\n---\n\n# Entrega\n\n'
+      printf 'Falha tecnica: a suite ficou vermelha e a regra de negocio precisa de decisao humana.\n'
+    } > "$1"
+  }
+  # entrega_portao <arquivo> <vN...> — bloqueado, com lista e causa DERIVADAS pela mergex real.
+  entrega_portao() {
+    local a="$1"; shift
+    entrega_reg "$a" bloqueado bloqueado "$(bash "$MERGEX_CAUSA" --lista "$@")" "$(bash "$MERGEX_CAUSA" --derivar "$@")"
+  }
+  # bl_arq <arquivo> <id|task|classe|resolvido_em|descricao>... — classe `-` é chave ausente (legado).
+  bl_arq() {
+    local a="$1" e id t c r d; shift
+    mkdir -p "$(dirname "$a")"
+    {
+      printf -- '---\nexpx_schema: 1\nexpx_tool: sprintx\nkind: bloqueios\ntrabalho_id: ft-01\natualizado_em: 2026-09-18\nbloqueios:\n'
+      for e in "$@"; do
+        IFS='|' read -r id t c r d <<EOF
+$e
+EOF
+        printf '  - id: %s\n    task: %s\n' "$id" "$t"
+        [ "$c" = - ] || printf '    classe: %s\n' "$c"
+        printf '    aberto_em: 2026-09-18\n    resolvido_em: %s\n    descricao: "%s"\n' "$r" "$d"
+      done
+      printf -- '---\n\n# Bloqueios\n\n'
+      for e in "$@"; do IFS='|' read -r id t c r d <<EOF
+$e
+EOF
+        printf '%s | %s | %s | destravaria\n' "$id" "$t" "$d"; done
+    } > "$a"
+  }
+
+  C="$(projeto_p01 c1)"; cd "$C"
+  BASE="$(git rev-parse HEAD)"
+  feature_nasce ft-01 "$BASE" c1; WT="$TMP_RAIZ/c1/wt-ft-01"
+  E="$WT/docs/entregas/ft-01/ENTREGA.md"; BLQ="$WT/docs/sprintx/features/ft-01/00-BLOQUEIOS.md"
+  sx_f1 "$WT" ft-01; sx_f2 "$WT" ft-01; sx_f3 "$WT" ft-01; sx_f4 "$WT" ft-01
+  sx_f5 "$WT" ft-01 sim >/dev/null
+  mkdir -p "$WT/src"; printf 'codigo\n' > "$WT/src/cabecalho.tsx"
+  cm "$WT" -m "feat: T-04.01" -m "Task: T-04.01"
+
+  # O piloto: T-04.03 precisa alterar arquivo fora do ownership. A F6 registra
+  # pelo único escritor de B-NN, com a classe do caminho; o portão dá V1 + V7.
+  DESC_PILOTO='T-04.03 precisa alterar tests/ui/cabecalho-topo.test.tsx, arquivo fora do ownership da task'
+  caso "P02.piloto o B-01 nasce pelo bloqueios.sh real" "id=B-01 task=T-04.03 classe=defeito_de_plano" \
+    "$(SPRINTX_RAIZ="$WT" bash "$SPRINTX_BLOQUEIOS" registrar ft-01 T-04.03 defeito_de_plano "$DESC_PILOTO" "incluir o teste nos arquivos da task" | tr '\n' ' ' | sed 's/ $//')"
+  entrega_portao "$E" v7 v1
+  caso "P02.piloto falhas_portao [v1, v7] -> causa bloqueio_aberto" "falhas_portao: [v1, v7] causa: bloqueio_aberto" \
+    "$(grep -E '^(falhas_portao|causa): ' "$E" | tr '\n' ' ' | sed 's/ $//')"
+  caso "P02.piloto a gravacao nova passa no validador da mergex" "causa=bloqueio_aberto" "$(bash "$MERGEX_CAUSA" --validar "$E")"
+  cm "$WT" -m "chore(mergex): registro do bloqueio"
+  H1="$(git rev-parse feature/ft-01)"; REF="$H1:docs/entregas/ft-01/ENTREGA.md"
+  caso "P02.piloto entrega terminal bloqueada"           bloqueada "$(entrega_terminal ft-01)"
+  caso "P02.piloto a retomada vai a triagem, nao a F6"   R:entrega_bloqueada "$(retomada_decide ft-01 "$BASE" em_andamento buildx/c1)"
+  caso "P02.piloto a causa commitada e a da mergex"      bloqueio_aberto "$(causa_commitada "$REF")"
+  caso "P02.piloto classe pela classe do B-01, nunca pela descricao" \
+    "trabalho_novo entrega_bloqueada/causa_bloqueio_aberto/classe_defeito_de_plano" "$(classe_da_entrega "$REF")"
+  caso "P02.piloto o gatilho entrega_bloqueada decide igual" \
+    "trabalho_novo entrega_bloqueada/causa_bloqueio_aberto/classe_defeito_de_plano" "$(classe_da_tabela entrega_bloqueada "$REF")"
+
+  # A descrição muda inteira, commitada: o resultado não muda.
+  for d in 'Credencial de sandbox ausente; precisa de decisao humana sobre a regra de negocio' \
+           'Falha tecnica: a suite inteira ficou vermelha' \
+           'lacuna_de_decisao prerequisito_ausente task_reivindicada suite_vermelha' \
+           'x'; do
+    sed -i "s#^    descricao: .*#    descricao: \"$d\"#; s#^B-01 | T-04.03 | .*#B-01 | T-04.03 | $d | outra coisa#" "$BLQ"
+    cm "$WT" -m "fixture: descricao reescrita"
+    caso "P02.piloto descricao '$d': mesma classe" "trabalho_novo entrega_bloqueada/causa_bloqueio_aberto/classe_defeito_de_plano" \
+      "$(classe_da_entrega "$(git rev-parse feature/ft-01):docs/entregas/ft-01/ENTREGA.md")"
+  done
+  caso "P02.piloto a descricao commitada mudou mesmo" sim \
+    "$(sim_nao eval "git show feature/ft-01:docs/sprintx/features/ft-01/00-BLOQUEIOS.md | grep -qx '    descricao: \"x\"'")"
+  # Working tree não conta: a classe mudada sem commit não muda nada.
+  sed -i 's/^    classe: defeito_de_plano$/    classe: prerequisito_ausente/' "$BLQ"
+  caso "P02.piloto B-NN so no working tree nao conta" \
+    "trabalho_novo entrega_bloqueada/causa_bloqueio_aberto/classe_defeito_de_plano" \
+    "$(classe_da_entrega "$(git rev-parse feature/ft-01):docs/entregas/ft-01/ENTREGA.md")"
+  git -C "$WT" checkout -q -- "docs/sprintx/features/ft-01/00-BLOQUEIOS.md"
+  H2="$(git rev-parse feature/ft-01)"; REF2="$H2:docs/entregas/ft-01/ENTREGA.md"
+
+  # O caminho integrado: triagem -> PEND commitada -> B5 -> PEND persistida.
+  caso "P02.persiste a triagem registra a entrega bloqueada" sim \
+    "$(sim_nao registra_entrega_bloqueada "$BASE" ft-01 FT-01 buildx/c1)"
+  REC=docs/projeto/RECURSAO.md
+  pc() { git show "HEAD:$REC" > "$TMP_RAIZ/c1-rec.md"; pend_campo "$TMP_RAIZ/c1-rec.md" PEND-01 "$1"; }
+  caso "P02.persiste um commit de estado, publicado"     "$(git rev-parse HEAD)" "$(git rev-parse origin/buildx/c1)"
+  caso "P02.persiste a CONTROL avancou um commit"        "$BASE" "$(git rev-parse HEAD~1)"
+  caso "P02.persiste a feature bloqueada no MAPA"        "bloqueada entrega_bloqueada PEND-01" \
+    "$(git show HEAD:docs/projeto/MAPA.md > "$TMP_RAIZ/c1-mapa.md"; for k in Status 'Bloqueada por' Pendência; do mapa_valor "$TMP_RAIZ/c1-mapa.md" FT-01 "$k"; done | tr '\n' ' ' | sed 's/ $//')"
+  caso "P02.persiste PEND commitada aguardando"          "aguardando_classificacao null entrega_bloqueada" "$(pc estado) $(pc classe) $(pc gatilho)"
+  caso "P02.persiste a causa copiada da mergex"          bloqueio_aberto "$(pc causa)"
+  caso "P02.persiste a clausula central e a causa"       bloqueio_aberto "$(pc clausula_central)"
+  caso "P02.persiste a evidencia: ENTREGA e BLOQUEIOS no mesmo HEAD" \
+    "feature/ft-01@$REF2 ; feature/ft-01@$H2:docs/sprintx/features/ft-01/00-BLOQUEIOS.md" "$(pc evidencia)"
+  caso "P02.persiste a feature nao recebeu commit"       "$H2" "$(git rev-parse feature/ft-01)"
+  caso "P02.persiste a ENTREGA nao foi reaberta"         "bloqueado bloqueado bloqueio_aberto" \
+    "$(campo_commitado ft-01 estado) $(campo_commitado ft-01 portao) $(campo_commitado ft-01 causa)"
+
+  cp "$REC" "$TMP_RAIZ/c1-trocada.md"; pend_define "$TMP_RAIZ/c1-trocada.md" PEND-01 causa suite_reprovada
+  caso "P02.persiste causa da PEND diferente da commitada: o B5 para" nao \
+    "$(sim_nao b5_classifica "$TMP_RAIZ/c1-trocada.md" PEND-01 docs/projeto/MAPA.md FT-03 ft-01-v2)"
+  caso "P02.persiste e nada foi gravado nela"            aguardando_classificacao "$(pend_campo "$TMP_RAIZ/c1-trocada.md" PEND-01 estado)"
+
+  caso "P02.persiste o B5 classifica pela evidencia commitada" sim \
+    "$(sim_nao b5_classifica "$REC" PEND-01 docs/projeto/MAPA.md FT-03 ft-01-v2)"
+  caso "P02.persiste o RECURSAO continua valido"         sim "$(sim_nao recursao_valida "$REC")"
+  fm_incrementa "$REC" ciclo_atual
+  git add -A && git commit -q -m "chore(buildx): ciclo 2 da recursão" && git push -q origin buildx/c1
+  caso "P02.persiste PEND persistida: estado e classe"   "em_resolucao trabalho_novo" "$(pc estado) $(pc classe)"
+  caso "P02.persiste PEND persistida: regra deterministica" entrega_bloqueada/causa_bloqueio_aberto/classe_defeito_de_plano "$(pc regra_aplicada)"
+  caso "P02.persiste PEND persistida: sucessora"         "FT-03 FT-01 ft-01-v2" "$(pc destino) $(pc sucede) $(pc slug_sucessora)"
+  caso "P02.persiste nenhuma falha_tecnica persistida"   "" "$(git show "HEAD:$REC" | grep falha_tecnica || true)"
+  caso "P02.persiste a sucessora esta no MAPA commitado" "pendente recursao FT-01" \
+    "$(git show HEAD:docs/projeto/MAPA.md > "$TMP_RAIZ/c1-mapa.md"; for k in Status Origem Sucede; do mapa_valor "$TMP_RAIZ/c1-mapa.md" FT-03 "$k"; done | tr '\n' ' ' | sed 's/ $//')"
+  caso "P02.persiste reclassificar a mesma PEND e recusado" nao \
+    "$(sim_nao b5_classifica "$REC" PEND-01 docs/projeto/MAPA.md FT-04 ft-01-v3)"
+
+  # A mesma evidência em outro projeto, com outra descrição: mesma classe, mesma regra.
+  caso "P02.persiste a evidencia antiga ainda classifica igual" \
+    "trabalho_novo entrega_bloqueada/causa_bloqueio_aberto/classe_defeito_de_plano" "$(classe_da_entrega "$REF")"
+
+  # A matriz. Cada fixture é um commit na feature; a leitura é sempre pelo HEAD.
+  cl() { classe_da_entrega "$(git rev-parse feature/ft-01):docs/entregas/ft-01/ENTREGA.md"; }
+  R=entrega_bloqueada/causa_bloqueio_aberto
+
+  for v in "v10 segredo_no_diff decisao_humana" "v6 auditoria_reprovada decisao_humana" \
+           "v8 legado_incompleto decisao_humana" "v9 arquivo_fora_do_plano trabalho_novo" \
+           "v1 tarefa_nao_concluida decisao_humana" "v2 suite_reprovada trabalho_novo" \
+           "v3 teste_nao_declarado trabalho_novo" "v4 regressao_nao_declarada decisao_humana" \
+           "v5 qa_nao_aprovado decisao_humana"; do
+    set -- $v
+    entrega_portao "$E" "$1"; cm "$WT" -m "fixture: $1"
+    caso "P02.matriz $1 grava $2"                  "$2" "$(campo_commitado ft-01 causa)"
+    caso "P02.matriz $1 $2 -> $3"                  "$3 entrega_bloqueada/causa_$2" "$(cl)"
+  done
+  entrega_portao "$E" v1 v2 v9; cm "$WT" -m "fixture: v1 v2 v9"
+  caso "P02.matriz precedencia da mergex: v9 vence v1 e v2" "trabalho_novo entrega_bloqueada/causa_arquivo_fora_do_plano" "$(cl)"
+
+  entrega_portao "$E" v1 v7_sem_prova; cm "$WT" -m "fixture: indeterminada"
+  caso "P02.matriz indeterminada: a mergex grava assim"  indeterminada "$(campo_commitado ft-01 causa)"
+  caso "P02.matriz indeterminada -> causa nao commitada" "decisao_humana entrega_bloqueada/causa_nao_commitada" "$(cl)"
+  entrega_reg "$E" bloqueado bloqueado - -; cm "$WT" -m "fixture: legado sem causa"
+  caso "P02.legado ENTREGA sem causa: ausente, nunca inferida" ausente \
+    "$(causa_commitada "$(git rev-parse feature/ft-01):docs/entregas/ft-01/ENTREGA.md")"
+  caso "P02.legado ENTREGA sem causa -> causa_nao_commitada" "decisao_humana entrega_bloqueada/causa_nao_commitada" "$(cl)"
+  caso "P02.legado continua terminal para a retomada"    R:entrega_bloqueada "$(retomada_decide ft-01 "$BASE" em_andamento buildx/c1)"
+  caso "P02.legado nenhuma migracao: a feature nao ganhou causa" "" "$(campo_commitado ft-01 causa)"
+
+  # Inconsistências: nada classificado.
+  entrega_reg "$E" bloqueado bloqueado '[v2]' falha_tecnica; cm "$WT" -m "fixture: causa desconhecida"
+  caso "P02.incons causa desconhecida (falha_tecnica): falha fechada" nao "$(sim_nao cl)"
+  entrega_reg "$E" bloqueado bloqueado '[v1]' suite_reprovada; cm "$WT" -m "fixture: causa nao derivada"
+  caso "P02.incons causa que nao e a derivada das falhas: falha fechada" nao "$(sim_nao cl)"
+  entrega_reg "$E" bloqueado bloqueado - suite_reprovada; cm "$WT" -m "fixture: causa sem falhas"
+  caso "P02.incons causa sem falhas_portao: falha fechada" nao "$(sim_nao cl)"
+  entrega_reg "$E" bloqueado bloqueado '[v2]' -; cm "$WT" -m "fixture: falhas sem causa"
+  caso "P02.incons falhas_portao sem causa: falha fechada" nao "$(sim_nao cl)"
+  entrega_reg "$E" bloqueado bloqueado '[v2]' null; cm "$WT" -m "fixture: bloqueado com causa null"
+  caso "P02.incons bloqueado com causa null: falha fechada" nao "$(sim_nao cl)"
+  entrega_reg "$E" aberto bloqueado '[v2]' null; cm "$WT" -m "fixture: aberto"
+  caso "P02.incons entrega aberta nao tem causa a classificar" nao "$(sim_nao cl)"
+  caso "P02.incons ref que nao existe: falha fechada"   nao "$(sim_nao classe_da_entrega "$(git rev-parse feature/ft-01):docs/entregas/outra/ENTREGA.md")"
+
+  # bloqueio_aberto: os B-NN do mesmo HEAD.
+  entrega_portao "$E" v1 v7
+  bl_arq "$BLQ" "B-01|T-04.03|defeito_de_plano|2026-09-18|resolvido"; cm "$WT" -m "fixture: V7 sem aberto"
+  caso "P02.incons V7 sem B-NN aberto: falha fechada, sem classe inventada" nao "$(sim_nao cl)"
+  bl_arq "$BLQ" "B-01|T-04.03|defeito_de_plano|null|a" "B-02|T-04.04|defeito_de_plano|null|b"; cm "$WT" -m "fixture: dois da mesma classe"
+  caso "P02.bnn varios abertos da mesma classe: a classe deles" "trabalho_novo $R/classe_defeito_de_plano" "$(cl)"
+  bl_arq "$BLQ" "B-01|T-04.03|defeito_de_plano|null|a" "B-02|T-04.04|prerequisito_ausente|null|b"; cm "$WT" -m "fixture: divergentes"
+  caso "P02.bnn classes diferentes: decisao_humana, sem escolher" "decisao_humana $R/classes_divergentes" "$(cl)"
+  bl_arq "$BLQ" "B-01|T-04.03|prerequisito_ausente|null|a" "B-02|T-04.04|defeito_de_plano|null|b"; cm "$WT" -m "fixture: divergentes invertidos"
+  caso "P02.bnn classes diferentes em outra ordem: o mesmo" "decisao_humana $R/classes_divergentes" "$(cl)"
+  bl_arq "$BLQ" "B-01|T-04.03|lacuna_de_decisao|2026-09-18|a" "B-02|T-04.04|prerequisito_ausente|null|b"; cm "$WT" -m "fixture: resolvido de outra classe"
+  caso "P02.bnn resolvido de outra classe nao conta" "recurso_externo $R/classe_prerequisito_ausente" "$(cl)"
+  for c in "suite_vermelha trabalho_novo" "lacuna_de_decisao decisao_humana" "task_reivindicada decisao_humana" "prerequisito_ausente recurso_externo"; do
+    set -- $c
+    bl_arq "$BLQ" "B-01|null|$1|null|defeito de plano, arquivo fora do ownership"; cm "$WT" -m "fixture: $1"
+    caso "P02.bnn $1 -> $2" "$2 $R/classe_$1" "$(cl)"
+  done
+  bl_arq "$BLQ" "B-01|T-04.03|-|null|arquivo fora do ownership: defeito de plano"; cm "$WT" -m "fixture: legado"
+  caso "P02.legado B-NN sem classe: decisao_humana, sem ler a descricao" "decisao_humana $R/bloqueio_legado" "$(cl)"
+  caso "P02.legado a sprintx o le como legado" legado \
+    "$(bloqueios_commitados "$(git rev-parse feature/ft-01)" ft-01 | cut -f3)"
+  bl_arq "$BLQ" "B-01|T-04.02|-|null|antigo" "B-02|T-04.03|defeito_de_plano|null|novo"; cm "$WT" -m "fixture: legado + tipado"
+  caso "P02.legado legado + tipado abertos: decisao_humana" "decisao_humana $R/bloqueio_legado" "$(cl)"
+  bl_arq "$BLQ" "B-01|T-04.02|-|2026-09-18|antigo" "B-02|T-04.03|defeito_de_plano|null|novo"; cm "$WT" -m "fixture: legado resolvido"
+  caso "P02.legado legado resolvido + tipado aberto: a classe do tipado" "trabalho_novo $R/classe_defeito_de_plano" "$(cl)"
+  bl_arq "$BLQ" "B-01|T-04.03|bug_misterioso|null|a"; cm "$WT" -m "fixture: classe desconhecida"
+  caso "P02.incons classe fora do enum da sprintx: falha fechada" nao "$(sim_nao cl)"
+  bl_arq "$BLQ" "B-01|T-04.03|null|null|a"; cm "$WT" -m "fixture: classe null"
+  caso "P02.incons classe null: falha fechada" nao "$(sim_nao cl)"
+  bl_arq "$BLQ" "B-01|T-04.02|defeito_de_plano|null|a" "B-02|T-04.03|-|null|b"; cm "$WT" -m "fixture: legado depois de tipado"
+  caso "P02.incons legado depois de tipado: falha fechada" nao "$(sim_nao cl)"
+  bl_arq "$BLQ" "B-01|T-04.03|defeito_de_plano|null|a"; sed -i 's/^bloqueios:$/bloqueios:\n    lixo fora da forma/' "$BLQ"
+  cm "$WT" -m "fixture: malformado"
+  caso "P02.incons registro malformado: a sprintx o recusa" nao \
+    "$(sim_nao bloqueios_commitados "$(git rev-parse feature/ft-01)" ft-01)"
+  caso "P02.incons registro malformado: falha fechada"  nao "$(sim_nao cl)"
+  bl_arq "$BLQ" "B-01|T-04.03|defeito_de_plano|null|a"; sed -i '/^kind: bloqueios$/d' "$BLQ"; cm "$WT" -m "fixture: sem kind"
+  caso "P02.incons arquivo sem kind: bloqueios: falha fechada" nao "$(sim_nao cl)"
+  git -C "$WT" rm -q "docs/sprintx/features/ft-01/00-BLOQUEIOS.md"; cm "$WT" -m "fixture: sem bloqueios"
+  caso "P02.incons arquivo de bloqueios ausente: falha fechada" nao "$(sim_nao cl)"
+  bl_arq "$BLQ" "B-01|T-04.03|defeito_de_plano|null|a"
+  caso "P02.incons bloqueios so no working tree: falha fechada" nao "$(sim_nao cl)"
+  caso "P02.mesmo HEAD o sha antigo continua lendo os B-NN dele" \
+    "trabalho_novo $R/classe_defeito_de_plano" "$(classe_da_entrega "$REF2")"
+  rm -f "$BLQ"
+
+  # A triagem não registra o que não classifica: a CONTROL fica em BASE_SHA.
+  for f in "falha_tecnica" "bloqueio_aberto_sem_bnn"; do
+    C="$(projeto_p01 "c-$f")"; cd "$C"
+    BASE="$(git rev-parse HEAD)"
+    feature_nasce ft-01 "$BASE" "c-$f"; WT="$TMP_RAIZ/c-$f/wt-ft-01"
+    if [ "$f" = falha_tecnica ]; then entrega_reg "$WT/docs/entregas/ft-01/ENTREGA.md" bloqueado bloqueado '[v2]' falha_tecnica
+    else entrega_portao "$WT/docs/entregas/ft-01/ENTREGA.md" v1 v7; fi
+    cm "$WT" -m "chore(mergex): registro do bloqueio"
+    caso "P02.triagem $f: a entrega e terminal"          bloqueada "$(entrega_terminal ft-01)"
+    caso "P02.triagem $f: nao registra"                  nao "$(sim_nao registra_entrega_bloqueada "$BASE" ft-01 FT-01 "buildx/c-$f")"
+    caso "P02.triagem $f: a CONTROL fica em BASE_SHA"    "$BASE $BASE" "$(git rev-parse HEAD) $(git rev-parse "origin/buildx/c-$f")"
+    caso "P02.triagem $f: nenhum RECURSAO, arvore limpa" "nao " "$(sim_nao test -e docs/projeto/RECURSAO.md) $(git status --porcelain)"
+  done
+fi
+cd "$REPO"
+fi  # causa
 
 if bloco decisoes; then
 echo

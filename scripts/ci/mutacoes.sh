@@ -13,7 +13,11 @@
 # resolver destino que o MAPA não tem — e, desde o P0.2, deixar o planejamento
 # F6 vencer a ENTREGA terminal commitada, aceitar ENTREGA só no working tree e
 # inferir bloqueio de registro inconsistente, e deixar o CHECKPOINT pendente
-# vencer a ENTREGA terminal — e exige que o harness FALHE.
+# vencer a ENTREGA terminal — e, no P0.2-A7, voltar a inferir `falha_tecnica` da
+# descrição do B-NN, escolher a primeira classe quando há classes diferentes,
+# tratar B-NN legado como tipado, aceitar `indeterminada` como causa conhecida,
+# ignorar a V7 sem B-NN aberto e ler os B-NN do working tree — e exige que o
+# harness FALHE.
 # Mutação que sobrevive é teste que falta.
 #
 # O repositório real nunca é alterado: a cópia vive num diretório temporário e é
@@ -21,7 +25,7 @@
 #
 # Uso: bash scripts/ci/mutacoes.sh              # todas, em paralelo
 #      bash scripts/ci/mutacoes.sh M1 M4        # só as nomeadas
-#      SPRINTX_REPO=/caminho/da/sprintx bash scripts/ci/mutacoes.sh
+#      SPRINTX_REPO=/caminho/da/sprintx MERGEX_REPO=/caminho/da/mergex bash scripts/ci/mutacoes.sh
 
 set -uo pipefail
 
@@ -29,6 +33,7 @@ REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 export SPRINTX_REPO="${SPRINTX_REPO:-$REPO/../sprintx}"
+export MERGEX_REPO="${MERGEX_REPO:-$REPO/../mergex}"
 
 HARNESS=scripts/ci/integracao.sh
 RECURSAO_REF=.claude/skills/buildx/references/06-recursao.md
@@ -167,6 +172,39 @@ EOF
   case "$(entrega_terminal "$slug")" in                                    # [M17]
 EOF
       ;;
+    M21) # voltar a inferir falha_tecnica da descrição do B-NN
+      troca "$d/$HARNESS" '# [M21]' <<'EOF'
+  git show "$sha:docs/sprintx/features/$slug/00-BLOQUEIOS.md" 2>/dev/null | grep -qiE '^    descricao: .*(arquivo|teste|suite)' &&
+    { echo "trabalho_novo entrega_bloqueada/falha_tecnica"; return 0; }
+  lista="$(bloqueios_commitados "$sha" "$slug")" || return 1                # [M21]
+EOF
+      ;;
+    M22) # escolher a primeira classe quando há abertos de classes diferentes
+      troca "$d/$HARNESS" '# [M22]' <<'EOF'
+  abertas="$(printf '%s\n' "$abertas" | head -1)"; if false; then           # [M22]
+EOF
+      ;;
+    M23) # tratar o B-NN legado como se tivesse classe
+      troca "$d/$HARNESS" '# [M23]' <<'EOF'
+  abertas="$(printf '%s\n' "$abertas" | sed 's/^legado$/defeito_de_plano/')"; if false; then   # [M23]
+EOF
+      ;;
+    M24) # aceitar `indeterminada` como causa conhecida
+      troca "$d/$HARNESS" '# [M24]' <<'EOF'
+    ausente) echo "decisao_humana $r/causa_nao_commitada" ;;                # [M24]
+    indeterminada) echo "trabalho_novo $r/causa_indeterminada" ;;
+EOF
+      ;;
+    M25) # ignorar a V7 sem nenhum B-NN aberto
+      troca "$d/$HARNESS" '# [M25]' <<'EOF'
+  [ -n "$abertas" ] || abertas=defeito_de_plano                             # [M25]
+EOF
+      ;;
+    M26) # ler os B-NN do working tree, e não do mesmo HEAD da ENTREGA
+      troca "$d/$HARNESS" '# [M26]' <<'EOF'
+  if cat "$(worktree_da_branch "$2")/$pasta/00-BLOQUEIOS.md" > "$raiz/$pasta/00-BLOQUEIOS.md" 2>/dev/null; then   # [M26]
+EOF
+      ;;
     *) echo "mutacao desconhecida: $1" >&2; return 1 ;;
   esac
 }
@@ -187,6 +225,7 @@ blocos() {
     M11|M12|M14|M15|M16) echo "convergencia" ;;
     M13) echo "recursao convergencia" ;;
     M17|M18|M19|M20) echo "entrega" ;;
+    M21|M22|M23|M24|M25|M26) echo "causa" ;;
   esac
 }
 
@@ -194,7 +233,7 @@ roda() { # roda <nome> <arvore> <blocos> -> grava <nome>.log e <nome>.rc
   ( cd "$TMP" && BLOCOS="$3" bash "$2/$HARNESS" > "$TMP/$1.log" 2>&1; echo $? > "$TMP/$1.rc" )
 }
 
-MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20}"
+MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23 M24 M25 M26}"
 TODOS_BLOCOS="$(for m in $MUTACOES; do blocos "$m"; done | tr ' ' '\n' | sort -u | tr '\n' ' ')"
 
 echo "controle — a árvore sem mutação passa nos blocos: $TODOS_BLOCOS"
