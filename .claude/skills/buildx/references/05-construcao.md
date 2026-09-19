@@ -387,7 +387,7 @@ git show feature/<slug>:docs/sprintx/features/<slug>/FECHAMENTO.md
 
 | Arquivo | Quem grava | O que o buildx lê |
 |---|---|---|
-| `docs/entregas/<slug>/ENTREGA.md` | mergex, no E8 | `estado`, `portao`, `pr_url`, `pr_estado`, `push_feito`, `desvios`, `entregue_em` |
+| `docs/entregas/<slug>/ENTREGA.md` | mergex, no E8 | `estado`, `portao`, `falhas_portao`, `causa`, `pr_url`, `pr_estado`, `push_feito`, `desvios`, `entregue_em` |
 | `docs/sprintx/features/<slug>/FECHAMENTO.md` | sprintx, ao fim da F6 | `fechado_em`, `resumo`, `risco_residual`, `testes_adicionados` |
 
 Nenhum campo além desses é inventado: são os que os contratos das duas skills declaram.
@@ -401,7 +401,7 @@ Nenhum campo além desses é inventado: são os que os contratos das duas skills
 | O que o `ENTREGA.md` diz | `MAPA.md` | O que registrar |
 |---|---|---|
 | `estado: entregue` e `portao: pronto` | **`entregue`** | `pr_url` quando houver, os testes de `testes_adicionados`, e o `risco_residual` do fechamento |
-| `portao: bloqueado` (com `estado: bloqueado`) | **`bloqueada`** | pela triagem terminal, gatilho `entrega_bloqueada`: o motivo que o portão registrou, e os `desvios`, se houver |
+| `portao: bloqueado` (com `estado: bloqueado`) | **`bloqueada`** | pela triagem terminal, gatilho `entrega_bloqueada`: a `causa` enumerada que o E8 gravou (`null` no registro anterior à chave), e os `desvios`, se houver — nunca a narrativa |
 | `estado: aberto` depois de a F6 ter devolvido o controle | **`bloqueada`** | pela triagem terminal, gatilho `entrega_interrompida`; a causa é a que está commitada na feature |
 
 Nas duas linhas de bloqueio, o `ENTREGA.md` lido é o **commitado** — é ele a evidência que autoriza a `CONTROL` a avançar.
@@ -588,7 +588,7 @@ O buildx **não marca uma feature `bloqueada` com base no relato do modelo.** An
 | Gatilho | Evidência exigida antes de mover a `CONTROL` |
 |---|---|
 | `orcamento_f5_esgotado` | o portão terminal pré-F6 inteiro, A a I: `00-PLANEJAMENTO.md` e `00-AUDITORIA.md` commitados, sprintx fora de `CHECKPOINT`, nenhum produto antes da F6 |
-| `entrega_bloqueada` · `entrega_interrompida` | o `ENTREGA.md` **commitado** na branch, como no P0 (passo 6) |
+| `entrega_bloqueada` · `entrega_interrompida` | o `ENTREGA.md` **commitado** na branch, como no P0 (passo 6). Em `entrega_bloqueada`, a `causa` dele precisa se deixar classificar pela tabela do B5 (`references/06-recursao.md`, D-36) — com `bloqueio_aberto`, pelo `00-BLOQUEIOS.md` commitado no **mesmo** `HEAD` —; registro que não se deixa classificar é inconsistência: pare e relate |
 | `incompatibilidade_de_versao` | o artefato esperado **comprovadamente ausente** no `HEAD` da feature, e o estado da feature commitado quando o dono dele existe (passo 6) |
 | `dependencia_nao_integrada` | o portão 2 falhando pelo Git — a feature nem chegou a nascer |
 | `regra_de_negocio_nao_declarada` · `recurso_externo_ausente` | o registro commitado na feature, lido e nunca escrito pelo buildx — o bloqueio no `ENTREGA.md` ou no `00-BLOQUEIOS.md` da sprintx —, ou a premissa provisória no `BUILDX-PREMISSAS.md` |
@@ -605,6 +605,8 @@ Provado o terminal, a janela se encerra, e **um único commit de estado** regist
    feature/<slug>@<HEAD>:docs/sprintx/features/<slug>/00-PLANEJAMENTO.md
    feature/<slug>@<HEAD>:docs/sprintx/features/<slug>/00-AUDITORIA.md
    ```
+
+   Para a entrega bloqueada, a `evidencia` é `feature/<slug>@<HEAD>:docs/entregas/<slug>/ENTREGA.md` — mais `feature/<slug>@<HEAD>:docs/sprintx/features/<slug>/00-BLOQUEIOS.md`, no mesmo `<HEAD>`, quando a causa é `bloqueio_aberto` —, e a `causa` da pendência é a do registro, copiada.
 
    E `pr_reservadas` com os `PR-NN` do `BUILDX-PREMISSAS.md` commitado da feature — reservados, nunca reutilizados (`references/06-recursao.md`, passo 7). Se a feature bloqueada é ela mesma uma sucessora, a pendência nova leva `raiz: PEND-NN`.
 

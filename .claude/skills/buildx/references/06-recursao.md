@@ -57,7 +57,7 @@ Cada pendência é um bloco `### PEND-NN — <assunto>` com uma linha `- chave: 
 | `origem` | `FT-NN`, ou a etapa (`b1`, `b2`, `b6`) que a levantou |
 | `ciclo` | o ciclo em que foi detectada |
 | `evidencia` | referências **commitadas**, `feature/<slug>@<sha>:<caminho>` (ou `buildx/<projeto_id>@<sha>:<caminho>`), separadas por ` ; ` |
-| `causa` | nas entregas: o gatilho que a evidência commitada aponta; senão `null` |
+| `causa` | em `entrega_bloqueada`: a `causa` do `ENTREGA.md` commitado, **copiada** do enum da mergex (`null` quando o registro é anterior à chave); em `entrega_interrompida`: o gatilho que a evidência commitada aponta; senão `null` |
 | `clausula_central` | o que o detector de laço compara (passo 5) |
 | `raiz` | `PEND-NN` da pendência que a sucessora bloqueada tentava resolver; senão `null` |
 | `detectada_em` · `classificada_em` · `resolvida_em` | datas `AAAA-MM-DD`, ou `null` |
@@ -92,7 +92,7 @@ Determinística: a mesma evidência commitada dá sempre a mesma classe. Nenhuma
 | `incompatibilidade_de_versao` | `decisao_humana` | `incompatibilidade_de_versao` |
 | `violacao_de_convencao` | `trabalho_novo` | `violacao_de_convencao` |
 | `dependencia_nao_integrada` | a classe da pendência raiz — a da dependência que não integrou —, quando identificável; senão `decisao_humana`, com a ambiguidade na `evidencia` | `dependencia_nao_integrada/segue_raiz` · `/raiz_ambigua` |
-| `entrega_bloqueada` | pela `causa` commitada: um gatilho desta tabela → a classe dele; `falha_tecnica` (portão reprovado por suíte, cobertura ou escopo) → `trabalho_novo`; sem causa commitada identificável → `decisao_humana` | `entrega_bloqueada/causa_<gatilho>` · `/falha_tecnica` · `/causa_nao_commitada` |
+| `entrega_bloqueada` | pela `causa` enumerada do `ENTREGA.md` commitado e, com `bloqueio_aberto`, pela `classe` dos `B-NN` abertos no mesmo `HEAD` — abaixo | `entrega_bloqueada/causa_<causa>` · `/causa_bloqueio_aberto/classe_<classe>` · `/causa_bloqueio_aberto/classes_divergentes` · `/causa_bloqueio_aberto/bloqueio_legado` · `/causa_nao_commitada` |
 | `entrega_interrompida` | pela `causa` commitada, quando ela é um gatilho desta tabela; senão `trabalho_novo` — tecnicamente resolvível sem decisão | `entrega_interrompida/causa_<gatilho>` · `/resolvivel_sem_decisao` |
 
 ### `orcamento_f5_esgotado` — os prefixos `[item N]` da sprintx
@@ -106,6 +106,53 @@ Leia a `00-AUDITORIA.md` **commitada** da rodada terminal (a referência está n
 **Mistura:** o `[item 7]` vence, porque exige decisão humana e nenhuma sucessora a produz; sem `[item 7]`, o `[item 8]` vence. Nenhuma `ALTA` na auditoria terminal é contrato quebrado — `orcamento_esgotado` só existe com `VEREDITO: NÃO` —: **pare e relate**.
 
 A regra que decidiu vai para `regra_aplicada`, literalmente. **Nunca tente reabrir a feature antiga.**
+
+### `entrega_bloqueada` — a causa da mergex e o `B-NN` tipado (D-36)
+
+**Nada aqui lê prosa.** Nem a narrativa do `ENTREGA.md`, nem a `descricao` do `B-NN`, nem a linha `B-NN | …`: a classe sai só de campos tipados, lidos **commitados** no `HEAD` da feature que a `evidencia` cita — o mesmo `HEAD` em que a entrega terminal foi lida (D-35). Cada registro é lido pelo seu dono:
+
+- a `causa` do `ENTREGA.md`, pela leitura histórica da mergex: `git show <sha>:docs/entregas/<slug>/ENTREGA.md | bash <mergex>/scripts/causa-do-portao.sh --validar-historico -` → `causa=<valor>` ou `causa=ausente`;
+- os `B-NN`, pela leitura da sprintx: o `git show <sha>:docs/sprintx/features/<slug>/00-BLOQUEIOS.md` gravado numa raiz temporária, e `SPRINTX_RAIZ=<raiz> bash <sprintx>/scripts/bloqueios.sh listar <slug>` → `id · task · classe|legado · aberto|resolvido`.
+
+`falha_tecnica` não existe: não é valor do enum da mergex, e nenhuma linha desta tabela a produz.
+
+**A causa da mergex → a classe do B5.** Uma causa por verificação do portão (mergex DM-111). A classe é a que uma regra **vigente** do buildx sustenta; sem regra inequívoca, `decisao_humana`.
+
+| `causa` (mergex) | Verificação | Evidência adicional | Classe | Regra vigente que sustenta | `regra_aplicada` |
+|---|---|---|---|---|---|
+| `suite_reprovada` | V2 | — | `trabalho_novo` | portão reprovado por **suíte** → `trabalho_novo` (a antiga linha `falha_tecnica`) | `entrega_bloqueada/causa_suite_reprovada` |
+| `teste_nao_declarado` | V3 | — | `trabalho_novo` | portão reprovado por **cobertura** → `trabalho_novo`; task só conclui com os dois testes (AGENTS, "o que o buildx nunca quebra") | `entrega_bloqueada/causa_teste_nao_declarado` |
+| `arquivo_fora_do_plano` | V9 | — | `trabalho_novo` | portão reprovado por **escopo** → `trabalho_novo`; "sintoma de recorte errado no B3, sinal para o B5" (`integracao/mergex.md`) | `entrega_bloqueada/causa_arquivo_fora_do_plano` |
+| `bloqueio_aberto` | V7 | o `00-BLOQUEIOS.md` commitado no mesmo `HEAD` | pela `classe` dos `B-NN` abertos — abaixo | — | abaixo |
+| `segredo_no_diff` | V10 | — | `decisao_humana` | nenhuma regra o torna trabalho de máquina: "bloqueio absoluto" (`integracao/mergex.md`), e o segredo fica na branch preservada, que o buildx nunca reescreve | `entrega_bloqueada/causa_segredo_no_diff` |
+| `auditoria_reprovada` | V6 | — | `decisao_humana` | o buildx só segue para a F6 com a sprintx em `F6` · `aprovado` · `duravel` (`05-construcao.md`, passo 4): auditoria reprovada na entrega é a sprintx contradizendo a si mesma. A tabela `[item N]` vale para a auditoria terminal do `orcamento_f5_esgotado`, não para esta | `entrega_bloqueada/causa_auditoria_reprovada` |
+| `legado_incompleto` | V8 | — | `decisao_humana` | "o modo legado não se aplica" num projeto do buildx; legado acumulado é manutenção, não recursão (`integracao/mergex.md`) | `entrega_bloqueada/causa_legado_incompleto` |
+| `tarefa_nao_concluida` | V1 | — | `decisao_humana` | sem V7 presente, a task não concluída não aponta `B-NN`: nenhum campo tipado diz por quê | `entrega_bloqueada/causa_tarefa_nao_concluida` |
+| `regressao_nao_declarada` | V4 | — | `decisao_humana` | V4 é só de bug da runx; numa feature da sprintx é `n/a` — nenhuma regra do buildx a cobre | `entrega_bloqueada/causa_regressao_nao_declarada` |
+| `qa_nao_aprovado` | V5 | — | `decisao_humana` | V5 é só da runx; numa feature da sprintx é `n/a` — nenhuma regra do buildx a cobre | `entrega_bloqueada/causa_qa_nao_aprovado` |
+| `indeterminada` | `vN_sem_prova` | — | `decisao_humana` | a própria mergex: quem lê a trata como causa não commitada (DM-114) | `entrega_bloqueada/causa_nao_commitada` |
+| ausente (`ENTREGA.md` anterior às chaves) | — | — | `decisao_humana` | causa não commitada, nunca inferida (DM-116) | `entrega_bloqueada/causa_nao_commitada` |
+
+**`bloqueio_aberto`: a classe do `B-NN` → a classe do B5.** A V7 diz que existe **pelo menos um** bloqueio aberto; ela não escolhe qual. Contam **só** os `B-NN` com `resolvido_em: null`, e **só** pela `classe` gravada (sprintx DS-139).
+
+| `classe` (`B-NN`) | Classe do B5 | Regra vigente que sustenta |
+|---|---|---|
+| `defeito_de_plano` | `trabalho_novo` | um campo do plano aprovado tem de mudar — arquivo fora de `arquivos`, `depende_de`, teste fraco, critério sem task —, que é exatamente o `ALTA` "de qualidade ou de planejamento que a máquina corrige" (`orcamento_f5_esgotado/alta_qualidade_plano`); e a feature velha não é replanejada no B5: o plano novo é de uma sucessora |
+| `suite_vermelha` | `trabalho_novo` | portão reprovado por **suíte** → `trabalho_novo`, a mesma regra de `suite_reprovada` |
+| `prerequisito_ausente` | `recurso_externo` | recurso fora do repositório indisponível: `recurso_externo_ausente` → `recurso_externo`, e o `[item 8]` do orçamento |
+| `lacuna_de_decisao` | `decisao_humana` | falta decisão que a execução não pode tomar: o `[item 7]` do orçamento e `regra_de_negocio_nao_declarada` → `decisao_humana` |
+| `task_reivindicada` | `decisao_humana` | outra sessão tem as tasks: nenhuma regra do buildx cobre concorrência de sessões — sem correspondência inequívoca |
+
+Os `B-NN` abertos, nesta ordem:
+
+1. **nenhum aberto** — a entrega diz V7 e a sprintx não tem bloqueio aberto: **inconsistência**. Pare e relate; nenhuma classe é inventada;
+2. **algum aberto sem `classe`** (legado, sozinho ou misturado a tipados) → `decisao_humana`, `entrega_bloqueada/causa_bloqueio_aberto/bloqueio_legado`. A descrição do legado não é lida;
+3. **abertos de classes diferentes** → `decisao_humana`, `entrega_bloqueada/causa_bloqueio_aberto/classes_divergentes`. Não há precedência entre classes de bloqueio — nem quando as duas levariam à mesma classe do B5;
+4. **um ou vários abertos, todos da mesma classe** → a classe do B5 dela, `entrega_bloqueada/causa_bloqueio_aberto/classe_<classe>`.
+
+**Falha fechada.** Nestes casos nada é classificado, nada é gravado, e o B5 **para e relata**: `ENTREGA.md` que a ref não alcança, ou que não é `bloqueado`/`bloqueado`; registro que a mergex recusa — causa fora do enum, só uma das duas chaves, causa que não é a derivada de `falhas_portao`; `causa` da pendência diferente da commitada; com `bloqueio_aberto`, `00-BLOQUEIOS.md` ausente no mesmo `HEAD`, ou recusado pela sprintx (entrada malformada, classe fora do enum, `classe: null`, legado depois de tipado), ou sem nenhum aberto. Ausente e `indeterminada` não são inconsistência: são causa não commitada, e vão a `decisao_humana`.
+
+Nenhuma migração retroativa: `ENTREGA.md` sem `causa` continua sem `causa`, e `B-NN` sem `classe` continua legado.
 
 ### Compatibilidade
 

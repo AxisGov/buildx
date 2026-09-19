@@ -43,18 +43,22 @@ Dois artefatos, na branch da feature. Só o que os contratos das duas skills dec
 
 | Arquivo | Campos que decidem |
 |---|---|
-| `docs/entregas/<slug>/ENTREGA.md` (mergex, E8) | `estado` (`aberto` \| `entregue` \| `bloqueado`), `portao` (`pronto` \| `bloqueado` \| `null`), `pr_url`, `pr_estado`, `push_feito`, `desvios`, `entregue_em` |
+| `docs/entregas/<slug>/ENTREGA.md` (mergex, E8) | `estado` (`aberto` \| `entregue` \| `bloqueado`), `portao` (`pronto` \| `bloqueado` \| `null`), `falhas_portao`, `causa`, `pr_url`, `pr_estado`, `push_feito`, `desvios`, `entregue_em` |
 | `docs/sprintx/features/<slug>/FECHAMENTO.md` (sprintx, fim da F6) | `fechado_em`, `resumo`, `risco_residual`, `testes_adicionados` |
 
 Regra, no B4 (`references/05-construcao.md`, passo 6):
 
 - `estado: entregue` com `portao: pronto` → feature `entregue` no `MAPA.md`;
-- `portao: bloqueado` → feature `bloqueada`, com o motivo do portão, pelo gatilho `entrega_bloqueada`;
+- `portao: bloqueado` → feature `bloqueada`, com a `causa` que o E8 gravou, pelo gatilho `entrega_bloqueada`;
 - `ENTREGA.md` ainda `aberto` depois de a F6 devolver o controle → gatilho `entrega_interrompida`; `ENTREGA.md` ausente → **incompatibilidade de versão da sprintx** (`incompatibilidade_de_versao`). Nos dois casos, feature `bloqueada` e o laço segue.
 
 Em todos, o `ENTREGA.md` que decide é o **commitado**, e a pendência nasce no mesmo commit de estado que marca a feature `bloqueada` — depois da evidência, nunca antes (`references/05-construcao.md`, "Terminal: aí sim o laço segue").
 
 **`pr_url: null` não é falha.** O contrato da mergex diz isso literalmente: sem a ferramenta do serviço, a descrição fica em `docs/entregas/<slug>/PR.md` e a entrega continua válida. Quem decide é o `portao`.
+
+## A causa do bloqueio é da mergex; a classe é do buildx
+
+Desde a mergex P0.2-A4, o `ENTREGA.md` bloqueado carrega `falhas_portao` e `causa` — uma causa por verificação do portão, derivada mecanicamente, mais `indeterminada`. O buildx **não** recalcula a causa e **não** a lê da prosa: roda a leitura histórica da própria mergex sobre o registro commitado (`git show <sha>:docs/entregas/<slug>/ENTREGA.md | bash <mergex>/scripts/causa-do-portao.sh --validar-historico -`) e traduz o valor pela tabela do B5 (`references/06-recursao.md`, D-36). O que a mergex recusa é inconsistência; `causa=ausente` (registro anterior às chaves) e `indeterminada` são causa não commitada. `falha_tecnica` não é valor da mergex e o buildx não a produz.
 
 ## Os dois tipos de pull request
 

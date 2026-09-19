@@ -740,15 +740,130 @@ classe_da_tabela() { # <gatilho> <argumento: ref da auditoria | causa | classe d
         *" $a "*) [ -n "$a" ] && { echo "$a $g/segue_raiz"; return; } ;;
       esac
       echo "decisao_humana $g/raiz_ambigua" ;;
-    entrega_bloqueada|entrega_interrompida)
+    entrega_bloqueada) classe_da_entrega "$a" ;;
+    entrega_interrompida)
       case " $GATILHOS_DIRETOS " in
         *" $a "*) [ -n "$a" ] && { r="$(classe_da_tabela "$a")"; echo "${r% *} $g/causa_$a"; return; } ;;
       esac
-      if [ "$g" = entrega_interrompida ]; then echo "trabalho_novo $g/resolvivel_sem_decisao"
-      elif [ "$a" = falha_tecnica ]; then echo "trabalho_novo $g/falha_tecnica"
-      else echo "decisao_humana $g/causa_nao_commitada"; fi ;;
+      echo "trabalho_novo $g/resolvivel_sem_decisao" ;;
     *) return 1 ;;
   esac
+}
+
+# --- entrega_bloqueada: a causa enumerada da mergex, e o B-NN tipado (D-36) ---
+#
+# Nada aqui lê prosa: nem a narrativa do ENTREGA.md, nem a `descricao` do B-NN.
+# Quem lê cada registro é o dono dele — a mergex (`causa-do-portao.sh
+# --validar-historico`) e a sprintx (`bloqueios.sh listar`) —, sobre o conteúdo
+# COMMITADO no HEAD da feature. O buildx só traduz o valor tipado.
+
+# A causa MergeX (DM-111) na classe do B5. `bloqueio_aberto` não tem classe
+# sozinha: depende dos B-NN abertos. Ausente (ENTREGA anterior às chaves) e
+# `indeterminada` são causa não commitada. Fora do enum: não classifica.
+classe_da_causa() { # <causa> -> "classe regra"
+  local r=entrega_bloqueada
+  case "$1" in
+    suite_reprovada|teste_nao_declarado|arquivo_fora_do_plano) echo "trabalho_novo $r/causa_$1" ;;
+    segredo_no_diff|auditoria_reprovada|legado_incompleto|tarefa_nao_concluida|regressao_nao_declarada|qa_nao_aprovado)
+      echo "decisao_humana $r/causa_$1" ;;
+    ausente|indeterminada) echo "decisao_humana $r/causa_nao_commitada" ;;   # [M24]
+    *) return 1 ;;
+  esac
+}
+
+# A classe do B-NN da sprintx (DS-139) na classe do B5: a que uma regra vigente
+# sustenta sem ambiguidade; sem regra inequívoca, decisao_humana.
+classe_do_bloqueio() { # <classe sprintx> -> classe do B5
+  case "$1" in
+    defeito_de_plano|suite_vermelha)     echo trabalho_novo ;;
+    prerequisito_ausente)                echo recurso_externo ;;
+    lacuna_de_decisao|task_reivindicada) echo decisao_humana ;;
+    *) return 1 ;;
+  esac
+}
+
+# A V7 diz que existe ao menos um B-NN aberto. Só os abertos contam, e só pela
+# classe gravada. Nenhum aberto: inconsistência. Algum legado, ou classes
+# diferentes: decisão humana — sem ler a descrição, sem precedência entre classes.
+classe_dos_abertos() { # stdin: a saída de bloqueios.sh listar -> "classe regra"
+  local abertas c r=entrega_bloqueada/causa_bloqueio_aberto
+  abertas="$(tr -d '\r' | awk -F'\t' '$4 == "aberto" { print $3 }')"
+  [ -n "$abertas" ] || return 1                                             # [M25]
+  if printf '%s\n' "$abertas" | grep -qx legado; then                       # [M23]
+    echo "decisao_humana $r/bloqueio_legado"; return 0
+  fi
+  if [ "$(printf '%s\n' "$abertas" | sort -u | wc -l | tr -d ' ')" != 1 ]; then   # [M22]
+    echo "decisao_humana $r/classes_divergentes"; return 0
+  fi
+  abertas="$(printf '%s\n' "$abertas" | sort -u)"
+  c="$(classe_do_bloqueio "$abertas")" || return 1
+  echo "$c $r/classe_$abertas"
+}
+
+# A causa do ENTREGA.md commitado na ref, pela leitura histórica da mergex. Só um
+# registro bloqueado/bloqueado tem causa a ler; o que a mergex recusa — causa fora
+# do enum, uma chave sem a outra, causa que não é a derivada de falhas_portao — é
+# inconsistência.
+causa_commitada() { # <sha>:docs/entregas/<slug>/ENTREGA.md -> causa | ausente
+  local e s k
+  [ -n "${MERGEX_CAUSA:-}" ] || return 1
+  e="$(git show "$1" 2>/dev/null)" || return 1
+  for k in estado portao; do
+    [ "$(printf '%s\n' "$e" | tr -d '\r' | grep -c "^$k: ")" = 1 ] || return 1
+  done
+  [ "$(printf '%s\n' "$e" | campo_registro estado):$(printf '%s\n' "$e" | campo_registro portao)" = bloqueado:bloqueado ] || return 1
+  s="$(printf '%s\n' "$e" | bash "$MERGEX_CAUSA" --validar-historico - 2>/dev/null)" || return 1
+  case "$s" in causa=null|causa=) return 1 ;; causa=*) echo "${s#causa=}" ;; *) return 1 ;; esac
+}
+
+# Os B-NN do 00-BLOQUEIOS.md commitado no MESMO sha, pela leitura da sprintx:
+# id, task, classe gravada ou `legado`, aberto|resolvido. Arquivo ausente ou
+# recusado pela sprintx (malformado, classe fora do enum): inconsistência.
+bloqueios_commitados() { # <sha> <slug>
+  local raiz pasta="docs/sprintx/features/$2" saida rc=1
+  [ -n "${SPRINTX_BLOQUEIOS:-}" ] || return 1
+  raiz="$(mktemp -d)"; mkdir -p "$raiz/$pasta"
+  if git show "$1:$pasta/00-BLOQUEIOS.md" > "$raiz/$pasta/00-BLOQUEIOS.md" 2>/dev/null; then   # [M26]
+    saida="$(SPRINTX_RAIZ="$raiz" bash "$SPRINTX_BLOQUEIOS" listar "$2" 2>/dev/null)"; rc=$?
+  fi
+  rm -rf "$raiz"
+  [ "$rc" = 0 ] && printf '%s\n' "$saida"
+}
+
+classe_da_entrega() { # <sha>:docs/entregas/<slug>/ENTREGA.md -> "classe regra"
+  local ref="$1" causa sha slug lista
+  causa="$(causa_commitada "$ref")" || return 1
+  [ "$causa" = bloqueio_aberto ] || { classe_da_causa "$causa"; return; }
+  sha="${ref%%:*}"; slug="${ref#*:docs/entregas/}"; slug="${slug%/ENTREGA.md}"
+  [ "$ref" = "$sha:docs/entregas/$slug/ENTREGA.md" ] || return 1
+  lista="$(bloqueios_commitados "$sha" "$slug")" || return 1                # [M21]
+  printf '%s\n' "$lista" | classe_dos_abertos
+}
+
+# A causa como a pendência a grava: a da mergex, e `null` quando não commitada.
+causa_da_pendencia() { case "$1" in ausente) echo null ;; *) echo "$1" ;; esac; }
+
+# Triagem terminal da entrega bloqueada (D-35, D-36). A evidência é o ENTREGA.md
+# commitado no HEAD da feature — e, com bloqueio_aberto, o 00-BLOQUEIOS.md do
+# mesmo HEAD. Registro que não se deixa classificar não move a CONTROL.
+registra_entrega_bloqueada() { # <base> <slug> <FT> <branch-do-projeto> [raiz]
+  local base="$1" slug="$2" ft="$3" proj="$4" raiz="${5:-null}" rec=docs/projeto/RECURSAO.md head ref causa ev id
+  [ "$(entrega_terminal "$slug")" = bloqueada ] || return 1
+  provas_pre_ff "$base" "feature/$slug" "$proj" || return 1
+  head="$(git rev-parse "feature/$slug")"; ref="$head:docs/entregas/$slug/ENTREGA.md"
+  classe_da_entrega "$ref" >/dev/null || return 1
+  causa="$(causa_da_pendencia "$(causa_commitada "$ref")")"
+  ev="feature/$slug@$ref"
+  [ "$causa" = bloqueio_aberto ] && ev="$ev ; feature/$slug@$head:docs/sprintx/features/$slug/00-BLOQUEIOS.md"
+  [ -f "$rec" ] || recursao_nova "$rec" "${proj#buildx/}"
+  id="$(pend_nova "$rec" "$ft entrega bloqueada" entrega_bloqueada "$ft" "$ev" "$causa" \
+        "$(pr_ids_commitados "$slug")" "$raiz" "$causa")" || return 1
+  mapa_define docs/projeto/MAPA.md "$ft" Status bloqueada
+  mapa_define docs/projeto/MAPA.md "$ft" "Bloqueada por" entrega_bloqueada
+  mapa_define docs/projeto/MAPA.md "$ft" "Pendência" "$id"
+  fm_incrementa docs/projeto/PROJETO.md features_bloqueadas
+  git add docs/projeto && git commit -q -m "chore(buildx): $ft bloqueada" || return 1
+  if git rev-parse --verify --quiet "refs/remotes/origin/$proj" >/dev/null; then git push -q origin "$proj" || return 1; fi
 }
 
 # A referência `feature/<slug>@<sha>:<caminho>` da evidência, como `<sha>:<caminho>`.
@@ -845,13 +960,18 @@ cria_sucessora() { # <RECURSAO.md> <PEND-NN> <MAPA.md> <FT-novo> <slug-novo> <re
 }
 
 b5_classifica() { # <RECURSAO.md> <PEND-NN> <MAPA.md> [FT-sucessora slug-sucessora] — sem commit
-  local rec="$1" id="$2" mapa="$3" g arg classe regra conv
+  local rec="$1" id="$2" mapa="$3" g arg classe regra conv causa
   [ "$(pend_campo "$rec" "$id" estado)" = aguardando_classificacao ] || return 1
   if detector_laco "$rec" "$id"; then recursao_reordena "$rec"; return; fi
   g="$(pend_campo "$rec" "$id" gatilho)"
   case "$g" in
     orcamento_f5_esgotado) arg="$(ref_da_evidencia "$(pend_campo "$rec" "$id" evidencia)" 00-AUDITORIA.md)" ;;
     dependencia_nao_integrada) arg="$(pend_campo "$rec" "$(pend_campo "$rec" "$id" raiz)" classe 2>/dev/null)" ;;
+    entrega_bloqueada)
+      # A evidência commitada decide; a `causa` gravada na pendência tem de ser a dela.
+      arg="$(ref_da_evidencia "$(pend_campo "$rec" "$id" evidencia)" ENTREGA.md)"
+      causa="$(causa_commitada "$arg")" || return 1
+      [ "$(pend_campo "$rec" "$id" causa)" = "$(causa_da_pendencia "$causa")" ] || return 1 ;;
     *) arg="$(pend_campo "$rec" "$id" causa)" ;;
   esac
   read -r classe regra <<EOF
@@ -1915,9 +2035,9 @@ caso "P01.tabela recurso externo -> recurso_externo"     "recurso_externo recurs
 caso "P01.tabela incompatibilidade -> decisao_humana"    "decisao_humana incompatibilidade_de_versao" "$(classe_da_tabela incompatibilidade_de_versao)"
 caso "P01.tabela dependencia segue a raiz"               "recurso_externo dependencia_nao_integrada/segue_raiz" "$(classe_da_tabela dependencia_nao_integrada recurso_externo)"
 caso "P01.tabela dependencia sem raiz -> decisao_humana" "decisao_humana dependencia_nao_integrada/raiz_ambigua" "$(classe_da_tabela dependencia_nao_integrada '')"
-caso "P01.tabela entrega bloqueada pela causa commitada" "recurso_externo entrega_bloqueada/causa_recurso_externo_ausente" "$(classe_da_tabela entrega_bloqueada recurso_externo_ausente)"
-caso "P01.tabela entrega bloqueada por falha tecnica"    "trabalho_novo entrega_bloqueada/falha_tecnica" "$(classe_da_tabela entrega_bloqueada falha_tecnica)"
-caso "P01.tabela entrega bloqueada sem causa commitada"  "decisao_humana entrega_bloqueada/causa_nao_commitada" "$(classe_da_tabela entrega_bloqueada null)"
+caso "P01.tabela entrega bloqueada pela causa enumerada"  "trabalho_novo entrega_bloqueada/causa_suite_reprovada" "$(classe_da_causa suite_reprovada)"
+caso "P01.tabela falha_tecnica nao e causa: nao classifica" nao "$(sim_nao classe_da_causa falha_tecnica)"
+caso "P01.tabela entrega bloqueada sem causa commitada"  "decisao_humana entrega_bloqueada/causa_nao_commitada" "$(classe_da_causa ausente)"
 caso "P01.tabela entrega interrompida resolvivel"        "trabalho_novo entrega_interrompida/resolvivel_sem_decisao" "$(classe_da_tabela entrega_interrompida null)"
 caso "P01.tabela entrega interrompida pela causa"        "decisao_humana entrega_interrompida/causa_regra_de_negocio_nao_declarada" "$(classe_da_tabela entrega_interrompida regra_de_negocio_nao_declarada)"
 caso "P01.tabela gatilho desconhecido nao classifica"    nao "$(sim_nao classe_da_tabela palpite)"
@@ -2438,12 +2558,12 @@ DEC_SKILL="$REPO/.claude/skills/buildx/DECISOES-DA-SKILL.md"
 IDS="$(tr -d '\r' < "$DEC_SKILL" | sed -n 's/^## \(D-[0-9][0-9]*\) — .*/\1/p')"
 caso "P01.36 nenhum D-NN repetido" "$(printf '%s\n' "$IDS" | wc -l | tr -d ' ')" "$(printf '%s\n' "$IDS" | sort -u | wc -l | tr -d ' ')"
 FALTA=""
-for n in $(seq 1 35); do
+for n in $(seq 1 36); do
   printf '%s\n' "$IDS" | grep -qx "$(printf 'D-%02d' "$n")" || FALTA="$FALTA D-$n"
 done
-caso "P01.36 D-01 a D-35 presentes" "" "$FALTA"
-caso "P01.36 as decisoes P0.1 vem depois da D-25, em ordem" "D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35" \
-  "$(printf '%s\n' "$IDS" | tail -11 | tr '\n' ' ' | sed 's/ $//')"
+caso "P01.36 D-01 a D-36 presentes" "" "$FALTA"
+caso "P01.36 as decisoes P0.1 vem depois da D-25, em ordem" "D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36" \
+  "$(printf '%s\n' "$IDS" | tail -12 | tr '\n' ' ' | sed 's/ $//')"
 for t in 'O orçamento da F5 é do caller; a contagem é da sprintx' \
          'Checkpoint da sprintx é estado legítimo da feature' \
          'Terminal pré-F6 só move a CONTROL com evidência commitada' \

@@ -123,7 +123,7 @@ Nesse caso: registre na própria feature, no arquivo do buildx — a premissa pr
 |---|---|
 | **R3** — TDD obrigatório | a rede que torna a execução autônoma possível. Relaxar aqui é serrar o galho |
 | **R4** — task só conclui com os dois testes passando | "concluída com ressalva" não existe, nem no modo autônomo |
-| **R8** — dúvida vira bloqueio, nunca parada | já é exatamente o comportamento que o buildx precisa |
+| **R8** — dúvida vira bloqueio, nunca parada | já é exatamente o comportamento que o buildx precisa. Desde a sprintx P0.2-A5 (DS-139) todo `B-NN` novo tem `classe`; o buildx a lê pelo `scripts/bloqueios.sh listar` da sprintx, sobre o `00-BLOQUEIOS.md` **commitado**, e nunca pela `descricao` — `B-NN` sem `classe` é `legado` e não ganha classe inferida (`references/06-recursao.md`, D-36) |
 | **R14** — a F5 audita e não corrige; achado alto volta à F3 | execução autônoma sem auditoria respeitada é dano autônomo |
 | **R15** — proibido código antes da F6 | o B2 entrega esqueleto, não funcionalidade |
 
