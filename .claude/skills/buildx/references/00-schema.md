@@ -167,7 +167,8 @@ ciclos_recursao: 2
 | `veredito` (validação) | `aprovado` · `aprovado_com_pendencia` · `reprovado` |
 | `estado` (pendência) | `aguardando_classificacao` · `em_resolucao` · `decisao_humana` · `recurso_externo` · `resolvida` |
 | `classe` (pendência) | `trabalho_novo` · `decisao_humana` · `recurso_externo` — `null` enquanto `aguardando_classificacao`. Valor legado de arquivo antigo é lido como `trabalho_novo` e nunca escrito |
-| `gatilho` (pendência) | `orcamento_f5_esgotado` · `regra_de_negocio_nao_declarada` · `recurso_externo_ausente` · `incompatibilidade_de_versao` · `violacao_de_convencao` · `dependencia_nao_integrada` · `entrega_bloqueada` · `entrega_interrompida` · `replanejamento_execucao_esgotado` |
+| `gatilho` (pendência) | `orcamento_f5_esgotado` · `regra_de_negocio_nao_declarada` · `recurso_externo_ausente` · `incompatibilidade_de_versao` · `violacao_de_convencao` · `dependencia_nao_integrada` · `entrega_bloqueada` · `entrega_interrompida` · `replanejamento_execucao_esgotado` · `replanejamento_execucao_recusado` · `orcamento_f5_esgotado_durante_replanejamento_execucao` |
+| `causa` (pendência) | a `causa` enumerada do `ENTREGA.md` commitado (mergex DM-111); no gatilho `replanejamento_execucao_recusado`, o `recusa_replanejamento_f6` commitado — `classes_mistas` · `orcamento_f6_legado` · `orcamento_f6_nao_declarado` · `planejamento_legado` (sprintx DS-148); `null` quando o registro não a traz |
 
 ## O que o buildx grava nos artefatos das outras camadas
 

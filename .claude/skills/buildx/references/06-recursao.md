@@ -92,8 +92,10 @@ Determinística: a mesma evidência commitada dá sempre a mesma classe. Nenhuma
 | `incompatibilidade_de_versao` | `decisao_humana` | `incompatibilidade_de_versao` |
 | `violacao_de_convencao` | `trabalho_novo` | `violacao_de_convencao` |
 | `dependencia_nao_integrada` | a classe da pendência raiz — a da dependência que não integrou —, quando identificável; senão `decisao_humana`, com a ambiguidade na `evidencia` | `dependencia_nao_integrada/segue_raiz` · `/raiz_ambigua` |
-| `entrega_bloqueada` | pela `causa` enumerada do `ENTREGA.md` commitado e, com `bloqueio_aberto`, pela `classe` dos `B-NN` abertos no mesmo `HEAD` — abaixo | `entrega_bloqueada/causa_<causa>` · `/causa_bloqueio_aberto/classe_<classe>` · `/causa_bloqueio_aberto/classes_divergentes` · `/causa_bloqueio_aberto/bloqueio_legado` · `/causa_bloqueio_aberto/replanejamento_execucao_esgotado` · `/causa_bloqueio_aberto/replanejamento_execucao_recusado/<motivo>` · `/causa_nao_commitada` |
+| `entrega_bloqueada` | pela `causa` enumerada do `ENTREGA.md` commitado e, com `bloqueio_aberto`, pela `classe` dos `B-NN` abertos no mesmo `HEAD` — abaixo; um terminal da F6 commitado no mesmo `HEAD` precede as duas | `entrega_bloqueada/causa_<causa>` · `/causa_bloqueio_aberto/classe_<classe>` · `/causa_bloqueio_aberto/classes_divergentes` · `/causa_bloqueio_aberto/bloqueio_legado` · `/causa_<causa>/replanejamento_execucao_esgotado` · `/causa_<causa>/replanejamento_execucao_recusado/<motivo>` · `/causa_<causa>/orcamento_f5_esgotado_durante_replanejamento_execucao` · `/causa_nao_commitada` |
 | `replanejamento_execucao_esgotado` | `decisao_humana` | `replanejamento_execucao_esgotado` |
+| `replanejamento_execucao_recusado` | `decisao_humana` | `replanejamento_execucao_recusado/<motivo>` — `classes_mistas` · `orcamento_f6_legado` · `orcamento_f6_nao_declarado` · `planejamento_legado` |
+| `orcamento_f5_esgotado_durante_replanejamento_execucao` | `decisao_humana` | `orcamento_f5_esgotado_durante_replanejamento_execucao` |
 | `entrega_interrompida` | pela `causa` commitada, quando ela é um gatilho desta tabela; senão `trabalho_novo` — tecnicamente resolvível sem decisão | `entrega_interrompida/causa_<gatilho>` · `/resolvivel_sem_decisao` |
 
 ### `orcamento_f5_esgotado` — os prefixos `[item N]` da sprintx
@@ -151,22 +153,36 @@ Os `B-NN` abertos, nesta ordem:
 3. **abertos de classes diferentes** → `decisao_humana`, `entrega_bloqueada/causa_bloqueio_aberto/classes_divergentes`. Não há precedência entre classes de bloqueio — nem quando as duas levariam à mesma classe do B5;
 4. **um ou vários abertos, todos da mesma classe** → a classe do B5 dela, `entrega_bloqueada/causa_bloqueio_aberto/classe_<classe>` — com a precedência abaixo quando a classe é `defeito_de_plano`.
 
-**O retorno da F6 recusado ou esgotado vence `defeito_de_plano` → `trabalho_novo`.** (D-37) Um `defeito_de_plano` é o que a sprintx devolve ao planejamento dentro da própria feature, com orçamento de uma rodada. A linha `defeito_de_plano` → `trabalho_novo` só vale quando **nada** no mesmo `HEAD` diz que esse retorno foi recusado ou esgotado — senão a sucessora seria só um jeito de contornar o teto da feature. Quando todos os abertos são `defeito_de_plano`, leia a pasta da feature **commitada** naquele `HEAD` pela sprintx — `bloqueios.sh listar` e `planejamento.sh fase`, numa raiz sem Git — e decida pela ordem do `replanejar-execucao` dela:
+**O retorno da F6 recusado ou esgotado vence `defeito_de_plano` → `trabalho_novo`.** (D-37, D-38) Um `defeito_de_plano` é o que a sprintx devolve ao planejamento dentro da própria feature, com orçamento de uma rodada. Um **terminal da F6 commitado no mesmo `HEAD`** — o `00-PLANEJAMENTO.md` lido pela sprintx sobre aquele commit — vence **toda** regra desta seção, qualquer que seja a `causa` do `ENTREGA.md`: senão a sucessora seria só um jeito de contornar o teto da feature, e uma recusa durável geraria FT nova para passar por cima da política da sprintx. Antes de olhar `causa` e `B-NN`, leia a pasta da feature **commitada** naquele `HEAD` (`planejamento.sh fase` e `bloqueios.sh listar`, numa raiz sem Git):
 
 | No mesmo `HEAD` | Classe | `regra_aplicada` |
 |---|---|---|
-| `estado: replanejamento_execucao_esgotado`, ou `aprovado` com `replanejamentos_f6` já no teto | `decisao_humana` | `entrega_bloqueada/causa_bloqueio_aberto/replanejamento_execucao_esgotado` |
-| planejamento legado (sem o eixo da F6), `max_replanejamentos_f6: null`, ou nenhum `00-PLANEJAMENTO.md` | `decisao_humana` | `entrega_bloqueada/causa_bloqueio_aberto/replanejamento_execucao_recusado/<motivo>` — `orcamento_f6_legado` · `orcamento_f6_nao_declarado` · `planejamento_legado` |
-| `aprovado`, com orçamento restante e nenhuma rodada ativa | `trabalho_novo` | `entrega_bloqueada/causa_bloqueio_aberto/classe_defeito_de_plano` — a regra de sempre |
-| rodada ainda ativa, outro estado, planejamento que a sprintx recusa | — | **pare e relate**: contradição ou contrato inválido, nada é gravado |
+| `estado: replanejamento_execucao_esgotado` | `decisao_humana` | `entrega_bloqueada/causa_<causa>/replanejamento_execucao_esgotado` |
+| `estado: replanejamento_execucao_recusado`, com `recusa_replanejamento_f6: <motivo>` do enum | `decisao_humana` | `entrega_bloqueada/causa_<causa>/replanejamento_execucao_recusado/<motivo>` — `classes_mistas` · `orcamento_f6_legado` · `orcamento_f6_nao_declarado` · `planejamento_legado` |
+| `estado: orcamento_esgotado` com a rodada da F6 ainda aberta | `decisao_humana` | `entrega_bloqueada/causa_<causa>/orcamento_f5_esgotado_durante_replanejamento_execucao` |
+| nenhum terminal da F6, todos os abertos `defeito_de_plano`, `aprovado` com orçamento restante e nenhuma rodada ativa | `trabalho_novo` | `entrega_bloqueada/causa_bloqueio_aberto/classe_defeito_de_plano` — a regra de sempre |
+| nenhum terminal da F6, `aprovado` com `replanejamentos_f6` já no teto, ou planejamento sem o eixo da F6 / `max_replanejamentos_f6: null` / sem `00-PLANEJAMENTO.md` — o retorno que a sprintx ainda vai recusar ou esgotar | `decisao_humana` | `.../replanejamento_execucao_esgotado` · `.../replanejamento_execucao_recusado/<motivo>` |
+| rodada ainda ativa, motivo fora do enum, planejamento que a sprintx recusa, terminal que ela não confirma | — | **pare e relate**: contradição ou contrato inválido, nada é gravado |
 
-Classes mistas já são `decisao_humana` pela linha 3 (`classes_divergentes`) — é o `classes_mistas` com que a sprintx recusa o retorno —, e nenhuma outra classe é afetada: `prerequisito_ausente` sozinho continua `recurso_externo`. O motivo de recusa da família contrato (`estado`, `sem_bloqueio_aberto`, `sem_defeito_de_plano`, `fronteira_insegura`) nunca vira pendência (`references/integracao/sprintx.md`, "O retorno da F6 ao planejamento").
+Classes mistas sem terminal gravado já são `decisao_humana` pela linha 3 (`classes_divergentes`) — é o `classes_mistas` com que a sprintx recusa o retorno —, e nenhuma outra classe é afetada: `prerequisito_ausente` sozinho continua `recurso_externo`. O motivo de recusa da família contrato (`estado`, `sem_bloqueio_aberto`, `sem_defeito_de_plano`, `fronteira_insegura`) **não é gravado pela sprintx em estado nenhum** e nunca vira pendência (`references/integracao/sprintx.md`, "O retorno da F6 ao planejamento").
 
-### `replanejamento_execucao_esgotado` — o terminal da F6
+### Os três terminais da F6
 
-Registrado pelo portão terminal da F6 (`references/05-construcao.md`): a sprintx gravou `replanejamento_execucao_esgotado` — a única rodada já tinha sido consumida e surgiu outro `defeito_de_plano`. A classe é **`decisao_humana`**, `regra_aplicada: replanejamento_execucao_esgotado`, depois de reler a evidência: o `00-PLANEJAMENTO.md` citado, com a pasta da feature do mesmo `HEAD`, ainda diz esgotado pela sprintx; não diz, **pare e relate**. Nenhuma segunda rodada, nenhuma sucessora — o que falta é decidir o que fazer com uma feature cujo plano precisou mudar duas vezes. Não é `orcamento_f5_esgotado`: a tabela `[item N]` não se aplica, e os dois gatilhos nunca se confundem.
+Registrados pelo portão terminal da F6 (`references/05-construcao.md`), sempre a partir do `00-PLANEJAMENTO.md` **commitado** no `HEAD` da feature, lido pela sprintx — sem worktree, sem rastro, sem memória de sessão (D-38). Todos são **`decisao_humana`**, e nenhum gera sucessora: o que falta é decidir o que fazer com uma feature cujo plano precisou mudar depois de aprovado, e a feature velha guarda as tasks concluídas e os commits válidos que uma sucessora jogaria fora.
 
-**Falha fechada.** Nestes casos nada é classificado, nada é gravado, e o B5 **para e relata**: `ENTREGA.md` que a ref não alcança, ou que não é `bloqueado`/`bloqueado`; registro que a mergex recusa — causa fora do enum, só uma das duas chaves, causa que não é a derivada de `falhas_portao`; `causa` da pendência diferente da commitada; com `bloqueio_aberto`, `00-BLOQUEIOS.md` ausente no mesmo `HEAD`, ou recusado pela sprintx (entrada malformada, classe fora do enum, `classe: null`, legado depois de tipado), ou sem nenhum aberto. Ausente e `indeterminada` não são inconsistência: são causa não commitada, e vão a `decisao_humana`.
+| Gatilho | O que a sprintx gravou | `regra_aplicada` | `causa` |
+|---|---|---|---|
+| `replanejamento_execucao_esgotado` | `replanejamento_execucao_esgotado` — a única rodada já tinha sido consumida e surgiu outro `defeito_de_plano` | `replanejamento_execucao_esgotado` | `null` |
+| `replanejamento_execucao_recusado` | `replanejamento_execucao_recusado` + `recusa_replanejamento_f6: <motivo>` — o retorno não pôde abrir, por motivo operacional | `replanejamento_execucao_recusado/<motivo>` | o `<motivo>` |
+| `orcamento_f5_esgotado_durante_replanejamento_execucao` | `orcamento_esgotado` com `bloqueios_replanejamento_f6` preenchido — a F5 esgotou o orçamento **dentro** da rodada | `orcamento_f5_esgotado_durante_replanejamento_execucao` | `null` |
+
+Antes de classificar, releia a evidência: o `00-PLANEJAMENTO.md` citado, com a pasta da feature do mesmo `HEAD`, ainda diz **o mesmo terminal** pela sprintx, com `defeito_de_plano` aberto; na recusa, a `causa` gravada na pendência é igual ao `recusa_replanejamento_f6` commitado. Divergiu, ou o gatilho não é o daquele terminal: **pare e relate**.
+
+**O enum do motivo é o da sprintx.** `classes_mistas`, `orcamento_f6_legado`, `orcamento_f6_nao_declarado`, `planejamento_legado` — a família operacional, conferida contra o contrato da sprintx fixada. Valor fora dela **falha fechada**: não é `decisao_humana`, não é adivinhado pela `classe` do `B-NN`, não sai da prosa dos bloqueios. Motivo novo ganha família por decisão registrada, nunca por semelhança de nome.
+
+Nenhum dos três é `orcamento_f5_esgotado`: a tabela `[item N]` não se aplica a eles, e os gatilhos nunca se confundem. `orcamento_esgotado` **sem** rodada aberta continua sendo o caso normal do P0.1 — gatilho `orcamento_f5_esgotado`, portão terminal pré-F6, e `alta_qualidade_plano` → `trabalho_novo` como sempre.
+
+**Falha fechada.** Nestes casos nada é classificado, nada é gravado, e o B5 **para e relata**: `ENTREGA.md` que a ref não alcança, ou que não é `bloqueado`/`bloqueado`; registro que a mergex recusa — causa fora do enum, só uma das duas chaves, causa que não é a derivada de `falhas_portao`; `causa` da pendência diferente da commitada; com `bloqueio_aberto`, `00-BLOQUEIOS.md` ausente no mesmo `HEAD`, ou recusado pela sprintx (entrada malformada, classe fora do enum, `classe: null`, legado depois de tipado), ou sem nenhum aberto. Ausente e `indeterminada` não são inconsistência: são causa não commitada, e vão a `decisao_humana`. Nos três terminais da F6, o mesmo vale para o `00-PLANEJAMENTO.md` que a sprintx recusa, o motivo fora do enum e o terminal que ela não confirma no `HEAD` citado.
 
 Nenhuma migração retroativa: `ENTREGA.md` sem `causa` continua sem `causa`, e `B-NN` sem `classe` continua legado.
 
@@ -211,6 +227,7 @@ A `clausula_central` é derivada da evidência commitada, nunca escolhida:
 | Gatilho | `clausula_central` |
 |---|---|
 | `orcamento_f5_esgotado` | os prefixos distintos dos achados `ALTA` da auditoria terminal, em ordem — `[item N]`, e `[item 2][fraco:<tipo>]` no item 2 —, separados por vírgula |
+| os três terminais da F6 | os `B-NN` `defeito_de_plano` abertos no mesmo `HEAD`, em ordem de id, separados por vírgula |
 | `entrega_bloqueada` · `entrega_interrompida` | a `causa` |
 | os demais | o identificador do item commitado que a evidência cita (`B-NN` do `00-BLOQUEIOS.md`, `PR-NN`, o artefato ausente) |
 

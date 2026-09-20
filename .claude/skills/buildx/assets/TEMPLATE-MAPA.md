@@ -40,6 +40,7 @@ Verificável, sem adjetivo, numa frase.>
 
 <Se bloqueada — escrito só depois da evidência commitada:>
 **Bloqueada por:** <o gatilho — orcamento_f5_esgotado, replanejamento_execucao_esgotado,
+replanejamento_execucao_recusado, orcamento_f5_esgotado_durante_replanejamento_execucao,
 entrega_bloqueada, entrega_interrompida, incompatibilidade_de_versao, dependencia_nao_integrada… —
 e o motivo exato que a evidência commitada registra>
 **Pendência:** <PEND-NN no RECURSAO.md, nascida aguardando_classificacao>
