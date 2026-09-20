@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Mutações dirigidas do harness de integração do buildx (P0.1).
+# Mutações dirigidas do harness de integração do buildx (P0.1 a P0.2-B).
 #
 # Um teste que nunca falha não prova nada. Cada mutação abaixo reintroduz, numa
 # CÓPIA da árvore, exatamente um dos defeitos que o P0.1 fechou — ignorar o
@@ -21,7 +21,11 @@
 # `defeito_de_plano -> trabalho_novo` vencer o esgotamento, criar sucessora depois
 # de 1/1, retomar a F6 com a rodada aberta, gastar a rodada de novo na retomada,
 # abrir task depois da recusa, tratar contrato como pendência e passar o teto da F6
-# a um legado na retomada da F1 — e exige que o harness FALHE.
+# a um legado na retomada da F1 — e, no fechamento do P0.2-B, ignorar o estado
+# durável e voltar a ler o worktree, transformar `classes_mistas` em trabalho novo,
+# inventar a causa pelo B-NN, aceitar motivo fora do enum, dar à F5 esgotada dentro
+# da rodada o gatilho e a classe do caso normal, exigir worktree no portão terminal
+# da F6 e aceitar a sprintx anterior ao estado durável — e exige que o harness FALHE.
 # Mutação que sobrevive é teste que falta.
 #
 # O repositório real nunca é alterado: a cópia vive num diretório temporário e é
@@ -255,6 +259,57 @@ EOF
     printf '%s %s %s\n' "$ORCAMENTO_F5_MAX" "$ORCAMENTO_F5_POR" "$ORCAMENTO_F6_MAX"   # [M35]
 EOF
       ;;
+    M36) # ignorar o estado durável e voltar a decidir pela leitura do worktree
+      troca "$d/$HARNESS" '# [M36]' <<'EOF'
+  case "$(if [ -n "$wt" ] && [ -d "$wt" ]; then terminal_f6_em "$wt" "$slug"; else echo nao; fi)" in   # [M36]
+EOF
+      ;;
+    M37) # transformar a recusa por classes mistas em trabalho novo
+      troca "$d/$HARNESS" '# [M37]' <<'EOF'
+                  { case "$1" in
+                      recusado:classes_mistas) echo "trabalho_novo replanejamento_execucao_recusado/classes_mistas" ;;
+                      *) echo "decisao_humana replanejamento_execucao_recusado/${1#recusado:}" ;;
+                    esac; return 0; } ;;   # [M37]
+EOF
+      ;;
+    M38) # inventar o motivo pela classe dos B-NN, em vez de ler a chave commitada
+      troca "$d/$HARNESS" '# [M38]' <<'EOF'
+      m="$(printf '%s
+' "$lista" | tr -d '
+' | awk -F'	' '$4 == "aberto" && !v[$3]++ { n++ } END { print (n > 1 ? "classes_mistas" : "orcamento_f6_nao_declarado") }')"   # [M38]
+EOF
+      ;;
+    M39) # aceitar qualquer motivo como recusa durável
+      troca "$d/$HARNESS" '# [M39]' <<'EOF'
+motivo_duravel() { [ -n "${1:-}" ]; }   # [M39]
+EOF
+      ;;
+    M40) # dar à F5 esgotada dentro da rodada o gatilho do caso normal
+      troca "$d/$HARNESS" '# [M40]' <<'EOF'
+    f5_esgotado_na_rodada) echo orcamento_f5_esgotado ;;   # [M40]
+EOF
+      ;;
+    M41) # criar sucessora no esgotamento da F5 durante o replanejamento
+      troca "$d/$HARNESS" '# [M41]' <<'EOF'
+      echo "trabalho_novo orcamento_f5_esgotado_durante_replanejamento_execucao"; return 0 ;;   # [M41]
+EOF
+      ;;
+    M42) # exigir worktree no portão terminal da F6
+      troca "$d/$HARNESS" '# [M42]' <<'EOF'
+  [ -n "$wt" ] && [ -d "$wt" ] || return 1   # [M42]
+  if [ -n "$wt" ]; then
+EOF
+      ;;
+    M43) # aceitar a sprintx anterior ao estado durável como equivalente
+      troca "$d/$HARNESS" '# [M43]' <<'EOF'
+SPRINTX_SHA_FIXO=5cdde90dabae86fd6f5c0238a90ffd83454495f8                   # [M43]
+EOF
+      ;;
+    M44) # usar a regra normal do orçamento da F5 dentro da rodada da F6
+      troca "$d/$HARNESS" '# [M44]' <<'EOF'
+      if false; then echo terminal_f6   # [M44]
+EOF
+      ;;
     *) echo "mutacao desconhecida: $1" >&2; return 1 ;;
   esac
 }
@@ -277,7 +332,8 @@ blocos() {
     M17|M18|M19|M20) echo "entrega" ;;
     M21|M22|M23|M24|M25|M26) echo "causa" ;;
     M27) echo "orcamento f6" ;;
-    M28|M29|M30|M31|M32|M33|M34|M35) echo "f6" ;;
+    M29|M30|M31|M32|M34) echo "f6" ;;
+    M28|M33|M35|M36|M37|M38|M39|M40|M41|M42|M43|M44) echo "f6d" ;;
   esac
 }
 
@@ -285,7 +341,7 @@ roda() { # roda <nome> <arvore> <blocos> -> grava <nome>.log e <nome>.rc
   ( cd "$TMP" && BLOCOS="$3" bash "$2/$HARNESS" > "$TMP/$1.log" 2>&1; echo $? > "$TMP/$1.rc" )
 }
 
-MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23 M24 M25 M26 M27 M28 M29 M30 M31 M32 M33 M34 M35}"
+MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23 M24 M25 M26 M27 M28 M29 M30 M31 M32 M33 M34 M35 M36 M37 M38 M39 M40 M41 M42 M43 M44}"
 TODOS_BLOCOS="$(for m in $MUTACOES; do blocos "$m"; done | tr ' ' '\n' | sort -u | tr '\n' ' ')"
 
 echo "controle — a árvore sem mutação passa nos blocos: $TODOS_BLOCOS"

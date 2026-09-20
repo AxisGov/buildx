@@ -1637,6 +1637,59 @@ hook_recusa() { # <liga|desliga>
   if [ "$1" = liga ]; then : > "$comum/recusar-commit"; else rm -f "$comum/recusar-commit"; fi
 }
 
+# --- P0.2-B: os cenários da F6, montados pelos scripts reais ---
+#
+# Helpers compartilhados pelos blocos `f6` (rodada, esgotamento e recusa prevista)
+# e `f6d` (os terminais duráveis, lidos do commit). Ambos exigem a sprintx real.
+sx_f1_legado() { sx_f1_com "$PLANEJAMENTO_LEGADO" "$1" "$2" "$ORCAMENTO_F5_MAX" "$ORCAMENTO_F5_POR"; }
+# A história até a F6 com a T-01.01 concluída: F1 com o orçamento do caso, F2 a F5
+# pela sprintx real, E0 e o E1 da primeira task. Deixa C, BASE, PROJ e WT.
+f6_ate_f6() { # <nome> [novo|legado|nao_declarado]
+  C="$(projeto_p01 "$1")" || return 1; cd "$C" || return 1
+  BASE="$(git rev-parse HEAD)"; PROJ="buildx/$1"; WT="$TMP_RAIZ/$1/wt-ft-01"
+  feature_nasce ft-01 "$BASE" "$1" || return 1
+  case "${2:-novo}" in
+    novo)          sx_f1 "$WT" ft-01 ;;
+    legado)        sx_f1_legado "$WT" ft-01 ;;
+    nao_declarado) sx_f1_com "$PLANEJAMENTO" "$WT" ft-01 "$ORCAMENTO_F5_MAX" "$ORCAMENTO_F5_POR" ;;
+  esac
+  sx_f2 "$WT" ft-01
+  sx_plano "$WT" ft-01 T-01.01 T-01.02 T-01.03; sprintx "$WT" avanca ft-01 f3 >/dev/null
+  sx_f4 "$WT" ft-01; sx_f5 "$WT" ft-01 sim >/dev/null
+  f6_e0 "$WT" ft-01; sx_conclui "$WT" ft-01 T-01.01
+}
+# A rodada 1/1 inteira: defeito na T-01.02, retorno, F3 com a T-01.04 nova, F4, F5
+# SIM, e a F6 retomada pelo que resta.
+f6_rodada() {
+  sx_bloqueia "$WT" ft-01 T-01.02 defeito_de_plano
+  sprintx "$WT" replanejar-execucao ft-01 >/dev/null
+  sx_task_nova "$WT" ft-01 T-01.04; sprintx "$WT" avanca ft-01 f3 >/dev/null
+  sx_f4 "$WT" ft-01; sx_f5 "$WT" ft-01 sim >/dev/null
+  sx_conclui "$WT" ft-01 T-01.02; sx_conclui "$WT" ft-01 T-01.04
+}
+f6_b5() { # <PEND-NN> — o B5 classifica; o estado é commitado e publicado
+  b5_classifica docs/projeto/RECURSAO.md "$1" docs/projeto/MAPA.md FT-03 ft-01-v2 || return 1
+  git add -A && git commit -q -m "chore(buildx): B5 classifica $1" && git push -q origin "$PROJ"
+}
+f6_pc() { git show "HEAD:docs/projeto/RECURSAO.md" > "$TMP_RAIZ/f6-rec.md" 2>/dev/null; pend_campo "$TMP_RAIZ/f6-rec.md" "$1" "$2"; }
+f6_mapa() { git show HEAD:docs/projeto/MAPA.md > "$TMP_RAIZ/f6-mapa.md"; mapa_valor "$TMP_RAIZ/f6-mapa.md" "$1" "$2"; }
+# A persistência de um terminal classificado, lida do Git: PEND, MAPA, PROJETO,
+# publicação — e nenhuma sucessora (FT-01 e FT-02 do projeto, nenhuma de recursao).
+f6_persistido() { # <rotulo> <gatilho> <classe> <regra>
+  caso "$1 persistido: PEND classificada, sem destino" "$3 $3 $4 null" \
+    "$(f6_pc PEND-01 estado) $(f6_pc PEND-01 classe) $(f6_pc PEND-01 regra_aplicada) $(f6_pc PEND-01 destino)"
+  caso "$1 persistido: pelo gatilho"               "$2" "$(f6_pc PEND-01 gatilho)"
+  caso "$1 persistido: MAPA com a feature bloqueada" "bloqueada $2 PEND-01" \
+    "$(f6_mapa FT-01 Status) $(f6_mapa FT-01 'Bloqueada por') $(f6_mapa FT-01 Pendência)"
+  caso "$1 persistido: PROJETO conta a bloqueada"  1 \
+    "$(git show HEAD:docs/projeto/PROJETO.md > "$TMP_RAIZ/f6-projeto.md"; fm "$TMP_RAIZ/f6-projeto.md" features_bloqueadas)"
+  caso "$1 persistido: publicado, arvore limpa"    "$(git rev-parse HEAD) " "$(git rev-parse "origin/$PROJ") $(git status --porcelain)"
+  caso "$1 persistido: nenhuma sucessora"          "2 0" \
+    "$(git show HEAD:docs/projeto/MAPA.md | tr -d '\r' | awk '/^### FT-/ { n++ } /^\*\*Origem:\*\* recursao$/ { r++ } END { print n + 0, r + 0 }')"
+  caso "$1 persistido: nenhuma regra defeito_de_plano -> trabalho_novo" "" \
+    "$(git show "HEAD:docs/projeto/RECURSAO.md" | grep -E 'classe: trabalho_novo|/classe_defeito_de_plano' || true)"
+}
+
 # ---------------------------------------------------------------------------
 # Montagem de cenário
 # ---------------------------------------------------------------------------
@@ -3465,57 +3518,9 @@ if com_causa "P02B retorno da F6" && [ -n "$PLANEJAMENTO_LEGADO" ]; then
     caso "P02B.pin o motivo $m esta na tabela do contrato" "$(familia_do_motivo "$m")" \
       "$(tr -d '\r' < "$SX_REF" | awk -F'|' -v m=" \`$m\` " '$2 == m { v = $4; gsub(/[ `*]/, "", v); print v }')"
   done
-  caso "P02B.pin os dois estados novos da sprintx" "F3 PARAR" \
-    "$(grep -E '^    replanejar_execucao\) printf|^    orcamento_esgotado\|replanejamento_execucao_esgotado\) printf' "$PLANEJAMENTO" | grep -oE "'F3'|'PARAR'" | tr -d "'" | paste -sd' ' -)"
+  caso "P02B.pin os estados novos da sprintx" "F3 PARAR" \
+    "$(grep -E '^    replanejar_execucao\) printf|^    orcamento_esgotado\|replanejamento_execucao_esgotado\|replanejamento_execucao_recusado\) printf' "$PLANEJAMENTO" | grep -oE "'F3'|'PARAR'" | tr -d "'" | paste -sd' ' -)"
 
-  sx_f1_legado() { sx_f1_com "$PLANEJAMENTO_LEGADO" "$1" "$2" "$ORCAMENTO_F5_MAX" "$ORCAMENTO_F5_POR"; }
-  # A história até a F6 com a T-01.01 concluída: F1 com o orçamento do caso, F2 a F5
-  # pela sprintx real, E0 e o E1 da primeira task. Deixa C, BASE, PROJ e WT.
-  f6_ate_f6() { # <nome> [novo|legado|nao_declarado]
-    C="$(projeto_p01 "$1")" || return 1; cd "$C" || return 1
-    BASE="$(git rev-parse HEAD)"; PROJ="buildx/$1"; WT="$TMP_RAIZ/$1/wt-ft-01"
-    feature_nasce ft-01 "$BASE" "$1" || return 1
-    case "${2:-novo}" in
-      novo)          sx_f1 "$WT" ft-01 ;;
-      legado)        sx_f1_legado "$WT" ft-01 ;;
-      nao_declarado) sx_f1_com "$PLANEJAMENTO" "$WT" ft-01 "$ORCAMENTO_F5_MAX" "$ORCAMENTO_F5_POR" ;;
-    esac
-    sx_f2 "$WT" ft-01
-    sx_plano "$WT" ft-01 T-01.01 T-01.02 T-01.03; sprintx "$WT" avanca ft-01 f3 >/dev/null
-    sx_f4 "$WT" ft-01; sx_f5 "$WT" ft-01 sim >/dev/null
-    f6_e0 "$WT" ft-01; sx_conclui "$WT" ft-01 T-01.01
-  }
-  # A rodada 1/1 inteira: defeito na T-01.02, retorno, F3 com a T-01.04 nova, F4, F5
-  # SIM, e a F6 retomada pelo que resta.
-  f6_rodada() {
-    sx_bloqueia "$WT" ft-01 T-01.02 defeito_de_plano
-    sprintx "$WT" replanejar-execucao ft-01 >/dev/null
-    sx_task_nova "$WT" ft-01 T-01.04; sprintx "$WT" avanca ft-01 f3 >/dev/null
-    sx_f4 "$WT" ft-01; sx_f5 "$WT" ft-01 sim >/dev/null
-    sx_conclui "$WT" ft-01 T-01.02; sx_conclui "$WT" ft-01 T-01.04
-  }
-  f6_b5() { # <PEND-NN> — o B5 classifica; o estado é commitado e publicado
-    b5_classifica docs/projeto/RECURSAO.md "$1" docs/projeto/MAPA.md FT-03 ft-01-v2 || return 1
-    git add -A && git commit -q -m "chore(buildx): B5 classifica $1" && git push -q origin "$PROJ"
-  }
-  f6_pc() { git show "HEAD:docs/projeto/RECURSAO.md" > "$TMP_RAIZ/f6-rec.md" 2>/dev/null; pend_campo "$TMP_RAIZ/f6-rec.md" "$1" "$2"; }
-  f6_mapa() { git show HEAD:docs/projeto/MAPA.md > "$TMP_RAIZ/f6-mapa.md"; mapa_valor "$TMP_RAIZ/f6-mapa.md" "$1" "$2"; }
-  # A persistência de um terminal classificado, lida do Git: PEND, MAPA, PROJETO,
-  # publicação — e nenhuma sucessora (FT-01 e FT-02 do projeto, nenhuma de recursao).
-  f6_persistido() { # <rotulo> <gatilho> <classe> <regra>
-    caso "$1 persistido: PEND classificada, sem destino" "$3 $3 $4 null" \
-      "$(f6_pc PEND-01 estado) $(f6_pc PEND-01 classe) $(f6_pc PEND-01 regra_aplicada) $(f6_pc PEND-01 destino)"
-    caso "$1 persistido: pelo gatilho"               "$2" "$(f6_pc PEND-01 gatilho)"
-    caso "$1 persistido: MAPA com a feature bloqueada" "bloqueada $2 PEND-01" \
-      "$(f6_mapa FT-01 Status) $(f6_mapa FT-01 'Bloqueada por') $(f6_mapa FT-01 Pendência)"
-    caso "$1 persistido: PROJETO conta a bloqueada"  1 \
-      "$(git show HEAD:docs/projeto/PROJETO.md > "$TMP_RAIZ/f6-projeto.md"; fm "$TMP_RAIZ/f6-projeto.md" features_bloqueadas)"
-    caso "$1 persistido: publicado, arvore limpa"    "$(git rev-parse HEAD) " "$(git rev-parse "origin/$PROJ") $(git status --porcelain)"
-    caso "$1 persistido: nenhuma sucessora"          "2 0" \
-      "$(git show HEAD:docs/projeto/MAPA.md | tr -d '\r' | awk '/^### FT-/ { n++ } /^\*\*Origem:\*\* recursao$/ { r++ } END { print n + 0, r + 0 }')"
-    caso "$1 persistido: nenhuma regra defeito_de_plano -> trabalho_novo" "" \
-      "$(git show "HEAD:docs/projeto/RECURSAO.md" | grep -E 'classe: trabalho_novo|/classe_defeito_de_plano' || true)"
-  }
 
   # ---- O piloto corrigido: rodada 1/1, aprovada, e a F6 de volta ----
   C="$(projeto_p01 r1)"; cd "$C"
@@ -3637,11 +3642,13 @@ if com_causa "P02B retorno da F6" && [ -n "$PLANEJAMENTO_LEGADO" ]; then
   caso "X2D retomada: T"                             T "$(retomada_decide ft-01 "$BASE" em_andamento "$PROJ")"
   TIP="$(git rev-parse feature/ft-01)"
   git worktree remove "$WT"
-  caso "X2D queda no terminal: H"                    H "$(retomada_decide ft-01 "$BASE" em_andamento "$PROJ")"
+  caso "X2D queda no terminal, sem worktree: T continua" "T esgotado" \
+    "$(retomada_decide ft-01 "$BASE" em_andamento "$PROJ") $(terminal_f6_commitado "$TIP" ft-01)"
+  caso "X2D e o portao passa sem worktree"           esgotado "$(gate_terminal_f6 "$BASE" ft-01 "$PROJ")"
   reabre_worktree ft-01 "$WT"
   caso "X2D reaberto: T, sem commit, sem gastar"     "T $TIP 1 1" \
     "$(retomada_decide ft-01 "$BASE" em_andamento "$PROJ") $(git rev-parse feature/ft-01) $(chave "$(sprintx "$WT" fase ft-01)" replanejamentos_f6) $(rodadas_abertas ft-01)"
-  caso "X2D o portao terminal da F6 passa"           sim "$(sim_nao gate_terminal_f6 "$BASE" ft-01 "$PROJ" "$WT")"
+  caso "X2D o portao terminal da F6 passa"           esgotado "$(gate_terminal_f6 "$BASE" ft-01 "$PROJ" "$WT")"
   caso "X2D o de pre-F6 nao: ha produto concluido"   nao "$(sim_nao gate_terminal_pre_f6 "$BASE" ft-01 "$PROJ" "$WT")"
   printf 'rascunho\n' > docs/projeto/RASCUNHO.md
   caso "X2D com a CONTROL suja o registro recusa"    nao "$(sim_nao registra_terminal_f6 "$BASE" ft-01 FT-01 "$PROJ" "$WT")"
@@ -3680,61 +3687,9 @@ if com_causa "P02B retorno da F6" && [ -n "$PLANEJAMENTO_LEGADO" ]; then
   caso "Q2 o B5 classifica e persiste"               sim "$(sim_nao f6_b5 PEND-01)"
   f6_persistido "Q2" entrega_bloqueada decisao_humana entrega_bloqueada/causa_bloqueio_aberto/replanejamento_execucao_esgotado
 
-  # ---- Orçamento legado e não declarado: a sprintx recusa, e o buildx não inventa ----
-  for k in legado nao_declarado; do
-    case "$k" in legado) MOT=orcamento_f6_legado ;; *) MOT=orcamento_f6_nao_declarado ;; esac
-    f6_ate_f6 "rl-$k" "$k"
-    if [ "$k" = legado ]; then
-      caso "L.$k o planejamento commitado nao tem o eixo da F6" 0 \
-        "$(git show "feature/ft-01:$PL" | grep -cE '^(max_replanejamentos_f6|replanejamentos_f6|bloqueios_replanejamento_f6|tasks_congeladas|assinatura_congeladas):')"
-      caso "L.$k a sprintx o le como legado"           legado "$(chave "$(sprintx "$WT" fase ft-01)" orcamento_f6)"
-      caso "L.$k e a conferencia do buildx o aceita como esta" sim "$(sim_nao orcamento_confere ft-01)"
-      caso "L.$k retomada da F1 no legado: sem o teto da F6" "3 buildx" "$(args_criar "$WT" ft-01)"
-      caso "L.$k e a sprintx aceita, sem acrescentar orcamento" "planejamento=ja_existe 0" \
-        "$(sprintx "$WT" criar ft-01 $(args_criar "$WT" ft-01) | head -1) $(grep -c 'replanejamentos_f6' "$WT/$PL")"
-    else
-      caso "L.$k o teto da F6 e null: a F1 nao o recebeu" null "$(chave "$(sprintx "$WT" fase ft-01)" max_replanejamentos_f6)"
-      caso "L.$k e a conferencia do buildx para"      nao "$(sim_nao orcamento_confere ft-01)"
-    fi
-    sx_bloqueia "$WT" ft-01 T-01.02 defeito_de_plano
-    caso "L.$k o buildx e a sprintx: recusado por $MOT" "recusado:$MOT recusado:$MOT" \
-      "$(retorno_f6_em "$WT" ft-01) $(retorno_f6_real "$WT" ft-01)"
-    caso "L.$k retomada: so o fechamento, sem task nova" "F:so_fechamento nao" \
-      "$(retomada_decide ft-01 "$BASE" em_andamento "$PROJ") $(sim_nao f6_pode_abrir_task ft-01 "$BASE" "$PROJ")"
-    SAIDA="$(sprintx "$WT" replanejar-execucao ft-01; printf 'codigo=%s\n' "$?")"
-    caso "L.$k a sprintx recusa"                     "recusado $MOT 5" \
-      "$(chave "$SAIDA" replanejamento) $(chave "$SAIDA" motivo) $(chave "$SAIDA" codigo)"
-    caso "L.$k nada gravado: aprovado, nenhuma rodada" "aprovado 0" \
-      "$(chave "$(sprintx "$WT" fase ft-01)" estado) $(rodadas_abertas ft-01)"
-    caso "L.$k a sprintx nao inventou teto"          "$(git show "feature/ft-01:$PL" | tr -d '\r' | grep -c '^max_replanejamentos_f6: 1$')" 0
-    caso "L.$k a retomada continua so no fechamento" F:so_fechamento "$(retomada_decide ft-01 "$BASE" em_andamento "$PROJ")"
-    f6_e8_bloqueado "$WT" ft-01
-    REF="$(git rev-parse feature/ft-01):docs/entregas/ft-01/ENTREGA.md"
-    caso "L.$k a entrega bloqueada: R"               R:entrega_bloqueada "$(retomada_decide ft-01 "$BASE" em_andamento "$PROJ")"
-    caso "L.$k nao vira trabalho_novo: decisao_humana" \
-      "decisao_humana entrega_bloqueada/causa_bloqueio_aberto/replanejamento_execucao_recusado/$MOT" "$(classe_da_entrega "$REF")"
-    caso "L.$k a triagem registra"                   sim "$(sim_nao registra_entrega_bloqueada "$BASE" ft-01 FT-01 "$PROJ")"
-    caso "L.$k o B5 classifica e persiste"           sim "$(sim_nao f6_b5 PEND-01)"
-    f6_persistido "L.$k" entrega_bloqueada decisao_humana "entrega_bloqueada/causa_bloqueio_aberto/replanejamento_execucao_recusado/$MOT"
-  done
-
-  # ---- Classes mistas: a sprintx recusa, e o buildx não escolhe uma ----
-  f6_ate_f6 rm
-  sx_bloqueia "$WT" ft-01 T-01.02 defeito_de_plano; sx_bloqueia "$WT" ft-01 T-01.03 prerequisito_ausente
-  caso "M.mistas o buildx e a sprintx: classes_mistas" "recusado:classes_mistas recusado:classes_mistas" \
-    "$(retorno_f6_em "$WT" ft-01) $(retorno_f6_real "$WT" ft-01)"
-  SAIDA="$(sprintx "$WT" replanejar-execucao ft-01; printf 'codigo=%s\n' "$?")"
-  caso "M.mistas a sprintx recusa, sem gravar"      "recusado classes_mistas 5 aprovado 0" \
-    "$(chave "$SAIDA" replanejamento) $(chave "$SAIDA" motivo) $(chave "$SAIDA" codigo) $(chave "$(sprintx "$WT" fase ft-01)" estado) $(rodadas_abertas ft-01)"
-  caso "M.mistas retomada: so o fechamento, sem task nova" "F:so_fechamento nao" \
-    "$(retomada_decide ft-01 "$BASE" em_andamento "$PROJ") $(sim_nao f6_pode_abrir_task ft-01 "$BASE" "$PROJ")"
-  f6_e8_bloqueado "$WT" ft-01
-  REF="$(git rev-parse feature/ft-01):docs/entregas/ft-01/ENTREGA.md"
-  caso "M.mistas nenhuma classe escolhida: decisao_humana" \
-    "decisao_humana entrega_bloqueada/causa_bloqueio_aberto/classes_divergentes" "$(classe_da_entrega "$REF")"
-  caso "M.mistas a triagem registra"                 sim "$(sim_nao registra_entrega_bloqueada "$BASE" ft-01 FT-01 "$PROJ")"
-  caso "M.mistas o B5 classifica e persiste"         sim "$(sim_nao f6_b5 PEND-01)"
-  f6_persistido "M.mistas" entrega_bloqueada decisao_humana entrega_bloqueada/causa_bloqueio_aberto/classes_divergentes
+  # A recusa operacional — os quatro motivos, agora duráveis e lidos do commit — e o
+  # esgotamento da F5 dentro da rodada estão no bloco `f6d`, junto dos cenários que
+  # perdem o worktree e retomam só com a branch.
 
   # ---- Só prerequisito_ausente: nada de retorno, e o A6 continua valendo ----
   f6_ate_f6 rp
@@ -3765,7 +3720,8 @@ if com_causa "P02B retorno da F6" && [ -n "$PLANEJAMENTO_LEGADO" ]; then
   caso "S.fronteira a sprintx nao gravou: aprovado, nenhuma rodada" "aprovado 0" \
     "$(chave "$(sprintx "$WT" fase ft-01)" estado) $(rodadas_abertas ft-01)"
   caso "S.fronteira nada limpo nem descartado"       "meio escrito" "$(cat "$WT/src/T-01.02.ts")"
-  caso "S.fronteira nenhum terminal"                 nao "$(sim_nao gate_terminal_f6 "$BASE" ft-01 "$PROJ" "$WT")"
+  caso "S.fronteira nenhum terminal, nem commitado"  "nao nao" \
+    "$(sim_nao gate_terminal_f6 "$BASE" ft-01 "$PROJ" "$WT") $(terminal_f6_commitado "$(git rev-parse feature/ft-01)" ft-01)"
   caso "S.fronteira nenhuma PEND, nenhum MAPA, nenhum commit" "$BASE $BASE nao em_andamento " \
     "$(git rev-parse HEAD) $(git rev-parse "origin/$PROJ") $(sim_nao test -e docs/projeto/RECURSAO.md) $(mapa_valor docs/projeto/MAPA.md FT-01 Status) $(git status --porcelain)"
 
@@ -3792,6 +3748,345 @@ fi
 cd "$REPO"
 fi  # f6
 
+if bloco f6d; then
+echo
+echo "P0.2-B — os terminais duráveis da F6: recusa operacional, F5 na rodada, retomada sem worktree"
+
+DEC_F6D="$REPO/.claude/skills/buildx/DECISOES-DA-SKILL.md"
+RET="$REPO/.claude/commands/buildx-retomar.md"
+REC_REF="$REPO/.claude/skills/buildx/references/06-recursao.md"
+SX_REF="$REPO/.claude/skills/buildx/references/integracao/sprintx.md"
+CON_REF="$REPO/.claude/skills/buildx/references/05-construcao.md"
+
+# --- O contrato vivo diz o que este bloco prova ---
+caso "P02D.contrato a D-38 esta registrada, sem apagar a D-37" "sim sim sim" \
+  "$(sim_nao grep -qF '## D-38 — A recusa do retorno da F6 é estado durável da sprintx, e o buildx a lê do commit' "$DEC_F6D") \
+$(sim_nao grep -qF '## D-37 — O retorno da F6 ao planejamento é da sprintx; recusado ou esgotado, é decisão humana' "$DEC_F6D") \
+$(sim_nao grep -qF '**Risco assumido:** a recusa não grava nada no Git' "$DEC_F6D")"
+caso "P02D.contrato a linha T le o terminal do commit, com ou sem worktree" sim \
+  "$(sim_nao grep -qE '^\| \*\*T\*\* \| o `00-PLANEJAMENTO.md` \*\*commitado\*\*.*replanejamento_execucao_recusado.*\*\*Com ou sem worktree\*\*' "$RET")"
+caso "P02D.contrato a linha F manda so o replanejar-execucao" sim \
+  "$(sim_nao grep -qE '^\| \*\*F\*\* \| .*o único passo é o `replanejar-execucao`' "$RET")"
+caso "P02D.contrato o B5 tem os dois gatilhos novos" "sim sim" \
+  "$(sim_nao grep -qE '^\| `replanejamento_execucao_recusado` \| `decisao_humana` \|' "$REC_REF") \
+$(sim_nao grep -qE '^\| `orcamento_f5_esgotado_durante_replanejamento_execucao` \| `decisao_humana` \|' "$REC_REF")"
+caso "P02D.contrato o schema tem os gatilhos e a causa do motivo" "sim sim" \
+  "$(sim_nao grep -qF '`replanejamento_execucao_recusado` · `orcamento_f5_esgotado_durante_replanejamento_execucao`' "$REPO/.claude/skills/buildx/references/00-schema.md") \
+$(sim_nao grep -qE '^\| `causa` \(pendência\) \|.*`recusa_replanejamento_f6`' "$REPO/.claude/skills/buildx/references/00-schema.md")"
+caso "P02D.contrato o portao terminal da F6 dispensa o worktree" sim \
+  "$(sim_nao grep -qF '**Este portão não precisa de worktree.**' "$CON_REF")"
+caso "P02D.contrato o contrato da sprintx cita o estado duravel" sim \
+  "$(sim_nao grep -qF 'a operacional vira o estado terminal `replanejamento_execucao_recusado`' "$SX_REF")"
+# O `so_fechamento` sai das instruções vivas; na DECISOES-DA-SKILL ele fica, porque
+# lá o histórico da decisão não se apaga — é onde a D-38 diz que ele deixou de existir.
+caso "P02D.contrato o so_fechamento saiu das instrucoes vivas, e a D-38 o explica" "0 sim" \
+  "$(grep -rl 'so_fechamento' "$REPO/.claude/commands" "$REPO/.opencode/commands" \
+       "$REPO/.claude/skills/buildx/references" "$REPO/.claude/skills/buildx/SKILL.md" \
+       "$REPO/.claude/skills/buildx/assets" 2>/dev/null | wc -l | tr -d ' ') \
+$(sim_nao grep -qF '`F:so_fechamento` deixa de existir' "$DEC_F6D")"
+
+# --- A tradução, pura: enum, gatilho e classe ---
+for m in classes_mistas orcamento_f6_legado orcamento_f6_nao_declarado planejamento_legado; do
+  caso "P02D.enum $m e motivo duravel, com gatilho proprio" "sim replanejamento_execucao_recusado decisao_humana replanejamento_execucao_recusado/$m" \
+    "$(sim_nao motivo_duravel "$m") $(gatilho_do_terminal "recusado:$m") $(classe_do_retorno_f6 "recusado:$m")"
+done
+for m in estado sem_bloqueio_aberto sem_defeito_de_plano fronteira_insegura motivo_do_futuro ""; do
+  caso "P02D.enum '$m' nao e duravel: sem gatilho, sem classe" "nao nao nao" \
+    "$(sim_nao motivo_duravel "$m") $(sim_nao gatilho_do_terminal "recusado:$m") $(sim_nao classe_do_retorno_f6 "recusado:$m")"
+done
+caso "P02D.enum o terminal do esgotamento"          "replanejamento_execucao_esgotado decisao_humana replanejamento_execucao_esgotado" \
+  "$(gatilho_do_terminal esgotado) $(classe_do_retorno_f6 esgotado)"
+caso "P02D.enum o terminal da F5 na rodada"         "orcamento_f5_esgotado_durante_replanejamento_execucao decisao_humana orcamento_f5_esgotado_durante_replanejamento_execucao" \
+  "$(gatilho_do_terminal f5_esgotado_na_rodada) $(classe_do_retorno_f6 f5_esgotado_na_rodada)"
+for v in nao ativo disponivel nao_se_aplica ""; do
+  caso "P02D.enum '$v' nao e terminal da F6"        "nao nao" \
+    "$(sim_nao gatilho_do_terminal "$v") $(sim_nao classe_do_retorno_f6 "$v")"
+done
+caso "P02D.enum o gatilho da F5 na rodada nao e o normal" nao \
+  "$(sim_nao eval 'classe_da_tabela orcamento_f5_esgotado x | grep -q durante_replanejamento')"
+
+if com_causa "P02B terminais duráveis da F6" && [ -n "$PLANEJAMENTO_LEGADO" ]; then
+  # --- O pin: o SHA completo, o enum do contrato da sprintx, o estado novo ---
+  caso "P02D.pin o SHA da sprintx e o completo, 40 hex" "c8bf65f825f96d49d2079286603d7d86e5e257d9 40" \
+    "$SPRINTX_SHA_FIXO $(printf '%s' "$SPRINTX_SHA_FIXO" | tr -cd '0-9a-f' | wc -c | tr -d ' ')"
+  caso "P02D.pin a sprintx fixada grava o terminal da recusa, e le o motivo" "sim sim" \
+    "$(sim_nao grep -q 'replanejamento_execucao_recusado "$P_REPROV" "$P_HIST"' "$PLANEJAMENTO") \
+$(sim_nao grep -q 'fm_em P_RECUSA recusa_replanejamento_f6' "$PLANEJAMENTO")"
+  caso "P02D.pin os tres estados terminais respondem PARAR" "F3 PARAR" \
+    "$(grep -E "^    replanejar_execucao\) printf|^    orcamento_esgotado\|replanejamento_execucao_esgotado\|replanejamento_execucao_recusado\) printf" "$PLANEJAMENTO" |
+       grep -oE "'F3'|'PARAR'" | tr -d "'" | paste -sd' ' -)"
+  SX_SCHEMA="$TMP_RAIZ/sprintx/.claude/skills/sprintx/references/00-schema.md"
+  caso "P02D.pin o estado novo esta no enum do planejamento da sprintx" sim \
+    "$(sim_nao grep -qF '`replanejamento_execucao_recusado` (ou `null` antes do fim da F2)' "$SX_SCHEMA")"
+  MOTIVOS_SX="$(tr -d '\r' < "$SX_SCHEMA" | grep -F '| `recusa_replanejamento_f6` (planejamento) |' |
+    grep -oE '`[a-z0-9_]+`' | tr -d '`' | grep -vx recusa_replanejamento_f6 | sort -u | paste -sd' ' -)"
+  MOTIVOS_BX="$(for m in classes_mistas orcamento_f6_legado orcamento_f6_nao_declarado planejamento_legado \
+                         estado sem_bloqueio_aberto sem_defeito_de_plano fronteira_insegura; do
+                  [ "$(familia_do_motivo "$m")" = operacional ] && printf '%s\n' "$m"
+                done | sort -u | paste -sd' ' -)"
+  caso "P02D.pin o enum da recusa: o contrato da sprintx e a lista do buildx batem" \
+    "classes_mistas orcamento_f6_legado orcamento_f6_nao_declarado planejamento_legado $MOTIVOS_SX" \
+    "$MOTIVOS_SX $MOTIVOS_BX"
+  for m in $MOTIVOS_SX; do
+    caso "P02D.pin o motivo $m do contrato e duravel no buildx" sim "$(sim_nao motivo_duravel "$m")"
+  done
+
+  # ---- A recusa operacional é DURÁVEL: os quatro motivos, lidos do commit ----
+  #
+  # Cada variante chega ao motivo por um caminho diferente — outra classe aberta,
+  # planejamento anterior ao eixo da F6, teto não declarado, feature sem
+  # 00-PLANEJAMENTO.md. O resultado do buildx é o mesmo, e nada nele vem do
+  # worktree: o estado e o motivo saem do commit que a sprintx fez.
+  for k in mistas legado nao_declarado sem_plano; do
+    case "$k" in
+      mistas)        MOT=classes_mistas ;;
+      legado)        MOT=orcamento_f6_legado ;;
+      nao_declarado) MOT=orcamento_f6_nao_declarado ;;
+      sem_plano)     MOT=planejamento_legado ;;
+    esac
+    case "$k" in
+      legado|nao_declarado) f6_ate_f6 "rd-$k" "$k" ;;
+      *)                    f6_ate_f6 "rd-$k" ;;
+    esac
+    PASTA=docs/sprintx/features/ft-01; PL="$PASTA/00-PLANEJAMENTO.md"; TK="$WT/$PASTA/sprint-01/tasks.md"
+    case "$k" in
+      legado)
+        caso "RD.$k o planejamento commitado nao tem o eixo da F6" 0 \
+          "$(git show "feature/ft-01:$PL" | grep -cE '^(max_replanejamentos_f6|replanejamentos_f6|bloqueios_replanejamento_f6|tasks_congeladas|assinatura_congeladas):')"
+        caso "RD.$k a sprintx o le como legado, e a F1 nao ganha teto na retomada" "legado 3 buildx" \
+          "$(chave "$(sprintx "$WT" fase ft-01)" orcamento_f6) $(args_criar "$WT" ft-01)" ;;
+      nao_declarado)
+        caso "RD.$k o teto da F6 e null, e a conferencia do buildx para" "null nao" \
+          "$(chave "$(sprintx "$WT" fase ft-01)" max_replanejamentos_f6) $(sim_nao orcamento_confere ft-01)" ;;
+      sem_plano)
+        git -C "$WT" rm -q "$PL"
+        git -C "$WT" commit -q -m "fixture: feature anterior ao P0.1" -m "Planejamento: checkpoint" >/dev/null
+        caso "RD.$k a feature nao tem planejamento commitado" nao "$(sim_nao git cat-file -e "feature/ft-01:$PL")" ;;
+    esac
+    sx_bloqueia "$WT" ft-01 T-01.02 defeito_de_plano
+    [ "$k" = mistas ] && sx_bloqueia "$WT" ft-01 T-01.03 prerequisito_ausente
+
+    caso "RD.$k o buildx e a sprintx preveem a recusa por $MOT" "recusado:$MOT recusado:$MOT" \
+      "$(retorno_f6_em "$WT" ft-01) $(retorno_f6_real "$WT" ft-01)"
+    caso "RD.$k antes da chamada nao ha terminal commitado" nao \
+      "$(terminal_f6_commitado "$(git rev-parse feature/ft-01)" ft-01)"
+    # Numa feature sem `00-PLANEJAMENTO.md` a sprintx responde `fonte=legado`, e o
+    # buildx para por aí, antes de qualquer pergunta sobre o retorno da F6: quem chama
+    # o `replanejar-execucao` ali é a F6 da sprintx — e o terminal que ela grava é o
+    # que volta a ser legível para ele, com o arquivo que a migração cria.
+    if [ "$k" = sem_plano ]; then
+      caso "RD.$k fonte=legado: o buildx para, e nao abre task" "PARE nao" \
+        "$(retomada_decide ft-01 "$BASE" em_andamento "$PROJ") $(sim_nao f6_pode_abrir_task ft-01 "$BASE" "$PROJ")"
+    else
+      caso "RD.$k a retomada manda so o replanejar-execucao, sem task nova" "F:replanejar_execucao nao" \
+        "$(retomada_decide ft-01 "$BASE" em_andamento "$PROJ") $(sim_nao f6_pode_abrir_task ft-01 "$BASE" "$PROJ")"
+    fi
+
+    SAIDA="$(sprintx "$WT" replanejar-execucao ft-01; printf 'codigo=%s\n' "$?")"
+    caso "RD.$k a sprintx grava o terminal e para" "recusado $MOT replanejamento_execucao_recusado PARAR 5" \
+      "$(chave "$SAIDA" replanejamento) $(chave "$SAIDA" motivo) $(chave "$SAIDA" estado) $(chave "$SAIDA" proxima) $(chave "$SAIDA" codigo)"
+    caso "RD.$k num checkpoint da sprintx, na fase f6" "f6 replanejamento_execucao_recusado" \
+      "$(git log -1 --format=%B feature/ft-01 | tr -d '\r' | awk -F': ' '/^Fase: / { f = $2 } /^Estado: / { e = $2 } END { print f, e }')"
+    caso "RD.$k o motivo esta no planejamento commitado" "recusa_replanejamento_f6: $MOT" \
+      "$(git show "feature/ft-01:$PL" | tr -d '\r' | grep '^recusa_replanejamento_f6:')"
+    caso "RD.$k nenhuma rodada aberta, nenhuma task nova, a T-01.02 bloqueada" "0 3 bloqueada" \
+      "$(rodadas_abertas ft-01) $(git show "feature/ft-01:$PASTA/sprint-01/tasks.md" | grep -c '^  - id: ') $(status_task "$TK" T-01.02)"
+    caso "RD.$k o buildx le o terminal e o motivo do commit" "recusado:$MOT" \
+      "$(terminal_f6_commitado "$(git rev-parse feature/ft-01)" ft-01)"
+    caso "RD.$k a acao do buildx: terminal da F6, e a retomada: T" "terminal_f6 T" \
+      "$(buildx_acao "$WT" ft-01) $(retomada_decide ft-01 "$BASE" em_andamento "$PROJ")"
+
+    # Repetir a chamada: o mesmo terminal, o mesmo motivo, nenhum commit novo.
+    TIP="$(git rev-parse feature/ft-01)"
+    SAIDA="$(sprintx "$WT" replanejar-execucao ft-01; printf 'codigo=%s\n' "$?")"
+    caso "RD.$k repetir devolve o mesmo, sem gravar de novo" "$MOT replanejamento_execucao_recusado 5 $TIP" \
+      "$(chave "$SAIDA" motivo) $(chave "$SAIDA" estado) $(chave "$SAIDA" codigo) $(git rev-parse feature/ft-01)"
+
+    # O worktree morre; depois, só a branch, num clone: o terminal continua o mesmo.
+    git worktree remove --force "$WT"
+    caso "RD.$k sem worktree: T, e o mesmo motivo" "T recusado:$MOT" \
+      "$(retomada_decide ft-01 "$BASE" em_andamento "$PROJ") $(terminal_f6_commitado "$TIP" ft-01)"
+    CLONE="$TMP_RAIZ/rd-$k/clone"
+    git clone -q "$C" "$CLONE" 2>/dev/null
+    caso "RD.$k retomada num clone, so com a branch: T, o motivo e o portao" "T recusado:$MOT recusado:$MOT" \
+      "$(cd "$CLONE" && git config user.email t@t && git config user.name t &&
+         git checkout -q -B "buildx/rd-$k" "origin/buildx/rd-$k" 2>/dev/null
+         git branch -q feature/ft-01 origin/feature/ft-01 2>/dev/null
+         printf '%s %s %s' "$(retomada_decide ft-01 "$BASE" em_andamento "buildx/rd-$k")" \
+           "$(terminal_f6_commitado "$TIP" ft-01)" "$(gate_terminal_f6 "$BASE" ft-01 "buildx/rd-$k")")"
+    cd "$C"
+
+    if [ "$k" = mistas ]; then
+      # A recusa materializada pelo fechamento da F6: a entrega bloqueada é a linha
+      # R, e o terminal COMMITADO vence a regra genérica dos B-NN — que aqui diria
+      # `classes_divergentes`, e em `defeito_de_plano` puro diria `trabalho_novo`.
+      reabre_worktree ft-01 "$WT"
+      f6_e8_bloqueado "$WT" ft-01
+      REF="$(git rev-parse feature/ft-01):docs/entregas/ft-01/ENTREGA.md"
+      caso "RD.$k a entrega bloqueada: R"           R:entrega_bloqueada "$(retomada_decide ft-01 "$BASE" em_andamento "$PROJ")"
+      caso "RD.$k pelos B-NN, a regra generica diria classes_divergentes" \
+        "decisao_humana entrega_bloqueada/causa_bloqueio_aberto/classes_divergentes" \
+        "$(bloqueios_commitados "${REF%%:*}" ft-01 | classe_dos_abertos)"
+      caso "RD.$k mas a recusa commitada vence, com o motivo" \
+        "decisao_humana entrega_bloqueada/causa_bloqueio_aberto/replanejamento_execucao_recusado/$MOT" \
+        "$(classe_da_entrega "$REF")"
+      caso "RD.$k a triagem registra, e o B5 classifica" "sim sim" \
+        "$(sim_nao registra_entrega_bloqueada "$BASE" ft-01 FT-01 "$PROJ") $(sim_nao f6_b5 PEND-01)"
+      f6_persistido "RD.$k" entrega_bloqueada decisao_humana "entrega_bloqueada/causa_bloqueio_aberto/replanejamento_execucao_recusado/$MOT"
+      continue
+    fi
+
+    # O registro do terminal, sem worktree nenhum.
+    caso "RD.$k o registro terminal, sem worktree"  sim "$(sim_nao registra_terminal_f6 "$BASE" ft-01 FT-01 "$PROJ")"
+    caso "RD.$k a CONTROL avancou um commit, publicado" "$BASE $(git rev-parse HEAD)" \
+      "$(git rev-parse HEAD~1) $(git rev-parse "origin/$PROJ")"
+    caso "RD.$k PEND pelo gatilho proprio, com a causa do motivo" \
+      "aguardando_classificacao null replanejamento_execucao_recusado $MOT B-01" \
+      "$(f6_pc PEND-01 estado) $(f6_pc PEND-01 classe) $(f6_pc PEND-01 gatilho) $(f6_pc PEND-01 causa) $(f6_pc PEND-01 clausula_central)"
+    caso "RD.$k a evidencia: PLANEJAMENTO e BLOQUEIOS no mesmo HEAD" \
+      "feature/ft-01@$TIP:$PL ; feature/ft-01@$TIP:$PASTA/00-BLOQUEIOS.md" "$(f6_pc PEND-01 evidencia)"
+    caso "RD.$k a feature nao foi tocada"           "$TIP" "$(git rev-parse feature/ft-01)"
+    # A causa gravada tem de ser a commitada: divergindo, o B5 para.
+    cp docs/projeto/RECURSAO.md "$TMP_RAIZ/rd-$k-rec.md"
+    pend_define docs/projeto/RECURSAO.md PEND-01 causa classes_mistas
+    caso "RD.$k causa divergente da commitada: o B5 para" nao \
+      "$(sim_nao b5_classifica docs/projeto/RECURSAO.md PEND-01 docs/projeto/MAPA.md FT-03 ft-01-v2)"
+    cp "$TMP_RAIZ/rd-$k-rec.md" docs/projeto/RECURSAO.md
+    caso "RD.$k o B5 classifica e persiste"         sim "$(sim_nao f6_b5 PEND-01)"
+    f6_persistido "RD.$k" replanejamento_execucao_recusado decisao_humana "replanejamento_execucao_recusado/$MOT"
+    caso "RD.$k reclassificar e recusado"           nao \
+      "$(sim_nao b5_classifica docs/projeto/RECURSAO.md PEND-01 docs/projeto/MAPA.md FT-04 ft-01-v3)"
+  done
+
+  # ---- A F5 esgota o orçamento DENTRO da rodada de replanejamento da F6 ----
+  #
+  # A lacuna que este fechamento cobre: não é o terminal pré-F6 (há produto
+  # concluído, e a prova H barra) e não é a regra normal do orçamento da F5, que
+  # criaria uma sucessora a partir da CONTROL e perderia o trabalho válido daquela
+  # branch.
+  f6_ate_f6 rf5
+  PASTA=docs/sprintx/features/ft-01; PL="$PASTA/00-PLANEJAMENTO.md"
+  E1_0101="$(git rev-parse feature/ft-01)"; BLOB_0101="$(git rev-parse "feature/ft-01:src/T-01.01.ts")"
+  sx_bloqueia "$WT" ft-01 T-01.02 defeito_de_plano
+  sprintx "$WT" replanejar-execucao ft-01 >/dev/null
+  # Os dois orçamentos são independentes: a rodada da F6 abriu sem tocar no da F5.
+  # `fase` devolve o eixo da F6; as reprovações estão no arquivo commitado.
+  caso "F5R a rodada abriu, com o orcamento da F5 ainda em 0 de 3" "1 ativo 0 3" \
+    "$(S="$(sprintx "$WT" fase ft-01)"; P="$(git show "feature/ft-01:$PL" | tr -d '\r')"
+printf '%s %s %s %s' "$(chave "$S" replanejamentos_f6)" "$(chave "$S" replanejamento_execucao)" \
+"$(printf '%s\n' "$P" | sed -n 's/^reprovacoes: //p')" "$(printf '%s\n' "$P" | sed -n 's/^max_reprovacoes_f5: //p')")"
+  for i in 1 2 3; do
+    sprintx "$WT" avanca ft-01 f3 >/dev/null; sx_f4 "$WT" ft-01
+    SAIDA="$(sx_f5 "$WT" ft-01 nao 9; printf 'codigo=%s\n' "$?")"
+  done
+  caso "F5R a terceira reprovacao esgota a F5 dentro da rodada" "orcamento_esgotado PARAR ativo 0" \
+    "$(chave "$SAIDA" estado) $(chave "$SAIDA" proxima) $(chave "$SAIDA" replanejamento_execucao) $(chave "$SAIDA" codigo)"
+  caso "F5R a evidencia duravel da rodada esta no mesmo commit" "[B-01] estado: orcamento_esgotado" \
+    "$(git show "feature/ft-01:$PL" | tr -d '\r' | sed -n 's/^bloqueios_replanejamento_f6: //p') \
+$(git show "feature/ft-01:$PL" | tr -d '\r' | grep '^estado: ')"
+  caso "F5R o buildx le o terminal proprio, do commit" f5_esgotado_na_rodada \
+    "$(terminal_f6_commitado "$(git rev-parse feature/ft-01)" ft-01)"
+  caso "F5R a acao e a retomada: terminal da F6, nunca o pre-F6" "terminal_f6 T" \
+    "$(buildx_acao "$WT" ft-01) $(retomada_decide ft-01 "$BASE" em_andamento "$PROJ")"
+  caso "F5R o portao pre-F6 nao passa: ha produto concluido" nao \
+    "$(sim_nao gate_terminal_pre_f6 "$BASE" ft-01 "$PROJ" "$WT")"
+  caso "F5R o portao terminal da F6 passa, e ecoa o terminal" f5_esgotado_na_rodada \
+    "$(gate_terminal_f6 "$BASE" ft-01 "$PROJ" "$WT")"
+  caso "F5R a regra NORMAL da F5 diria trabalho_novo" "trabalho_novo orcamento_f5_esgotado/alta_qualidade_plano" \
+    "$(git show "feature/ft-01:$PASTA/00-AUDITORIA.md" | classe_orcamento)"
+  TIP="$(git rev-parse feature/ft-01)"
+  git worktree remove --force "$WT"
+  caso "F5R worktree perdido: o terminal e o portao continuam" "T f5_esgotado_na_rodada f5_esgotado_na_rodada" \
+    "$(retomada_decide ft-01 "$BASE" em_andamento "$PROJ") $(terminal_f6_commitado "$TIP" ft-01) $(gate_terminal_f6 "$BASE" ft-01 "$PROJ")"
+  caso "F5R o registro terminal, sem worktree"       sim "$(sim_nao registra_terminal_f6 "$BASE" ft-01 FT-01 "$PROJ")"
+  caso "F5R PEND pelo gatilho proprio, sem causa"    "aguardando_classificacao null orcamento_f5_esgotado_durante_replanejamento_execucao null B-01" \
+    "$(f6_pc PEND-01 estado) $(f6_pc PEND-01 classe) $(f6_pc PEND-01 gatilho) $(f6_pc PEND-01 causa) $(f6_pc PEND-01 clausula_central)"
+  caso "F5R a evidencia: PLANEJAMENTO, AUDITORIA e BLOQUEIOS no mesmo HEAD" \
+    "feature/ft-01@$TIP:$PL ; feature/ft-01@$TIP:$PASTA/00-AUDITORIA.md ; feature/ft-01@$TIP:$PASTA/00-BLOQUEIOS.md" \
+    "$(f6_pc PEND-01 evidencia)"
+  caso "F5R o B5 classifica e persiste"              sim "$(sim_nao f6_b5 PEND-01)"
+  f6_persistido "F5R" orcamento_f5_esgotado_durante_replanejamento_execucao decisao_humana \
+    orcamento_f5_esgotado_durante_replanejamento_execucao
+  caso "F5R a branch e os commits validos preservados" "$TIP $BLOB_0101 sim concluida" \
+    "$(git rev-parse feature/ft-01) $(git rev-parse "feature/ft-01:src/T-01.01.ts") \
+$(sim_nao git merge-base --is-ancestor "$E1_0101" feature/ft-01) \
+$(git show "feature/ft-01:$PASTA/sprint-01/tasks.md" > "$TMP_RAIZ/rf5-tk.md"; status_task "$TMP_RAIZ/rf5-tk.md" T-01.01)"
+
+  # ---- O caso normal da F5, antes de qualquer F6: o P0.1 continua intacto ----
+  C="$(projeto_p01 rn)"; cd "$C"
+  BASE="$(git rev-parse HEAD)"; PROJ=buildx/rn; WT="$TMP_RAIZ/rn/wt-ft-01"
+  feature_nasce ft-01 "$BASE" rn
+  sx_f1 "$WT" ft-01; sx_f2 "$WT" ft-01
+  sx_rodada_nao "$WT" ft-01 9; sx_rodada_nao "$WT" ft-01 9; sx_rodada_nao "$WT" ft-01 9
+  caso "N.f5 a sprintx esgota a F5 sem nenhuma rodada da F6" "orcamento_esgotado PARAR " \
+    "$(S="$(sprintx "$WT" fase ft-01)"; printf '%s %s %s' "$(chave "$S" estado)" "$(chave "$S" fase)" "$(chave "$S" replanejamento_execucao)")"
+  caso "N.f5 nenhum terminal da F6 no commit"        nao "$(terminal_f6_commitado "$(git rev-parse feature/ft-01)" ft-01)"
+  caso "N.f5 a acao continua terminal_pre_f6, e a retomada G" "terminal_pre_f6 G" \
+    "$(buildx_acao "$WT" ft-01) $(retomada_decide ft-01 "$BASE" em_andamento "$PROJ")"
+  caso "N.f5 o portao pre-F6 passa, e o da F6 nao"   "sim nao" \
+    "$(sim_nao gate_terminal_pre_f6 "$BASE" ft-01 "$PROJ" "$WT") $(sim_nao gate_terminal_f6 "$BASE" ft-01 "$PROJ" "$WT")"
+  caso "N.f5 registra pelo gatilho da F5"            "sim orcamento_f5_esgotado" \
+    "$(sim_nao registra_terminal_pre_f6 "$BASE" ft-01 FT-01 "$PROJ" "$WT") $(f6_pc PEND-01 gatilho)"
+  caso "N.f5 o B5 classifica"                        sim "$(sim_nao f6_b5 PEND-01)"
+  caso "N.f5 trabalho_novo com sucessora, exatamente como no P0.1" \
+    "em_resolucao trabalho_novo orcamento_f5_esgotado/alta_qualidade_plano FT-03" \
+    "$(f6_pc PEND-01 estado) $(f6_pc PEND-01 classe) $(f6_pc PEND-01 regra_aplicada) $(f6_pc PEND-01 destino)"
+  caso "N.f5 a sucessora esta no MAPA, origem recursao" "pendente recursao FT-01" \
+    "$(f6_mapa FT-03 Status) $(f6_mapa FT-03 Origem) $(f6_mapa FT-03 Sucede)"
+
+  # ---- Erros de contrato: nada disso vira recusa por inferência ----
+  #
+  # Cada fixture é um 00-PLANEJAMENTO.md commitado que a sprintx recusa, ou um
+  # estado que ela não confirma. Resultado: PARE, nenhuma PEND, nenhum commit.
+  f6_ate_f6 rx
+  PASTA=docs/sprintx/features/ft-01; PL="$PASTA/00-PLANEJAMENTO.md"
+  sx_bloqueia "$WT" ft-01 T-01.02 defeito_de_plano
+  sprintx "$WT" replanejar-execucao ft-01 >/dev/null
+  caso "X.contrato o piso do cenario: a rodada abriu" ativo "$(retorno_f6_em "$WT" ft-01)"
+  LIMPO="$(git rev-parse feature/ft-01)"
+  for f in motivo_fora_do_enum recusa_sem_motivo motivo_em_estado_vivo estado_fora_do_enum; do
+    git -C "$WT" checkout -q "$LIMPO" -- "$PL"
+    case "$f" in
+      motivo_fora_do_enum)
+        sed -i -e 's/^estado: .*/estado: replanejamento_execucao_recusado/' \
+               -e 's/^reprovacoes: /recusa_replanejamento_f6: motivo_do_futuro\nreprovacoes: /' "$WT/$PL" ;;
+      recusa_sem_motivo)
+        sed -i 's/^estado: .*/estado: replanejamento_execucao_recusado/' "$WT/$PL" ;;
+      motivo_em_estado_vivo)
+        sed -i 's/^reprovacoes: /recusa_replanejamento_f6: classes_mistas\nreprovacoes: /' "$WT/$PL" ;;
+      estado_fora_do_enum)
+        sed -i 's/^estado: .*/estado: recusa_operacional/' "$WT/$PL" ;;
+    esac
+    git -C "$WT" add -A 2>/dev/null; git -C "$WT" commit -q -m "fixture: $f" >/dev/null
+    REF="$(git rev-parse feature/ft-01)"
+    caso "X.contrato $f: nenhum terminal confirmado, e o buildx para" "nao PARE nao nao" \
+      "$(sim_nao test "$(terminal_f6_commitado "$REF" ft-01)" = recusado:motivo_do_futuro) \
+$(retomada_decide ft-01 "$BASE" em_andamento "$PROJ") \
+$(sim_nao gate_terminal_f6 "$BASE" ft-01 "$PROJ" "$WT") \
+$(sim_nao registra_terminal_f6 "$BASE" ft-01 FT-01 "$PROJ" "$WT")"
+    caso "X.contrato $f: nenhuma PEND, nenhum MAPA, nenhum commit na CONTROL" "$BASE $BASE nao em_andamento " \
+      "$(git rev-parse HEAD) $(git rev-parse "origin/$PROJ") $(sim_nao test -e docs/projeto/RECURSAO.md) \
+$(mapa_valor docs/projeto/MAPA.md FT-01 Status) $(git status --porcelain)"
+  done
+
+  # Uma sprintx futura que devolvesse um motivo novo: o buildx não o aceita por
+  # semelhança de nome. A lista dele é conferida contra o contrato — e falha fechada.
+  RXD="$TMP_RAIZ/rx-recusado"; mkdir -p "$RXD/docs/sprintx/features"
+  git -C "$WT" checkout -q "$LIMPO" -- "$PL"
+  cp -R "$WT/docs/sprintx/features/ft-01" "$RXD/docs/sprintx/features/"
+  sed -i 's/^estado: .*/estado: replanejamento_execucao_recusado/' "$RXD/$PL"
+  for m in classes_mistas motivo_do_futuro; do
+    printf '#!/usr/bin/env bash\nprintf "fase=PARAR\\nestado=replanejamento_execucao_recusado\\nfonte=planejamento\\npersistencia=disco\\nrecusa_replanejamento_f6=%s\\nreplanejamentos_f6=0\\nmax_replanejamentos_f6=1\\n"\n' \
+      "$m" > "$TMP_RAIZ/stub-fase-$m.sh"
+  done
+  caso "X.enum o mecanismo confere: motivo do enum e aceito" recusado:classes_mistas \
+    "$(PLANEJAMENTO="$TMP_RAIZ/stub-fase-classes_mistas.sh"; terminal_f6_em "$RXD" ft-01)"
+  caso "X.enum motivo fora do enum do buildx: falha fechada" nao \
+    "$(PLANEJAMENTO="$TMP_RAIZ/stub-fase-motivo_do_futuro.sh"; sim_nao terminal_f6_em "$RXD" ft-01)"
+fi
+cd "$REPO"
+fi  # f6d
+
 if bloco decisoes; then
 echo
 echo "P0.1 — decisões append-only, D-26 em diante"
@@ -3800,12 +4095,12 @@ DEC_SKILL="$REPO/.claude/skills/buildx/DECISOES-DA-SKILL.md"
 IDS="$(tr -d '\r' < "$DEC_SKILL" | sed -n 's/^## \(D-[0-9][0-9]*\) — .*/\1/p')"
 caso "P01.36 nenhum D-NN repetido" "$(printf '%s\n' "$IDS" | wc -l | tr -d ' ')" "$(printf '%s\n' "$IDS" | sort -u | wc -l | tr -d ' ')"
 FALTA=""
-for n in $(seq 1 36); do
+for n in $(seq 1 38); do
   printf '%s\n' "$IDS" | grep -qx "$(printf 'D-%02d' "$n")" || FALTA="$FALTA D-$n"
 done
-caso "P01.36 D-01 a D-36 presentes" "" "$FALTA"
-caso "P01.36 as decisoes P0.1 e P0.2 vem depois da D-25, em ordem" "D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36 D-37" \
-  "$(printf '%s\n' "$IDS" | tail -13 | tr '\n' ' ' | sed 's/ $//')"
+caso "P01.36 D-01 a D-38 presentes" "" "$FALTA"
+caso "P01.36 as decisoes P0.1 e P0.2 vem depois da D-25, em ordem" "D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36 D-37 D-38" \
+  "$(printf '%s\n' "$IDS" | tail -14 | tr '\n' ' ' | sed 's/ $//')"
 for t in 'O orçamento da F5 é do caller; a contagem é da sprintx' \
          'Checkpoint da sprintx é estado legítimo da feature' \
          'Terminal pré-F6 só move a CONTROL com evidência commitada' \
@@ -3813,7 +4108,7 @@ for t in 'O orçamento da F5 é do caller; a contagem é da sprintx' \
          'Trabalho resolvível depois de um bloqueio vira feature sucessora' \
          'A pendência tem estado' \
          'PR-NN de feature que não integrou continuam reservados' \
-         'O buildx nunca comita artefato da sprintx'; do
+         'O buildx nunca comita artefato da sprintx' \n         'A recusa do retorno da F6 é estado durável da sprintx, e o buildx a lê do commit'; do
   caso "P01.36 decisao registrada: $t" sim "$(sim_nao grep -qF "$t" "$DEC_SKILL")"
 done
 fi  # decisoes
