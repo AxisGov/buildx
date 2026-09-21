@@ -10,8 +10,10 @@ O B2 é a etapa mais mecânica do buildx e a que mais dá errado quando pulada. 
 
 Se não houver `.git` no diretório de trabalho nem em nenhum ancestral, inicialize aqui. O `.gitignore` vem do template, no Passo 5, e já cobre segredo, `node_modules`, o arquivo do banco e o client gerado — mas ele precisa estar no lugar **antes do primeiro commit**, para que nada sensível chegue a ter estado versionado. Se for commitar antes do Passo 5, commite vazio.
 
-Nunca versione: `.env`, `node_modules/`, o arquivo `.db` do SQLite, artefatos de build, o índice do memox.
+Nunca versione: `.env`, `node_modules/`, o arquivo `.db` do SQLite, artefatos de build, o índice do memox (`.expx/memoria/`), o rastro de eventos (`docs/eventos/`) e o `.expx/estado.json` da barra.
 Sempre versione: `.env.example`, `.expx/expx-lock.json`, as migrations, a seed de demonstração.
+
+Os três derivados do expx merecem nota, porque o contrato **já conta com eles fora do `git status`**: a prova E do B4 afirma que derivado e ignorado "não aparece em `git status --porcelain` e não conta" (`references/05-construcao.md`). Isso só é verdade se o `.gitignore` os mantiver fora — e é por isso que eles estão no template. **`.expx/` inteira não é ignorada:** o lock e o marketplace são versionados (Passo 5), e ignorar a pasta apagaria a reprodutibilidade da instalação.
 
 ### 1.1 — Determinar e persistir a branch principal
 

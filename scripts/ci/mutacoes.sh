@@ -25,7 +25,12 @@
 # durável e voltar a ler o worktree, transformar `classes_mistas` em trabalho novo,
 # inventar a causa pelo B-NN, aceitar motivo fora do enum, dar à F5 esgotada dentro
 # da rodada o gatilho e a classe do caso normal, exigir worktree no portão terminal
-# da F6 e aceitar a sprintx anterior ao estado durável — e exige que o harness FALHE.
+# da F6 e aceitar a sprintx anterior ao estado durável — e, no P0.2-C6, os dez defeitos
+# que a prova E dos desvios fecha: qualquer `desvios` não vazio liberando qualquer
+# sujeira, ler a ENTREGA do worktree, prefixo de diretório, prefixo cru, olhar só o
+# primeiro caminho sujo, ENTREGA ausente ou aberta autorizando, allowlist de artefato
+# de método, stage passando por desvio e `desvios: []` valendo por "nada a restringir"
+# — e exige que o harness FALHE.
 # Mutação que sobrevive é teste que falta.
 #
 # O repositório real nunca é alterado: a cópia vive num diretório temporário e é
@@ -46,6 +51,7 @@ export MERGEX_REPO="${MERGEX_REPO:-$REPO/../mergex}"
 HARNESS=scripts/ci/integracao.sh
 RECURSAO_REF=.claude/skills/buildx/references/06-recursao.md
 TEMPLATE_RECURSAO=.claude/skills/buildx/assets/TEMPLATE-RECURSAO.md
+PROVA_E=.claude/skills/buildx/scripts/prova-e.sh
 
 # copia <destino> — os arquivos rastreados, com o conteúdo do working tree.
 copia() {
@@ -310,6 +316,57 @@ EOF
       if false; then echo terminal_f6   # [M44]
 EOF
       ;;
+    M45) # qualquer `desvios` não vazio libera qualquer sujeira
+      troca "$d/$PROVA_E" '# [M45]' <<'EOF'
+  [ "${#DECLARADOS[@]}" -gt 0 ] && return 0                                                   # [M45]
+  return 1
+EOF
+      ;;
+    M46) # ler a ENTREGA da árvore de trabalho — a cópia que se autoautoriza
+      troca "$d/$PROVA_E" '# [M46]' <<'EOF'
+if ! ENTREGA="$(cat "$WT/docs/entregas/$SLUG/ENTREGA.md" 2>/dev/null)"; then                  # [M46]
+EOF
+      ;;
+    M47) # prefixo de diretório: `src/foo` passa a autorizar `src/foo/bar.ts`
+      troca "$d/$PROVA_E" '# [M47]' <<'EOF'
+    case "$1" in "$d"|"$d"/*) return 0 ;; esac                                                # [M47]
+EOF
+      ;;
+    M48) # olhar só o primeiro caminho sujo, e ignorar o segundo não declarado
+      troca "$d/$PROVA_E" '# [M48]' <<'EOF'
+while [ "$i" -lt 1 ] && [ "$i" -lt "$TOTAL" ]; do                                             # [M48]
+EOF
+      ;;
+    M49) # ENTREGA ausente passa a permitir sujeira
+      troca "$d/$PROVA_E" '# [M49]' <<'EOF'
+  veredito limpa; exit 0                                                                      # [M49]
+EOF
+      ;;
+    M50) # ENTREGA aberta passa a autorizar os `desvios` dela
+      troca "$d/$PROVA_E" '# [M50]' <<'EOF'
+    ;;                                                                                        # [M50]
+EOF
+      ;;
+    M51) # allowlist genérica de artefato de método
+      troca "$d/$PROVA_E" '# [M51]' <<'EOF'
+  elif case "${SUJOS[$i]}" in docs/*) true ;; *) declarado "${SUJOS[$i]}" ;; esac; then       # [M51]
+EOF
+      ;;
+    M52) # stage de caminho declarado passa a ser autorizado pelo desvio
+      troca "$d/$PROVA_E" '# [M52]' <<'EOF'
+  if false; then                                                                              # [M52]
+EOF
+      ;;
+    M53) # casamento por prefixo cru: `src/foo.ts` passa a autorizar `src/foo.ts.bak`
+      troca "$d/$PROVA_E" '# [M53]' <<'EOF'
+  for d in ${DECLARADOS+"${DECLARADOS[@]}"}; do case "$1" in "$d"*) return 0 ;; esac          # [M53]
+EOF
+      ;;
+    M54) # `desvios: []` passa a significar "nada a restringir"
+      troca "$d/$PROVA_E" '# [M54]' <<'EOF'
+  local d; [ "${#DECLARADOS[@]}" = 0 ] && return 0                                            # [M54]
+EOF
+      ;;
     *) echo "mutacao desconhecida: $1" >&2; return 1 ;;
   esac
 }
@@ -334,6 +391,7 @@ blocos() {
     M27) echo "orcamento f6" ;;
     M29|M30|M31|M32|M34) echo "f6" ;;
     M28|M33|M35|M36|M37|M38|M39|M40|M41|M42|M43|M44) echo "f6d" ;;
+    M45|M46|M47|M48|M49|M50|M51|M52|M53|M54) echo "desvios" ;;
   esac
 }
 
@@ -341,7 +399,7 @@ roda() { # roda <nome> <arvore> <blocos> -> grava <nome>.log e <nome>.rc
   ( cd "$TMP" && BLOCOS="$3" bash "$2/$HARNESS" > "$TMP/$1.log" 2>&1; echo $? > "$TMP/$1.rc" )
 }
 
-MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23 M24 M25 M26 M27 M28 M29 M30 M31 M32 M33 M34 M35 M36 M37 M38 M39 M40 M41 M42 M43 M44}"
+MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23 M24 M25 M26 M27 M28 M29 M30 M31 M32 M33 M34 M35 M36 M37 M38 M39 M40 M41 M42 M43 M44 M45 M46 M47 M48 M49 M50 M51 M52 M53 M54}"
 TODOS_BLOCOS="$(for m in $MUTACOES; do blocos "$m"; done | tr ' ' '\n' | sort -u | tr '\n' ' ')"
 
 echo "controle — a árvore sem mutação passa nos blocos: $TODOS_BLOCOS"

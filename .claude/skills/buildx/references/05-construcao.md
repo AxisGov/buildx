@@ -40,7 +40,8 @@ CONTROL = checkout de controle = buildx/<projeto_id>
   ◄──────── volta ao checkout de controle ────┘
   6. lê ENTREGA.md + FECHAMENTO.md COMMITADOS (git show feature/<slug>:...)
   7. PROVAS: A HEAD==BASE_SHA · B origin==BASE_SHA · C ancestral · D CONTROL limpa
-             E worktree da feature limpa · F estado final no HEAD da feature
+             E worktree da feature limpa, salvo desvio commitado · F estado
+               final no HEAD da feature
              + entrega publicada: push_feito e origin/feature == feature
   8. git merge --ff-only feature/<slug>
   9. MAPA: entregue + Integrada em <FEATURE_SHA>
@@ -344,7 +345,7 @@ Quando a sprintx responde `fase=PARAR`, `estado=orcamento_esgotado`, `persistenc
 | **B** | o remoto da `CONTROL` continua no mesmo ponto, quando houver remoto | `git rev-parse origin/buildx/<projeto_id>` == `BASE_SHA` |
 | **C** | a feature descende da base | `git merge-base --is-ancestor <BASE_SHA> feature/<slug>` |
 | **D** | a árvore de controle está limpa | `git status --porcelain` vazio, em `CONTROL` |
-| **E** | a árvore da feature está limpa | `git status --porcelain` vazio, no worktree da feature |
+| **E** | a árvore da feature está limpa — **estrita** | `prova-e.sh <worktree> <slug> --estrito` respondendo `limpa`. Aqui a tentativa parou **antes** da F6: o E0 nunca rodou, não existe `ENTREGA.md`, e portanto não existe desvio commitado que explique coisa alguma (abaixo, "A prova E") |
 | **F** | o estado terminal está **commitado** | `git show feature/<slug>:docs/sprintx/features/<slug>/00-PLANEJAMENTO.md` com `estado: orcamento_esgotado` |
 | **G** | a sprintx não está em checkpoint pendente | `planejamento.sh fase <slug>` responde `PARAR` / `orcamento_esgotado` / `duravel` — nunca `CHECKPOINT` |
 | **H** | não há produto antes da F6 | ver abaixo |
@@ -382,7 +383,7 @@ A F6 pode terminar de três formas que **não** são entrega, todas depois de pr
 | # | Prova | Como |
 |---|---|---|
 | **A**–**D** | as mesmas do portão pré-F6 | `CONTROL` em `BASE_SHA`, remoto no mesmo ponto, árvore de controle limpa, ancestralidade |
-| **E** | **se** o worktree existe, ele está limpo e concorda | `git status --porcelain` vazio nele, e `planejamento.sh fase <slug>` ali respondendo `PARAR` / `duravel`. Worktree ausente: a prova não se aplica — não reabra worktree para decidir |
+| **E** | **se** o worktree existe, ele está limpo — **estrita** — e concorda | `prova-e.sh <worktree> <slug> --estrito` respondendo `limpa`, e `planejamento.sh fase <slug>` ali respondendo `PARAR` / `duravel`. Estrita porque a prova **H6** deste mesmo portão exige `ENTREGA.md` ausente ou `aberto`: sem entrega terminal commitada não há desvio que autorize sujeira (abaixo, "A prova E"). Worktree ausente (`sem_worktree`): a prova não se aplica — não reabra worktree para decidir |
 | **F** | o terminal está **commitado** | `git show feature/<slug>:docs/sprintx/features/<slug>/00-PLANEJAMENTO.md` num dos três estados da tabela acima |
 | **G** | a sprintx confirma o terminal, sobre aquele commit | `planejamento.sh fase <slug>` na pasta extraída do `HEAD` da feature responde `PARAR` com o mesmo `estado` — e, na recusa, `recusa_replanejamento_f6` com um motivo **do enum**. Registro que ela recusa, motivo fora do enum, ou estado que ela não confirma: **pare e relate** |
 | **H6** | nenhuma entrega terminal por cima | o `ENTREGA.md` do `HEAD` da feature ausente ou `aberto` — terminal, é a linha **L** ou **R**, que vencem (D-35) |
@@ -509,12 +510,52 @@ Havendo remoto, `git fetch origin` primeiro. Então:
 | **B** | o remoto da `CONTROL` continua no mesmo ponto | `git rev-parse origin/buildx/<projeto_id>` == `BASE_SHA` |
 | **C** | a feature descende daquela base | `git merge-base --is-ancestor <BASE_SHA> feature/<slug>` |
 | **D** | a árvore de controle está limpa | `git status --porcelain` vazio, em `CONTROL` |
-| **E** | a árvore da feature está limpa | `git status --porcelain` vazio, no worktree da feature |
+| **E** | a árvore da feature está limpa, **exceto** pelos desvios commitados | `prova-e.sh <worktree> <slug>` respondendo `limpa` ou `autorizada` (abaixo, "A prova E") |
 | **F** | o estado final está no HEAD da feature | `git show feature/<slug>:docs/entregas/<slug>/ENTREGA.md` declara `estado: entregue` e `portao: pronto` |
 
 **Falhou qualquer uma: pare e relate.** Não tente entender, não tente consertar, não escolha outro caminho — A e C falhando significam que a invariante foi violada; B, que outra sessão ou outra pessoa mexeu no remoto. Quem decide é gente.
 
-A prova **E** merece nota. Numa entrega `PRONTO`, a árvore da feature termina limpa: o E8 da mergex commita os artefatos de método que sobraram, e arquivo de produto fora do plano teria reprovado o portão antes (V9). Derivado e ignorado — o rastro de eventos, o `estado.json` da barra — não aparece em `git status --porcelain` e não conta. Então sujeira rastreável ali é **contradição**: a entrega diz pronta e a árvore diz que ficou coisa fora. Pare.
+### A prova E
+
+**A árvore da feature está limpa, exceto pelos caminhos que estejam explicitamente registrados em `desvios` na `ENTREGA.md` terminal e commitada da própria feature. Qualquer sujeira não coberta por esse conjunto: pare.**
+
+Numa entrega `PRONTO`, a árvore termina limpa quase sempre: o E8 da mergex commita os artefatos de método que sobraram, e arquivo de produto fora do plano teria reprovado o portão antes (V9). Derivado e **ignorado** — o rastro de eventos, o `estado.json` da barra — não aparece em `git status --porcelain` e não conta, porque o `.gitignore` do template já o mantém fora. Sujeira rastreável e inexplicada ali continua sendo **contradição**: a entrega diz pronta e a árvore diz que ficou coisa fora. Pare.
+
+O que muda é a única sujeira que a mergex **manda** deixar. Quando um arquivo de produto é alterado fora da lista declarada de toda task, o contrato dela é explícito (DM-13, `references/01-commits.md`): *não o commite e não o apague* — deixe-o na árvore e registre o caminho em `desvios`. Essa sujeira não é resíduo: é um registro deliberado, esperando decisão de gente. Chamá-la de contradição faria o buildx parar exatamente no caso que a irmã construiu para não perder trabalho de ninguém.
+
+```
+bash .claude/skills/buildx/scripts/prova-e.sh <worktree da feature> <slug> [--estrito]
+```
+
+| Veredito | Código | O que significa |
+|---|---|---|
+| `limpa` | 0 | `git status --porcelain` vazio. Nenhuma autorização é consultada |
+| `autorizada` | 0 | toda sujeira está declarada em `desvios` da `ENTREGA.md` terminal commitada |
+| `suja` | 1 | há sujeira que nenhum desvio commitado explica |
+| `entrega_ausente` · `entrega_aberta` · `entrega_invalida` | 1 | há sujeira e não há entrega terminal commitada que possa explicá-la |
+| `desvios_ausente` · `desvios_invalidos` | 1 | a entrega é terminal mas `desvios` não está lá, ou não é a lista de fluxo de uma linha que a mergex grava |
+| `stage_nao_autorizado` | 1 | há conteúdo em **stage** (abaixo) |
+| `sem_worktree` | 2 | não há árvore a inspecionar (abaixo) |
+
+**A fonte da verdade é o commit, nunca a cópia de trabalho.** A lista vem de `git show feature/<slug>:docs/entregas/<slug>/ENTREGA.md`, o mesmo endereço que o passo 6 já lê. O `ENTREGA.md` da árvore de trabalho não autoriza nada — **nem a si próprio**. Commit com `desvios: []`, arquivo local editado para incluir `src/x.ts`, `src/x.ts` sujo: **pare**. Uma alteração local que se autoriza não é evidência; é a afirmação se validando sozinha, que é a falha que o método inteiro existe para evitar.
+
+**A exceção só existe depois de uma entrega terminal commitada.** Terminais são exatamente as duas combinações que o E8 grava ao fechar — `entregue` · `pronto` e `bloqueado` · `bloqueado` (D-35) —, e nenhuma outra. `ENTREGA.md` ausente, ou `estado: aberto`, é limpeza **estrita**: `desvios` de uma entrega em curso não autoriza coisa nenhuma, porque o portão que decide sobre eles ainda não rodou. Registro terminal inválido com a árvore suja: **pare por contrato**, sem inferir autorização de um registro que não se declara inteiro. É por isso que as outras duas ocorrências da prova E — o portão terminal pré-F6 e o portão terminal da F6 — são estritas por construção: numa o E0 nunca rodou; na outra, a prova **H6** exige a entrega ausente ou `aberto`.
+
+**Onde cada terminal aparece, na prática.** No contrato atual da mergex, `desvios` não vazio **reprova a V9** e leva ao fechamento bloqueado: o terminal que carrega desvio de verdade é `bloqueado` · `bloqueado`. Um `entregue` · `pronto` com `desvios` não vazio é, hoje, inalcançável por esse caminho. A regra aqui é a mesma para os dois assim mesmo, e de propósito: quem decide se desvio reprova é o **portão**, que já rodou, e a prova E não existe para julgar de novo o que o portão julgou — se um registro terminal chega com desvio declarado, ela responde apenas se a sujeira na árvore é aquela. Inverter isso faria o buildx criar um segundo portão sobre a V9.
+
+**Subconjunto, não igualdade.** O que se prova é que toda sujeira está declarada, não que todo declarado ainda está sujo. Desvio registrado que já não aparece como sujeira é `limpa`, e não é erro: a mergex preserva em `desvios` os desvios "enquanto continuarem verdadeiros" (`references/00-abertura.md`, CASO 2), e a filtragem acontece no E0 de uma retomada — que pode ser muito antes desta leitura. Nada no contrato dela exige presença física do arquivo no instante em que o buildx olha, e parar diante de uma árvore **mais limpa** do que a declarada seria punir a direção segura.
+
+**O casamento de caminho é exato.** Byte a byte, contra o caminho que o Git imprime relativo à raiz do repositório. `src/foo` não autoriza `src/foo/bar.ts` — o schema de `desvios` é uma lista de arquivos alterados, não de diretórios —, `src/foo.ts` não autoriza `src/foo.ts.bak`, e nada de substring, prefixo ou `grep` frouxo. A leitura é `git status --porcelain -z --untracked-files=all`: a forma NUL-safe, que não cita e não escapa, para que caminho com espaço, acento ou aspas seja comparado como é. Renomeado traz **dois** caminhos — o novo e o de origem — e os dois precisam estar declarados.
+
+**Todo estado rastreável conta como sujeira:** modificado, novo (não rastreado), apagado, renomeado e em stage. Não rastreado e apagado podem ser desvio como qualquer outro — o schema da mergex não exige que o arquivo fosse rastreado antes, e um arquivo de produto **criado** fora da lista declarada é exatamente o caso que o E1 registra. Ignorado pelo `.gitignore` não aparece e não conta.
+
+**Stage nunca é autorizado por desvio.** O desvio da mergex fica **na árvore** e nunca entra no índice; o E1 dela exige índice vazio na entrada e para sem tocá-lo quando não está (`references/01-commits.md`, "O stage na entrada" — que separa explicitamente o índice, assunto dele, da árvore suja, assunto do desvio e do E2). Um caminho em `desvios` não compra autorização para conteúdo em stage, nem para o dele próprio. Ali quem decide é a regra do índice, e ela continua vencendo.
+
+**Desvio não é bypass.** A prova E responde "esta sujeira está explicada por um desvio commitado?" — não "esta sujeira é segura". Ela não desativa gate de segredo, de contrato, de segurança, de integridade nem qualquer outra prova independente. Se outra prova reprova, continua reprovada.
+
+**Nenhuma allowlist de artefato de método.** `ORQUESTRADOR.md`, `tasks.md`, `ENTREGA.md`, `docs/sprintx/**`, `docs/entregas/**` — nada disso ganha isenção só para a prova passar. Artefato de método sujo sem desvio formal é **pare**. A mergex os isenta do **portão** (V9) porque eles não são produto; isso não os torna sujeira aceitável numa entrega que se diz pronta. Queremos descobrir divergência real, não escondê-la.
+
+**Sem worktree, a prova não afirma nada.** Árvore perdida não é árvore limpa. `sem_worktree` (código 2) significa que a prova **não se aplica**, exatamente como no portão terminal da F6 (D-38): as provas A–D e F continuam valendo, todas sobre commits, e são elas que autorizam o fast-forward. O que fica **não provado** é apenas isto: se havia sujeira naquele diretório, e se ela estava explicada. Não invente "limpa", não reabra worktree para decidir, e não remova worktree para mudar veredito — o diretório perdido levou junto a sujeira que existiria nele, e o que o fast-forward carrega são commits, que a prova F já fixou.
 
 ### A entrega precisa estar publicada
 
@@ -581,7 +622,10 @@ No `MAPA.md`, no checkout de controle:
 
 - `status` para `entregue`, e os contadores do frontmatter;
 - `**Integrada em:** <FEATURE_SHA>` no bloco daquela feature;
-- o PR (ou o caminho do `PR.md`), os testes de `testes_adicionados` e o `risco_residual` do `FECHAMENTO.md`.
+- o PR (ou o caminho do `PR.md`), os testes de `testes_adicionados` e o `risco_residual` do `FECHAMENTO.md`;
+- `**Desvios na árvore:**` — os caminhos que a prova E aceitou por desvio commitado, copiados de `desvios` da `ENTREGA.md` do `<FEATURE_SHA>`; `[]` quando a prova respondeu `limpa`, e `n/a (sem worktree)` quando ela não se aplicou.
+
+Essa linha é o que torna a prova E explicável mecanicamente depois, sem memória de sessão: o `<FEATURE_SHA>` diz de onde a autorização veio, e `desvios` daquele commit diz o que ela cobria. Na entrega bloqueada, a mesma evidência já vai para a pendência do `RECURSAO.md`, com os `desvios` do registro (triagem terminal, adiante).
 
 Junto vai o `PREMISSAS.md` com as premissas recém-promovidas, e o mais que estiver represado. **Se a feature é sucessora** (`origem: recursao`, `**Sucede:** FT-XX`), a pendência que tinha nela o `destino` passa a `estado: resolvida`, com `resolvida_em`, e muda para a seção "Resolvido nos ciclos" do `RECURSAO.md` — no mesmo commit. A feature que ela sucede continua `bloqueada`. Então:
 

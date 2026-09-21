@@ -48,6 +48,8 @@ e o motivo exato que a evidência commitada registra>
 <Se entregue:>
 **PR:** <#numero — da feature, contra buildx/<projeto_id> | caminho do PR.md>
 **Integrada em:** <sha do commit em buildx/<projeto_id> depois do fast-forward>
+**Desvios na árvore:** <[] | [caminho, ...] — o que a prova E aceitou, copiado de
+`desvios` da ENTREGA.md commitada | n/a (sem worktree)>
 **Sprints:** <n>
 **Testes:** <n>
 

@@ -161,16 +161,39 @@ provas_pre_ff() { # <base_sha> <branch-da-feature> <branch-do-projeto>
   git merge-base --is-ancestor "$1" "$2" || return 1                   # feature descende da base
 }
 
+# A prova E, pelo SCRIPT REAL do buildx — o mesmo que o contrato manda rodar.
+# Ele lê a ENTREGA do COMMIT, casa caminho exato sobre `git status --porcelain -z`
+# e devolve um veredito: `limpa`/`autorizada` passam, `sem_worktree` é não se
+# aplica, todo o resto é PARE.
+PROVA_E="$REPO/.claude/skills/buildx/scripts/prova-e.sh"
+
+prova_e() { # <worktree> <slug> [--estrito] -> o veredito
+  bash "$PROVA_E" "$@" 2>/dev/null | tr -d '\r' | sed -n 's/^veredito: //p'
+}
+
+# Passa a prova. Worktree ausente NÃO passa — quem admite o `n/a` diz isso na
+# chamada, e só onde o contrato o declara.
+prova_e_passa() { # <worktree> <slug> [--estrito]
+  case "$(prova_e "$@")" in limpa|autorizada) return 0 ;; *) return 1 ;; esac
+}
+
+# Passa, ou não se aplica: árvore perdida não é árvore limpa, e também não é
+# contradição — A–D e F, todas sobre commits, é que autorizam o ff (D-39).
+prova_e_ok() { # <worktree> <slug> [--estrito]
+  case "$(prova_e "$@")" in limpa|autorizada|sem_worktree) return 0 ;; *) return 1 ;; esac
+}
+
 # Passo 7, as seis provas nomeadas. A `provas_pre_ff` acima cobre A–D e é o que
-# os cenários antigos exercitam; esta acrescenta E (árvore da feature limpa) e
-# F (o estado final está no HEAD da feature, não na worktree).
+# os cenários antigos exercitam; esta acrescenta E (árvore da feature limpa,
+# exceto pelos desvios commitados) e F (o estado final está no HEAD da feature,
+# não na worktree).
 provas_abcdef() { # <base_sha> <slug> <branch-do-projeto> <worktree>
   local base="$1"
   local slug="$2"
   local proj="$3"
   local wt="$4"
   provas_pre_ff "$base" "feature/$slug" "$proj" || return 1        # A, B, C, D
-  [ -z "$(git -C "$wt" status --porcelain)" ] || return 1          # E
+  prova_e_ok "$wt" "$slug" || return 1                             # E
   local entrega
   entrega="$(git show "feature/$slug:docs/entregas/$slug/ENTREGA.md" 2>/dev/null)" || return 1
   printf '%s\n' "$entrega" | grep -q '^estado: entregue' || return 1
@@ -461,7 +484,7 @@ prova_i_auditoria_commitada() { # <slug>
 # O portão inteiro, A a I. Falhou qualquer uma: nada de escrita na CONTROL.
 gate_terminal_pre_f6() { # <base_sha> <slug> <branch-do-projeto> <worktree>
   provas_pre_ff "$1" "feature/$2" "$3" || return 1             # A B C D
-  [ -z "$(git -C "$4" status --porcelain)" ] || return 1       # E
+  prova_e_passa "$4" "$2" --estrito || return 1                # E — estrita: o E0 nunca rodou
   prova_f_terminal_commitado "$2" || return 1                  # F
   prova_g_sprintx_terminal "$4" "$2" || return 1               # G
   sem_produto_pre_f6 "$1" "$2" || return 1                     # H
@@ -1006,7 +1029,7 @@ gate_terminal_f6() { # <base_sha> <slug> <branch-do-projeto> [worktree]
   local wt="${4:-}" s head t n ab
   provas_pre_ff "$1" "feature/$2" "$3" || return 1                         # A B C D
   if [ -n "$wt" ] && [ -d "$wt" ]; then                                     # [M42]
-    [ -z "$(git -C "$wt" status --porcelain)" ] || return 1                # E
+    prova_e_passa "$wt" "$2" --estrito || return 1                         # E — estrita: H6 exige entrega ausente ou aberta
     s="$(sprintx "$wt" fase "$2")"                                         # G, com worktree
     [ "$(chave "$s" fase):$(chave "$s" persistencia)" = PARAR:duravel ] || return 1
   fi
@@ -1734,7 +1757,7 @@ feature_entrega() { # feature_entrega <slug> <base_sha> <projeto>
   git worktree add -q -b "feature/$slug" "$wt" "$base" 2>/dev/null || return 1
   mkdir -p "$wt/src" "$wt/docs/entregas/$slug"
   printf 'codigo de %s\n' "$slug" > "$wt/src/$slug.ts"
-  printf 'estado: entregue\nportao: pronto\n' > "$wt/docs/entregas/$slug/ENTREGA.md"
+  printf 'estado: entregue\nportao: pronto\ndesvios: []\n' > "$wt/docs/entregas/$slug/ENTREGA.md"
   git -C "$wt" add -A
   git -C "$wt" -c user.email=t@t -c user.name=t commit -q -m "feat: $slug"
 }
@@ -4087,6 +4110,255 @@ fi
 cd "$REPO"
 fi  # f6d
 
+if bloco desvios; then
+echo
+echo "P0.2-C6 — a prova E admite o desvio declarado, e só ele"
+
+# A ENTREGA como a mergex a grava, COMMITADA no HEAD da feature.
+entrega_com_desvios() { # <wt> <slug> <estado> <portao> <desvios>
+  mkdir -p "$1/docs/entregas/$2"
+  printf 'estado: %s\nportao: %s\ndesvios: %s\n' "$3" "$4" "$5" > "$1/docs/entregas/$2/ENTREGA.md"
+  git -C "$1" add -A
+  git -C "$1" -c user.email=t@t -c user.name=t commit -q --allow-empty -m "chore(mergex): entrega" >/dev/null
+}
+
+# Devolve a árvore ao HEAD: nada em stage, nada modificado, nada de resto.
+limpa_wt() { # <wt>
+  git -C "$1" reset -q >/dev/null 2>&1
+  git -C "$1" checkout -q -- . >/dev/null 2>&1
+  git -C "$1" clean -qfdx >/dev/null 2>&1
+}
+
+C="$(novo_projeto pe1 nao)"; cd "$C"
+BASE="$(git rev-parse HEAD)"
+feature_entrega ft-01 "$BASE" pe1
+WT="$TMP_RAIZ/pe1/wt-ft-01"
+
+# A — árvore limpa, desvios vazio
+caso "C6.A arvore limpa com desvios []"              limpa "$(prova_e "$WT" ft-01)"
+caso "C6.A e as seis provas passam"                  sim   "$(sim_nao provas_abcdef "$BASE" ft-01 buildx/pe1 "$WT")"
+
+# E — sujeira com desvios vazio: PARE
+printf 'sobra\n' > "$WT/src/sobra.ts"
+caso "C6.E sujeira com desvios [] para"              suja  "$(prova_e "$WT" ft-01)"
+caso "C6.E e as seis provas param"                   nao   "$(sim_nao provas_abcdef "$BASE" ft-01 buildx/pe1 "$WT")"
+limpa_wt "$WT"
+
+# B — um dirty, o mesmo caminho declarado no commit
+entrega_com_desvios "$WT" ft-01 entregue pronto '[src/sobra.ts]'
+printf 'sobra\n' > "$WT/src/sobra.ts"
+caso "C6.B dirty declarado no commit autoriza"       autorizada "$(prova_e "$WT" ft-01)"
+caso "C6.B e as seis provas passam"                  sim   "$(sim_nao provas_abcdef "$BASE" ft-01 buildx/pe1 "$WT")"
+caso "C6.B a evidencia nomeia quem autorizou"        "autorizado_por: src/sobra.ts" \
+  "$(bash "$PROVA_E" "$WT" ft-01 | tr -d '\r' | grep '^autorizado_por: ')"
+
+# D — dois dirty, só um declarado: PARE
+printf 'segunda\n' > "$WT/src/segunda.ts"
+caso "C6.D um dos dois nao declarado para"           suja  "$(prova_e "$WT" ft-01)"
+caso "C6.D e a evidencia nomeia o nao autorizado"    "nao_autorizado: src/segunda.ts" \
+  "$(bash "$PROVA_E" "$WT" ft-01 | tr -d '\r' | grep '^nao_autorizado: ')"
+limpa_wt "$WT"
+
+# D, na outra ordem: o declarado vem primeiro e o não declarado vem DEPOIS. É esta
+# que pega quem olha só o primeiro caminho sujo e dá o veredito ali.
+entrega_com_desvios "$WT" ft-01 entregue pronto '[src/a-declarado.ts]'
+printf 'a\n' > "$WT/src/a-declarado.ts"; printf 'z\n' > "$WT/src/z-solto.ts"
+caso "C6.D2 o segundo sujo nao passa despercebido"   suja  "$(prova_e "$WT" ft-01)"
+caso "C6.D2 e o primeiro continua autorizado"        "autorizado_por: src/a-declarado.ts" \
+  "$(bash "$PROVA_E" "$WT" ft-01 | tr -d '\r' | grep '^autorizado_por: ')"
+limpa_wt "$WT"
+
+# C — dois dirty, os dois declarados
+entrega_com_desvios "$WT" ft-01 entregue pronto '[src/sobra.ts, src/segunda.ts]'
+printf 'sobra\n' > "$WT/src/sobra.ts"; printf 'segunda\n' > "$WT/src/segunda.ts"
+caso "C6.C dois dirty, os dois declarados"           autorizada "$(prova_e "$WT" ft-01)"
+limpa_wt "$WT"
+
+# F — declarado e árvore limpa: não é erro (subconjunto, não igualdade)
+caso "C6.F declarado sem estar sujo nao e erro"      limpa "$(prova_e "$WT" ft-01)"
+
+# G — a ENTREGA da worktree declara; a commitada não. O teste que mata o leitor errado.
+entrega_com_desvios "$WT" ft-01 entregue pronto '[]'
+printf 'sobra\n' > "$WT/src/sobra.ts"
+printf 'estado: entregue\nportao: pronto\ndesvios: [src/sobra.ts]\n' > "$WT/docs/entregas/ft-01/ENTREGA.md"
+caso "C6.G ENTREGA da worktree nao autoriza nada"    suja  "$(prova_e "$WT" ft-01)"
+caso "C6.G e as seis provas param"                   nao   "$(sim_nao provas_abcdef "$BASE" ft-01 buildx/pe1 "$WT")"
+limpa_wt "$WT"
+
+# G2 — a forma completa do ataque: a cópia local declara o arquivo E A SI MESMA.
+# Sem isto, o G passa pelo motivo errado — um leitor da worktree também pararia,
+# porque a ENTREGA editada é ela própria sujeira não declarada. Aqui só a leitura
+# do COMMIT separa as duas implementações.
+entrega_com_desvios "$WT" ft-01 entregue pronto '[]'
+printf 'sobra\n' > "$WT/src/sobra.ts"
+printf 'estado: entregue\nportao: pronto\ndesvios: [src/sobra.ts, docs/entregas/ft-01/ENTREGA.md]\n' \
+  > "$WT/docs/entregas/ft-01/ENTREGA.md"
+caso "C6.G2 a ENTREGA local nao autoriza nem a si"   suja  "$(prova_e "$WT" ft-01)"
+caso "C6.G2 e as seis provas param"                  nao   "$(sim_nao provas_abcdef "$BASE" ft-01 buildx/pe1 "$WT")"
+limpa_wt "$WT"
+
+# H — a commitada declara A, a da worktree declara A+B, e o dirty é B
+entrega_com_desvios "$WT" ft-01 entregue pronto '[src/sobra.ts]'
+printf 'segunda\n' > "$WT/src/segunda.ts"
+printf 'estado: entregue\nportao: pronto\ndesvios: [src/sobra.ts, src/segunda.ts]\n' \
+  > "$WT/docs/entregas/ft-01/ENTREGA.md"
+caso "C6.H a worktree ampliando a lista nao vale"    suja  "$(prova_e "$WT" ft-01)"
+limpa_wt "$WT"
+entrega_com_desvios "$WT" ft-01 entregue pronto '[src/sobra.ts]'
+printf 'segunda\n' > "$WT/src/segunda.ts"
+printf 'estado: entregue\nportao: pronto\ndesvios: [src/sobra.ts, src/segunda.ts, docs/entregas/ft-01/ENTREGA.md]\n' \
+  > "$WT/docs/entregas/ft-01/ENTREGA.md"
+caso "C6.H2 ampliando e se incluindo tambem nao vale" suja "$(prova_e "$WT" ft-01)"
+caso "C6.H2 e o nao autorizado e o B"                "nao_autorizado: docs/entregas/ft-01/ENTREGA.md nao_autorizado: src/segunda.ts" \
+  "$(bash "$PROVA_E" "$WT" ft-01 | tr -d '\r' | grep '^nao_autorizado: ' | tr '\n' ' ' | sed 's/ $//')"
+limpa_wt "$WT"
+
+# I — prefixo parecido não autoriza, nos dois sentidos
+entrega_com_desvios "$WT" ft-01 entregue pronto '[src/foo.ts]'
+printf 'x\n' > "$WT/src/foo.ts.bak"
+caso "C6.I foo.ts nao autoriza foo.ts.bak"           suja  "$(prova_e "$WT" ft-01)"
+limpa_wt "$WT"
+entrega_com_desvios "$WT" ft-01 entregue pronto '[src/foo]'
+mkdir -p "$WT/src/foo"; printf 'x\n' > "$WT/src/foo/bar.ts"
+caso "C6.I diretorio nao autoriza o que ha dentro"   suja  "$(prova_e "$WT" ft-01)"
+limpa_wt "$WT"
+
+# J — caminho com espaço e com acento
+entrega_com_desvios "$WT" ft-01 entregue pronto '[src/com espaco.ts, src/ação.ts]'
+printf 'x\n' > "$WT/src/com espaco.ts"; printf 'y\n' > "$WT/src/ação.ts"
+caso "C6.J caminho com espaco e acento casa"         autorizada "$(prova_e "$WT" ft-01)"
+limpa_wt "$WT"
+
+# K — não rastreado declarado / L — apagado declarado
+entrega_com_desvios "$WT" ft-01 entregue pronto '[src/novo.ts]'
+printf 'n\n' > "$WT/src/novo.ts"
+caso "C6.K nao rastreado pode ser desvio"            autorizada "$(prova_e "$WT" ft-01)"
+limpa_wt "$WT"
+entrega_com_desvios "$WT" ft-01 entregue pronto '[src/ft-01.ts]'
+rm -f "$WT/src/ft-01.ts"
+caso "C6.L apagado declarado e desvio"               autorizada "$(prova_e "$WT" ft-01)"
+limpa_wt "$WT"
+
+# stage — a regra do índice continua vencendo
+entrega_com_desvios "$WT" ft-01 entregue pronto '[src/ft-01.ts]'
+printf 'mexido\n' > "$WT/src/ft-01.ts"; git -C "$WT" add src/ft-01.ts
+caso "C6.stage declarado em stage nao passa"         stage_nao_autorizado "$(prova_e "$WT" ft-01)"
+caso "C6.stage e as seis provas param"               nao "$(sim_nao provas_abcdef "$BASE" ft-01 buildx/pe1 "$WT")"
+limpa_wt "$WT"
+
+# Sem ENTREGA commitada, sujeira nenhuma é explicável — nem por ausência de regra
+C="$(novo_projeto pe3 nao)"; cd "$C"
+BASE3="$(git rev-parse HEAD)"
+feature_nasce ft-01 "$BASE3" pe3
+WT3="$TMP_RAIZ/pe3/wt-ft-01"
+mkdir -p "$WT3/src"; printf 'solto\n' > "$WT3/src/solto.ts"
+caso "C6.sem-entrega ausencia nao permite sujeira"   entrega_ausente "$(prova_e "$WT3" ft-01)"
+caso "C6.sem-entrega e a prova nao passa"            nao "$(sim_nao prova_e_passa "$WT3" ft-01)"
+cd "$TMP_RAIZ/pe1/ctrl"
+
+# M — ENTREGA aberta com desvio declarado: limpeza estrita
+entrega_com_desvios "$WT" ft-01 aberto null '[src/sobra.ts]'
+printf 'sobra\n' > "$WT/src/sobra.ts"
+caso "C6.M ENTREGA aberta nao usa a excecao"         entrega_aberta "$(prova_e "$WT" ft-01)"
+limpa_wt "$WT"
+
+# P — ENTREGA terminal inválida com árvore suja: pare por contrato
+entrega_com_desvios "$WT" ft-01 entregue bloqueado '[src/sobra.ts]'
+printf 'sobra\n' > "$WT/src/sobra.ts"
+caso "C6.P registro inconsistente para por contrato" entrega_invalida "$(prova_e "$WT" ft-01)"
+limpa_wt "$WT"
+
+# `desvios` fora do formato da mergex, e ausente: falha fechada
+entrega_com_desvios "$WT" ft-01 entregue pronto 'src/sobra.ts'
+printf 'sobra\n' > "$WT/src/sobra.ts"
+caso "C6.fmt desvios fora da lista de fluxo para"    desvios_invalidos "$(prova_e "$WT" ft-01)"
+limpa_wt "$WT"
+mkdir -p "$WT/docs/entregas/ft-01"
+printf 'estado: entregue\nportao: pronto\n' > "$WT/docs/entregas/ft-01/ENTREGA.md"
+git -C "$WT" add -A; git -C "$WT" -c user.email=t@t -c user.name=t commit -q -m "chore(mergex): sem desvios"
+printf 'sobra\n' > "$WT/src/sobra.ts"
+caso "C6.fmt desvios ausente nao autoriza"           desvios_ausente "$(prova_e "$WT" ft-01)"
+limpa_wt "$WT"
+
+# Artefato de método sujo sem desvio formal: PARE. Nada de allowlist.
+entrega_com_desvios "$WT" ft-01 entregue pronto '[]'
+printf 'rascunho\n' > "$WT/docs/entregas/ft-01/RASCUNHO.md"
+caso "C6.metodo docs/entregas sujo sem desvio para"  suja "$(prova_e "$WT" ft-01)"
+limpa_wt "$WT"
+mkdir -p "$WT/docs/sprintx/features/ft-01"
+printf 'plano\n' > "$WT/docs/sprintx/features/ft-01/00-PLANEJAMENTO.md"
+caso "C6.metodo docs/sprintx sujo sem desvio para"   suja "$(prova_e "$WT" ft-01)"
+limpa_wt "$WT"
+
+# Derivado IGNORADO não é sujeira — e não é exceção da prova, é `.gitignore`.
+printf 'docs/eventos/\n.expx/estado.json\n.expx/memoria/\n' > "$WT/.gitignore"
+git -C "$WT" add -A; git -C "$WT" -c user.email=t@t -c user.name=t commit -q -m "chore: gitignore"
+mkdir -p "$WT/docs/eventos" "$WT/.expx/memoria"
+printf '{}\n' > "$WT/docs/eventos/ft-01.jsonl"
+printf '{}\n' > "$WT/.expx/estado.json"
+printf '{}\n' > "$WT/.expx/memoria/indice.json"
+caso "C6.ign derivado ignorado nao entra em DIRTY"   limpa "$(prova_e "$WT" ft-01)"
+printf '{"x":1}\n' > "$WT/.expx/expx-lock.json"
+caso "C6.ign o lock versionado NAO ganha isencao"    suja  "$(prova_e "$WT" ft-01)"
+limpa_wt "$WT"
+
+# O template do buildx é quem torna isso verdade num projeto novo.
+TPL="$REPO/.claude/skills/buildx/template/.gitignore"
+for p in 'docs/eventos/' '.expx/estado.json' '.expx/memoria/'; do
+  caso "C6.tpl o template ignora $p"                 sim "$(sim_nao grep -qxF "$p" "$TPL")"
+done
+caso "C6.tpl e NAO ignora a .expx inteira"           nao "$(sim_nao grep -qxE '\.expx/?' "$TPL")"
+
+# N — bloqueada/bloqueada é terminal: a mesma regra vale
+C="$(novo_projeto pe2 nao)"; cd "$C"
+BASE="$(git rev-parse HEAD)"
+feature_entrega ft-01 "$BASE" pe2
+WT="$TMP_RAIZ/pe2/wt-ft-01"
+entrega_com_desvios "$WT" ft-01 bloqueado bloqueado '[src/sobra.ts]'
+printf 'sobra\n' > "$WT/src/sobra.ts"
+caso "C6.N bloqueada/bloqueada autoriza o declarado" autorizada "$(prova_e "$WT" ft-01)"
+printf 'outra\n' > "$WT/src/outra.ts"
+caso "C6.N e nao autoriza o que nao declarou"        suja  "$(prova_e "$WT" ft-01)"
+limpa_wt "$WT"
+
+# O modo estrito: nos portões anteriores à entrega terminal, desvio não autoriza nada
+entrega_com_desvios "$WT" ft-01 entregue pronto '[src/sobra.ts]'
+printf 'sobra\n' > "$WT/src/sobra.ts"
+caso "C6.estrito nem com ENTREGA terminal autoriza"  suja  "$(prova_e "$WT" ft-01 --estrito)"
+caso "C6.estrito e sem estrito passaria"             autorizada "$(prova_e "$WT" ft-01)"
+limpa_wt "$WT"
+
+# Worktree ausente: a prova não se aplica — e não vira "limpa"
+caso "C6.wt sem worktree a prova nao se aplica"      sem_worktree "$(prova_e "$TMP_RAIZ/pe2/nao-existe" ft-01)"
+caso "C6.wt e nao passa como se fosse limpa"         nao "$(sim_nao prova_e_passa "$TMP_RAIZ/pe2/nao-existe" ft-01)"
+caso "C6.wt mas o passo 7 segue por A-D e F"         sim "$(sim_nao provas_abcdef "$BASE" ft-01 buildx/pe2 "$TMP_RAIZ/pe2/nao-existe")"
+
+# Renomeado traz os dois caminhos, e os dois precisam estar declarados
+entrega_com_desvios "$WT" ft-01 entregue pronto '[src/ft-01.ts]'
+mv "$WT/src/ft-01.ts" "$WT/src/renomeado.ts"
+caso "C6.ren so a origem declarada nao basta"        suja  "$(prova_e "$WT" ft-01)"
+limpa_wt "$WT"
+entrega_com_desvios "$WT" ft-01 entregue pronto '[src/ft-01.ts, src/renomeado.ts]'
+mv "$WT/src/ft-01.ts" "$WT/src/renomeado.ts"
+caso "C6.ren os dois caminhos declarados passam"     autorizada "$(prova_e "$WT" ft-01)"
+limpa_wt "$WT"
+
+# O contrato vivo diz o que este bloco prova
+CONS="$REPO/.claude/skills/buildx/references/05-construcao.md"
+caso "C6.contrato a prova E tem seção própria" sim \
+  "$(sim_nao grep -qx '### A prova E' "$CONS")"
+caso "C6.contrato a regra está escrita" sim \
+  "$(sim_nao grep -q 'exceto pelos caminhos que estejam explicitamente registrados em `desvios` na `ENTREGA.md` terminal e commitada' "$CONS")"
+caso "C6.contrato a worktree nunca autoriza" sim \
+  "$(sim_nao grep -q 'não autoriza nada — \*\*nem a si próprio\*\*' "$CONS")"
+caso "C6.contrato as duas ocorrências anteriores são estritas" 2 \
+  "$(grep -c '^| \*\*E\*\* | .*\*\*estrita\*\*' "$CONS")"
+caso "C6.contrato o passo 7 admite o desvio commitado" sim \
+  "$(sim_nao grep -q '^| \*\*E\*\* | a árvore da feature está limpa, \*\*exceto\*\* pelos desvios commitados' "$CONS")"
+caso "C6.contrato o mapa guarda a evidência" sim \
+  "$(sim_nao grep -q 'Desvios na árvore:' "$REPO/.claude/skills/buildx/assets/TEMPLATE-MAPA.md")"
+fi  # desvios
+
 if bloco decisoes; then
 echo
 echo "P0.1 — decisões append-only, D-26 em diante"
@@ -4095,12 +4367,12 @@ DEC_SKILL="$REPO/.claude/skills/buildx/DECISOES-DA-SKILL.md"
 IDS="$(tr -d '\r' < "$DEC_SKILL" | sed -n 's/^## \(D-[0-9][0-9]*\) — .*/\1/p')"
 caso "P01.36 nenhum D-NN repetido" "$(printf '%s\n' "$IDS" | wc -l | tr -d ' ')" "$(printf '%s\n' "$IDS" | sort -u | wc -l | tr -d ' ')"
 FALTA=""
-for n in $(seq 1 38); do
+for n in $(seq 1 39); do
   printf '%s\n' "$IDS" | grep -qx "$(printf 'D-%02d' "$n")" || FALTA="$FALTA D-$n"
 done
-caso "P01.36 D-01 a D-38 presentes" "" "$FALTA"
-caso "P01.36 as decisoes P0.1 e P0.2 vem depois da D-25, em ordem" "D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36 D-37 D-38" \
-  "$(printf '%s\n' "$IDS" | tail -14 | tr '\n' ' ' | sed 's/ $//')"
+caso "P01.36 D-01 a D-39 presentes" "" "$FALTA"
+caso "P01.36 as decisoes P0.1 e P0.2 vem depois da D-25, em ordem" "D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36 D-37 D-38 D-39" \
+  "$(printf '%s\n' "$IDS" | tail -15 | tr '\n' ' ' | sed 's/ $//')"
 for t in 'O orçamento da F5 é do caller; a contagem é da sprintx' \
          'Checkpoint da sprintx é estado legítimo da feature' \
          'Terminal pré-F6 só move a CONTROL com evidência commitada' \
@@ -4108,7 +4380,9 @@ for t in 'O orçamento da F5 é do caller; a contagem é da sprintx' \
          'Trabalho resolvível depois de um bloqueio vira feature sucessora' \
          'A pendência tem estado' \
          'PR-NN de feature que não integrou continuam reservados' \
-         'O buildx nunca comita artefato da sprintx' \n         'A recusa do retorno da F6 é estado durável da sprintx, e o buildx a lê do commit'; do
+         'O buildx nunca comita artefato da sprintx' \
+         'A recusa do retorno da F6 é estado durável da sprintx, e o buildx a lê do commit' \
+         'A prova E admite exclusivamente sujeira explicada por desvio terminal commitado'; do
   caso "P01.36 decisao registrada: $t" sim "$(sim_nao grep -qF "$t" "$DEC_SKILL")"
 done
 fi  # decisoes
