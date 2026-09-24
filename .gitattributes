@@ -1,0 +1,4 @@
+# Scripts shell e contratos Markdown lidos mecanicamente sao LF em qualquer checkout,
+# independente de core.autocrlf. Prova: scripts/ci/certifica-p02.sh, bloco PORTABILIDADE.
+*.sh text eol=lf
+*.md text eol=lf

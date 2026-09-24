@@ -34,6 +34,9 @@
 # Uso: bash scripts/ci/integracao.sh
 #      BLOCOS="p0 x1" bash scripts/ci/integracao.sh   # só os blocos nomeados
 #      SPRINTX_REPO=/caminho/da/sprintx bash scripts/ci/integracao.sh
+#
+# Com BUILDX_BIBLIOTECA=1 e carregado com `.`, só define as funções: não extrai
+# irmã nenhuma e não roda cenário (é assim que a certificação P0.2 o usa).
 
 set -uo pipefail
 
@@ -74,7 +77,7 @@ SPRINTX_SHA_FIXO=c8bf65f825f96d49d2079286603d7d86e5e257d9                   # [M
 SPRINTX_REPO="${SPRINTX_REPO:-$REPO/../sprintx}"
 PLANEJAMENTO=""
 SPRINTX_BLOQUEIOS=""
-if git -c safe.directory='*' -C "$SPRINTX_REPO" cat-file -e "$SPRINTX_SHA_FIXO^{commit}" 2>/dev/null; then
+if [ "${BUILDX_BIBLIOTECA:-}" != 1 ] && git -c safe.directory='*' -C "$SPRINTX_REPO" cat-file -e "$SPRINTX_SHA_FIXO^{commit}" 2>/dev/null; then
   mkdir -p "$TMP_RAIZ/sprintx"
   if git -c safe.directory='*' -C "$SPRINTX_REPO" archive "$SPRINTX_SHA_FIXO" .claude/skills/sprintx |
        tar -x -C "$TMP_RAIZ/sprintx" 2>/dev/null; then
@@ -90,7 +93,7 @@ fi
 # antes do contrato, e que o script novo tem de continuar lendo como legado.
 SPRINTX_SHA_LEGADO=7300e4754907207ca77084c39ffdefef4a0cbbfb
 PLANEJAMENTO_LEGADO=""
-if git -c safe.directory='*' -C "$SPRINTX_REPO" cat-file -e "$SPRINTX_SHA_LEGADO^{commit}" 2>/dev/null; then
+if [ "${BUILDX_BIBLIOTECA:-}" != 1 ] && git -c safe.directory='*' -C "$SPRINTX_REPO" cat-file -e "$SPRINTX_SHA_LEGADO^{commit}" 2>/dev/null; then
   mkdir -p "$TMP_RAIZ/sprintx-legado"
   if git -c safe.directory='*' -C "$SPRINTX_REPO" archive "$SPRINTX_SHA_LEGADO" .claude/skills/sprintx |
        tar -x -C "$TMP_RAIZ/sprintx-legado" 2>/dev/null; then
@@ -110,7 +113,7 @@ com_sprintx() { # com_sprintx <cenario> — pula, e conta o pulo, sem a sprintx 
 MERGEX_SHA_FIXO=b51ba94305ba6857653f0636813ebd6823c5b082
 MERGEX_REPO="${MERGEX_REPO:-$REPO/../mergex}"
 MERGEX_CAUSA=""
-if git -c safe.directory='*' -C "$MERGEX_REPO" cat-file -e "$MERGEX_SHA_FIXO^{commit}" 2>/dev/null; then
+if [ "${BUILDX_BIBLIOTECA:-}" != 1 ] && git -c safe.directory='*' -C "$MERGEX_REPO" cat-file -e "$MERGEX_SHA_FIXO^{commit}" 2>/dev/null; then
   mkdir -p "$TMP_RAIZ/mergex"
   if git -c safe.directory='*' -C "$MERGEX_REPO" archive "$MERGEX_SHA_FIXO" .claude/skills/mergex |
        tar -x -C "$TMP_RAIZ/mergex" 2>/dev/null; then
@@ -1790,6 +1793,11 @@ mergex_publica() { git push -q origin "feature/$1" 2>/dev/null; }
 # ---------------------------------------------------------------------------
 # Cenários
 # ---------------------------------------------------------------------------
+
+# Modo biblioteca: quem carrega este arquivo com `.` e BUILDX_BIBLIOTECA=1 (a
+# certificação P0.2, scripts/ci/certifica-p02.sh) recebe os portões e as provas
+# acima — uma implementação só — e nenhum cenário roda.
+[ "${BUILDX_BIBLIOTECA:-}" = 1 ] && return 0
 
 if bloco p0; then
 
@@ -4305,9 +4313,9 @@ limpa_wt "$WT"
 # O template do buildx é quem torna isso verdade num projeto novo.
 TPL="$REPO/.claude/skills/buildx/template/.gitignore"
 for p in 'docs/eventos/' '.expx/estado.json' '.expx/memoria/'; do
-  caso "C6.tpl o template ignora $p"                 sim "$(sim_nao grep -qxF "$p" "$TPL")"
+  caso "C6.tpl o template ignora $p"                 sim "$(sim_nao eval 'tr -d "\r" < "$TPL" | grep -qxF "$p"')"
 done
-caso "C6.tpl e NAO ignora a .expx inteira"           nao "$(sim_nao grep -qxE '\.expx/?' "$TPL")"
+caso "C6.tpl e NAO ignora a .expx inteira"           nao "$(sim_nao eval 'tr -d "\r" < "$TPL" | grep -qxE "\.expx/?"')"
 
 # N — bloqueada/bloqueada é terminal: a mesma regra vale
 C="$(novo_projeto pe2 nao)"; cd "$C"
