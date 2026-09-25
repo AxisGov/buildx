@@ -535,23 +535,6 @@ rodada_f6_legitima() { # <slug> <wt>
   [ "$(chave "$(sprintx "$2" fase "$1")" replanejamentos_f6)" = "$(rodadas_abertas "$1")" ]
 }
 
-# A fronteira segura da sprintx (DS-145): nenhum produto editado, novo ou staged no
-# worktree — só os artefatos de método da feature.
-fronteira_limpa() { # <wt> <slug>
-  local p
-  while IFS= read -r p; do
-    [ -n "$p" ] || continue
-    p="${p#???}"; case "$p" in *" -> "*) p="${p##* -> }" ;; esac
-    p="${p#\"}"; p="${p%\"}"
-    case "$p" in
-      "docs/sprintx/features/$2/"*|docs/sprintx/estimativas/HISTORICO.md|"docs/entregas/$2/"*) ;;
-      *) return 1 ;;
-    esac
-  done <<EOF
-$(git -C "$1" -c core.quotepath=false status --porcelain --untracked-files=all)
-EOF
-}
-
 # Os `motivo=` de `replanejar-execucao` recusado (sprintx c8bf65f), nas duas famílias
 # do D-37. Operacional: um resultado durável, gravado pela sprintx no estado
 # `replanejamento_execucao_recusado` (D-38), que o humano resolve. Contrato: o buildx
@@ -687,7 +670,9 @@ classe_do_retorno_f6() { # <veredito> -> "classe regra"
 # A linha F com um `defeito_de_plano` aberto: a F6 não retoma a execução normal. O
 # único passo é o 3 da F6 (`replanejar-execucao`) — a sprintx decide, e desde o
 # c8bf65f ela GRAVA a decisão: rodada nova, terminal esgotado ou terminal recusado
-# (D-38). Disponível exige a fronteira segura, que ela pede para abrir a rodada.
+# (D-38). A fronteira segura também é dela (DS-156, D-40): o buildx não pré-julga o
+# produto sujo — o trabalho parcial da task bloqueada ela preserva, o resto ela recusa
+# com `fronteira_insegura`, e essa recusa de contrato é parada.
 # Erro de contrato: parada. O worktree é lido aqui só para escolher o passo da F6
 # viva — a classificação sai do commit —, e isto só restringe: nunca move a `CONTROL`.
 retomada_f6() { # <wt> <slug> -> F | F:replanejar_execucao | PARE
@@ -695,7 +680,7 @@ retomada_f6() { # <wt> <slug> -> F | F:replanejar_execucao | PARE
   v="$(retorno_f6_em "$1" "$2")" || { echo PARE; return; }
   case "$v" in
     nao_se_aplica) echo F ;;
-    disponivel) if fronteira_limpa "$1" "$2"; then echo F:replanejar_execucao; else echo PARE; fi ;;
+    disponivel) echo F:replanejar_execucao ;;                               # [Y9]
     esgotado)   echo F:replanejar_execucao ;;
     *) if classe_do_retorno_f6 "$v" >/dev/null; then echo F:replanejar_execucao; else echo PARE; fi ;;   # [M33]
   esac
@@ -3742,7 +3727,11 @@ if com_causa "P02B retorno da F6" && [ -n "$PLANEJAMENTO_LEGADO" ]; then
   sx_bloqueia "$WT" ft-01 T-01.02 defeito_de_plano
   printf 'meio escrito\n' > "$WT/src/T-01.02.ts"
   caso "S.fronteira a leitura commitada diria disponivel" disponivel "$(retorno_f6_em "$WT" ft-01)"
-  caso "S.fronteira mas o produto sujo: retomada PARE" PARE "$(retomada_decide ft-01 "$BASE" em_andamento "$PROJ")"
+  # A fronteira é da sprintx (D-40): o buildx não pré-julga o produto sujo, manda o
+  # passo 3 da F6 — e é a recusa de contrato dela que para. Na sprintx fixada (DS-145)
+  # todo produto sujo é inseguro; o parcial seguro (DS-156) é certificado no P0.2.
+  caso "S.fronteira o buildx nao pre-julga: so o passo 3 da F6" F:replanejar_execucao \
+    "$(retomada_decide ft-01 "$BASE" em_andamento "$PROJ")"
   SAIDA="$(sprintx "$WT" replanejar-execucao ft-01; printf 'codigo=%s\n' "$?")"
   caso "S.fronteira a sprintx recusa: fronteira_insegura" "recusado fronteira_insegura 2" \
     "$(chave "$SAIDA" replanejamento) $(chave "$SAIDA" motivo) $(chave "$SAIDA" codigo)"
@@ -4375,12 +4364,12 @@ DEC_SKILL="$REPO/.claude/skills/buildx/DECISOES-DA-SKILL.md"
 IDS="$(tr -d '\r' < "$DEC_SKILL" | sed -n 's/^## \(D-[0-9][0-9]*\) — .*/\1/p')"
 caso "P01.36 nenhum D-NN repetido" "$(printf '%s\n' "$IDS" | wc -l | tr -d ' ')" "$(printf '%s\n' "$IDS" | sort -u | wc -l | tr -d ' ')"
 FALTA=""
-for n in $(seq 1 39); do
+for n in $(seq 1 40); do
   printf '%s\n' "$IDS" | grep -qx "$(printf 'D-%02d' "$n")" || FALTA="$FALTA D-$n"
 done
-caso "P01.36 D-01 a D-39 presentes" "" "$FALTA"
-caso "P01.36 as decisoes P0.1 e P0.2 vem depois da D-25, em ordem" "D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36 D-37 D-38 D-39" \
-  "$(printf '%s\n' "$IDS" | tail -15 | tr '\n' ' ' | sed 's/ $//')"
+caso "P01.36 D-01 a D-40 presentes" "" "$FALTA"
+caso "P01.36 as decisoes P0.1 e P0.2 vem depois da D-25, em ordem" "D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36 D-37 D-38 D-39 D-40" \
+  "$(printf '%s\n' "$IDS" | tail -16 | tr '\n' ' ' | sed 's/ $//')"
 for t in 'O orçamento da F5 é do caller; a contagem é da sprintx' \
          'Checkpoint da sprintx é estado legítimo da feature' \
          'Terminal pré-F6 só move a CONTROL com evidência commitada' \
@@ -4390,7 +4379,8 @@ for t in 'O orçamento da F5 é do caller; a contagem é da sprintx' \
          'PR-NN de feature que não integrou continuam reservados' \
          'O buildx nunca comita artefato da sprintx' \
          'A recusa do retorno da F6 é estado durável da sprintx, e o buildx a lê do commit' \
-         'A prova E admite exclusivamente sujeira explicada por desvio terminal commitado'; do
+         'A prova E admite exclusivamente sujeira explicada por desvio terminal commitado' \
+         'A fronteira segura do retorno da F6 é da sprintx, e o parcial seguro não é parada'; do
   caso "P01.36 decisao registrada: $t" sim "$(sim_nao grep -qF "$t" "$DEC_SKILL")"
 done
 fi  # decisoes

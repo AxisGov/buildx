@@ -633,3 +633,23 @@ Dois casos particulares, e os dois importam:
 **Risco assumido:** a prova E passa a depender de um leitor executável do buildx (`scripts/prova-e.sh`, o primeiro da skill) e de uma cópia do formato de `desvios` — lista de fluxo numa linha, como a mergex a grava. Formato novo lá quebra o leitor aqui e vira falha de teste, não autorização silenciosa: qualquer forma que não seja `[...]` numa linha responde `desvios_invalidos` e **para**. Caminho que contenha vírgula é indistinguível de dois caminhos nesse formato — limitação herdada do kind `entrega`, que **falha fechada** (nada casa, a prova para).
 
 **O que invalida:** a mergex mudar a semântica de `desvios` para "todo desvio já ocorrido", inclusive os resolvidos (aí subconjunto deixaria de ser a leitura certa e a assimetria precisaria de decisão nova); `desvios` deixar de ser lista de caminhos exatos, ou ganhar entrada de diretório; a mergex passar a deixar desvio em stage; ou o buildx passar a ter um ponto do fluxo em que a prova E roda **depois** de uma entrega terminal sem que o passo 7 a cubra.
+
+---
+
+## D-40 — A fronteira segura do retorno da F6 é da sprintx, e o parcial seguro não é parada
+
+*(Consome a sprintx `253b592` — DS-156, `parciais_replanejamento_f6`. Supera, na D-37, só a última frase do **Risco assumido** — "a fronteira segura é verificada pelo buildx com a mesma regra da DS-145" — e, na linha **F** do `/buildx-retomar`, só o "produto sujo no worktree: pare e relate". Não muda enum de classe, gatilho, motivo de recusa, nem a família de `fronteira_insegura`, que continua **contrato**.)*
+
+**Decisão:** o buildx **não** pré-julga a fronteira do `replanejar-execucao`. Com `defeito_de_plano` aberto e o retorno `disponivel`, a linha **F** manda o passo 3 da F6 com ou sem produto sujo; a sprintx decide:
+
+1. **Parcial seguro.** O que a task bloqueada já escreveu — declarado só nela, sem stage, sem segredo, `??`/` M`/` D` — a sprintx preserva: grava `path`, `task`, `estado` e `hash` em `parciais_replanejamento_f6` no checkpoint que abre a rodada, e o arquivo fica sujo na árvore. A rodada é a de sempre (linha **S**); fechada pela F5, a lista volta a `[]` e o arquivo segue sujo até o E1 da task reaberta, que o commita como produto dela.
+2. **O resto é recusa de contrato.** Sujeira de irmã, de task concluída, compartilhada, em stage ou com segredo: `fronteira_insegura` (`nao_preservaveis=` diz qual e por quê), código `2` — **pare e relate**, sem PEND, sem commit na `CONTROL`, nada limpo.
+3. **A integridade do parcial também é dela.** O buildx não lê `parciais_replanejamento_f6` para decidir nada — presença da chave não prova coisa alguma. Quem revalida é a sprintx (`fase`, `avanca`, fechamento da rodada): `perdido` ou `divergente` é `PARAR`, e na retomada a linha **S** vira **pare e relate**. O buildx nunca reconstrói, restaura, stasha, reseta, nem transforma o parcial em commit intermediário.
+
+**Alternativas descartadas:** (1) manter a regra da DS-145 no buildx — nenhum produto sujo antes do passo 3; (2) copiar para o buildx a regra de preservação da DS-156 (donos, estado mecânico, segredo) e decidir antes da sprintx; (3) aceitar o parcial pela presença de `parciais_replanejamento_f6` no `00-PLANEJAMENTO.md`, sem a revalidação da sprintx.
+
+**Por quê:** (1) o fluxo TDD real escreve o teste da task **antes** de descobrir o defeito de plano: com a regra antiga o buildx pararia exatamente o estado que a sprintx passou a declarar retomável, e a única saída seria apagar o teste ou commitá-lo fora do E1 — as duas proibidas. (2) duas implementações da mesma fronteira divergem na primeira mudança de uma delas; foi assim que a DS-145 ficou viva aqui depois de morta lá. (3) a chave é o registro do que foi preservado, não a prova de que continua igual: hash, estado e dono só a sprintx confere, contra a árvore, a cada transição.
+
+**Risco assumido:** a retomada da linha **F** manda o `replanejar-execucao` sem antecipar a recusa; a recusa de contrato só aparece na resposta dele. Como ela não grava nada (DS-148), o custo é uma chamada que devolve `fronteira_insegura` e para — o mesmo desfecho de antes, com a decisão no dono.
+
+**O que invalida:** a sprintx devolver a verificação da fronteira a quem a chama; `fronteira_insegura` virar recusa durável (aí ganha família por decisão nova, D-38); ou a sprintx passar a mover, limpar ou commitar o parcial por conta própria.
