@@ -30,7 +30,8 @@
 # sujeira, ler a ENTREGA do worktree, prefixo de diretório, prefixo cru, olhar só o
 # primeiro caminho sujo, ENTREGA ausente ou aberta autorizando, allowlist de artefato
 # de método, stage passando por desvio e `desvios: []` valendo por "nada a restringir"
-# — e exige que o harness FALHE.
+# — e, no C7-B, a V11 da mergex (`commit_nao_registrado`) voltando a ficar sem classe
+# (D-41) — e exige que o harness FALHE.
 # Mutação que sobrevive é teste que falta.
 #
 # O repositório real nunca é alterado: a cópia vive num diretório temporário e é
@@ -367,6 +368,11 @@ EOF
   local d; [ "${#DECLARADOS[@]}" = 0 ] && return 0                                            # [M54]
 EOF
       ;;
+    M55) # a V11 da mergex volta a ficar sem classe (D-41)
+      troca "$d/$HARNESS" '# [M55]' <<'EOF'
+    commit_nao_registrado_desligado) echo "trabalho_novo $r/causa_$1" ;;     # [M55]
+EOF
+      ;;
     *) echo "mutacao desconhecida: $1" >&2; return 1 ;;
   esac
 }
@@ -392,6 +398,7 @@ blocos() {
     M29|M30|M31|M32|M34) echo "f6" ;;
     M28|M33|M35|M36|M37|M38|M39|M40|M41|M42|M43|M44) echo "f6d" ;;
     M45|M46|M47|M48|M49|M50|M51|M52|M53|M54) echo "desvios" ;;
+    M55) echo "causa" ;;
   esac
 }
 
@@ -399,7 +406,7 @@ roda() { # roda <nome> <arvore> <blocos> -> grava <nome>.log e <nome>.rc
   ( cd "$TMP" && BLOCOS="$3" bash "$2/$HARNESS" > "$TMP/$1.log" 2>&1; echo $? > "$TMP/$1.rc" )
 }
 
-MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23 M24 M25 M26 M27 M28 M29 M30 M31 M32 M33 M34 M35 M36 M37 M38 M39 M40 M41 M42 M43 M44 M45 M46 M47 M48 M49 M50 M51 M52 M53 M54}"
+MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23 M24 M25 M26 M27 M28 M29 M30 M31 M32 M33 M34 M35 M36 M37 M38 M39 M40 M41 M42 M43 M44 M45 M46 M47 M48 M49 M50 M51 M52 M53 M54 M55}"
 TODOS_BLOCOS="$(for m in $MUTACOES; do blocos "$m"; done | tr ' ' '\n' | sort -u | tr '\n' ' ')"
 
 echo "controle — a árvore sem mutação passa nos blocos: $TODOS_BLOCOS"

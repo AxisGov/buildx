@@ -1129,6 +1129,7 @@ classe_da_causa() { # <causa> -> "classe regra"
   local r=entrega_bloqueada
   case "$1" in
     suite_reprovada|teste_nao_declarado|arquivo_fora_do_plano) echo "trabalho_novo $r/causa_$1" ;;
+    commit_nao_registrado) echo "trabalho_novo $r/causa_$1" ;;                # [M55] D-41
     segredo_no_diff|auditoria_reprovada|legado_incompleto|tarefa_nao_concluida|regressao_nao_declarada|qa_nao_aprovado)
       echo "decisao_humana $r/causa_$1" ;;
     ausente|indeterminada) echo "decisao_humana $r/causa_nao_commitada" ;;   # [M24]
@@ -3175,16 +3176,19 @@ echo
 echo "P0.2 — a causa da entrega bloqueada é enumerada, e o B-NN é lido pela classe"
 
 # A tabela pura: causa da mergex -> classe do B5, e classe do B-NN -> classe do B5.
-for c in suite_reprovada teste_nao_declarado arquivo_fora_do_plano; do
+for c in suite_reprovada teste_nao_declarado arquivo_fora_do_plano commit_nao_registrado; do
   caso "P02.causa $c -> trabalho_novo"          "trabalho_novo entrega_bloqueada/causa_$c" "$(classe_da_causa "$c")"
 done
+# D-41: a V11 é reparo de evidência, nunca decisão humana nem recurso externo.
+caso "P02.causa commit_nao_registrado nao e decisao_humana nem recurso_externo" "nao nao" \
+  "$(sim_nao eval 'classe_da_causa commit_nao_registrado | grep -q "^decisao_humana "') $(sim_nao eval 'classe_da_causa commit_nao_registrado | grep -q "^recurso_externo "')"
 for c in segredo_no_diff auditoria_reprovada legado_incompleto tarefa_nao_concluida regressao_nao_declarada qa_nao_aprovado; do
   caso "P02.causa $c -> decisao_humana"         "decisao_humana entrega_bloqueada/causa_$c" "$(classe_da_causa "$c")"
 done
 caso "P02.causa indeterminada e causa nao commitada" "decisao_humana entrega_bloqueada/causa_nao_commitada" "$(classe_da_causa indeterminada)"
 caso "P02.causa ausente (legado) e causa nao commitada" "decisao_humana entrega_bloqueada/causa_nao_commitada" "$(classe_da_causa ausente)"
 caso "P02.causa bloqueio_aberto nao tem classe sem os B-NN" nao "$(sim_nao classe_da_causa bloqueio_aberto)"
-for c in falha_tecnica null "" BLOQUEIO_ABERTO decisao_humana trabalho_novo; do
+for c in falha_tecnica null "" BLOQUEIO_ABERTO decisao_humana trabalho_novo COMMIT_NAO_REGISTRADO v11 commit_nao_registrado_; do
   caso "P02.causa '$c' fora do enum: nao classifica" nao "$(sim_nao classe_da_causa "$c")"
 done
 caso "P02.bloqueio defeito_de_plano -> trabalho_novo"       trabalho_novo   "$(classe_do_bloqueio defeito_de_plano)"
@@ -3229,7 +3233,7 @@ caso "P02.contrato a linha entrega_bloqueada le a causa enumerada e a classe do 
   "$(sim_nao grep -qF '| `entrega_bloqueada` | pela `causa` enumerada do `ENTREGA.md` commitado e, com `bloqueio_aberto`, pela `classe` dos `B-NN` abertos no mesmo `HEAD`' "$REPO/.claude/skills/buildx/references/06-recursao.md")"
 caso "P02.contrato a D-36 esta registrada" sim \
   "$(sim_nao grep -qF '## D-36 — A causa da entrega bloqueada é enumerada, e o B-NN é lido pela classe' "$REPO/.claude/skills/buildx/DECISOES-DA-SKILL.md")"
-for c in segredo_no_diff auditoria_reprovada bloqueio_aberto legado_incompleto arquivo_fora_do_plano tarefa_nao_concluida suite_reprovada teste_nao_declarado regressao_nao_declarada qa_nao_aprovado indeterminada; do
+for c in segredo_no_diff auditoria_reprovada bloqueio_aberto legado_incompleto arquivo_fora_do_plano tarefa_nao_concluida suite_reprovada teste_nao_declarado regressao_nao_declarada qa_nao_aprovado commit_nao_registrado indeterminada; do
   caso "P02.contrato a tabela do B5 tem a causa $c" sim \
     "$(sim_nao grep -qE "^\| \`$c\` \|" "$REPO/.claude/skills/buildx/references/06-recursao.md")"
 done
@@ -3240,9 +3244,12 @@ done
 
 if com_causa "P02 causa"; then
   # Os contratos reais: o enum da mergex e o da sprintx são os que a tabela traduz.
-  caso "P02.pin o enum de causa da mergex e o que a tabela conhece" \
-    "arquivo_fora_do_plano auditoria_reprovada bloqueio_aberto indeterminada legado_incompleto qa_nao_aprovado regressao_nao_declarada segredo_no_diff suite_reprovada tarefa_nao_concluida teste_nao_declarado" \
-    "$(bash "$MERGEX_CAUSA" --causas | cut -d'|' -f2 | sort | tr '\n' ' ' | sed 's/ $//')"
+  # A tabela conhece todo o enum da mergex fixada: o do pino de produção (sem a V11)
+  # e o do candidato (com a V11, D-41). Causa que a tabela não conhece aparece aqui.
+  caso "P02.pin todo o enum de causa da mergex e conhecido pela tabela" "" \
+    "$(bash "$MERGEX_CAUSA" --causas | tr -d '\r' | cut -d'|' -f2 | grep -vxE 'arquivo_fora_do_plano|auditoria_reprovada|bloqueio_aberto|commit_nao_registrado|indeterminada|legado_incompleto|qa_nao_aprovado|regressao_nao_declarada|segredo_no_diff|suite_reprovada|tarefa_nao_concluida|teste_nao_declarado' | sort | tr '\n' ' ' | sed 's/ $//')"
+  caso "P02.pin o enum da mergex tem as onze causas das verificacoes, ao menos" 11 \
+    "$(bash "$MERGEX_CAUSA" --causas | tr -d '\r' | cut -d'|' -f2 | grep -cxE 'arquivo_fora_do_plano|auditoria_reprovada|bloqueio_aberto|indeterminada|legado_incompleto|qa_nao_aprovado|regressao_nao_declarada|segredo_no_diff|suite_reprovada|tarefa_nao_concluida|teste_nao_declarado')"
   caso "P02.pin o enum de classe da sprintx e o que a tabela conhece" \
     "defeito_de_plano lacuna_de_decisao prerequisito_ausente suite_vermelha task_reivindicada" \
     "$(bash "$SPRINTX_BLOQUEIOS" classes | sort | tr '\n' ' ' | sed 's/ $//')"
@@ -3398,6 +3405,16 @@ EOF
   done
   entrega_portao "$E" v1 v2 v9; cm "$WT" -m "fixture: v1 v2 v9"
   caso "P02.matriz precedencia da mergex: v9 vence v1 e v2" "trabalho_novo entrega_bloqueada/causa_arquivo_fora_do_plano" "$(cl)"
+  # D-41: a V11 pela mergex real. A fixada em produção ainda não a tem, e o diz.
+  if bash "$MERGEX_CAUSA" --causas | tr -d '\r' | grep -q '^v11|'; then
+    entrega_portao "$E" v11; cm "$WT" -m "fixture: v11"
+    caso "P02.matriz v11 grava commit_nao_registrado"    commit_nao_registrado "$(campo_commitado ft-01 causa)"
+    caso "P02.matriz v11 commit_nao_registrado -> trabalho_novo (D-41)" \
+      "trabalho_novo entrega_bloqueada/causa_commit_nao_registrado" "$(cl)"
+  else
+    caso "P02.matriz a mergex fixada nao deriva v11: nada a classificar" nao \
+      "$(sim_nao bash "$MERGEX_CAUSA" --derivar v11)"
+  fi
 
   entrega_portao "$E" v1 v7_sem_prova; cm "$WT" -m "fixture: indeterminada"
   caso "P02.matriz indeterminada: a mergex grava assim"  indeterminada "$(campo_commitado ft-01 causa)"
@@ -4364,12 +4381,12 @@ DEC_SKILL="$REPO/.claude/skills/buildx/DECISOES-DA-SKILL.md"
 IDS="$(tr -d '\r' < "$DEC_SKILL" | sed -n 's/^## \(D-[0-9][0-9]*\) — .*/\1/p')"
 caso "P01.36 nenhum D-NN repetido" "$(printf '%s\n' "$IDS" | wc -l | tr -d ' ')" "$(printf '%s\n' "$IDS" | sort -u | wc -l | tr -d ' ')"
 FALTA=""
-for n in $(seq 1 40); do
+for n in $(seq 1 41); do
   printf '%s\n' "$IDS" | grep -qx "$(printf 'D-%02d' "$n")" || FALTA="$FALTA D-$n"
 done
-caso "P01.36 D-01 a D-40 presentes" "" "$FALTA"
-caso "P01.36 as decisoes P0.1 e P0.2 vem depois da D-25, em ordem" "D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36 D-37 D-38 D-39 D-40" \
-  "$(printf '%s\n' "$IDS" | tail -16 | tr '\n' ' ' | sed 's/ $//')"
+caso "P01.36 D-01 a D-41 presentes" "" "$FALTA"
+caso "P01.36 as decisoes P0.1 e P0.2 vem depois da D-25, em ordem" "D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36 D-37 D-38 D-39 D-40 D-41" \
+  "$(printf '%s\n' "$IDS" | tail -17 | tr '\n' ' ' | sed 's/ $//')"
 for t in 'O orçamento da F5 é do caller; a contagem é da sprintx' \
          'Checkpoint da sprintx é estado legítimo da feature' \
          'Terminal pré-F6 só move a CONTROL com evidência commitada' \
@@ -4380,7 +4397,8 @@ for t in 'O orçamento da F5 é do caller; a contagem é da sprintx' \
          'O buildx nunca comita artefato da sprintx' \
          'A recusa do retorno da F6 é estado durável da sprintx, e o buildx a lê do commit' \
          'A prova E admite exclusivamente sujeira explicada por desvio terminal commitado' \
-         'A fronteira segura do retorno da F6 é da sprintx, e o parcial seguro não é parada'; do
+         'A fronteira segura do retorno da F6 é da sprintx, e o parcial seguro não é parada' \
+         '`commit_nao_registrado` é trabalho novo: reparar o registro, não refazer o produto'; do
   caso "P01.36 decisao registrada: $t" sim "$(sim_nao grep -qF "$t" "$DEC_SKILL")"
 done
 fi  # decisoes

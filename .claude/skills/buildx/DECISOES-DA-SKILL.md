@@ -653,3 +653,19 @@ Dois casos particulares, e os dois importam:
 **Risco assumido:** a retomada da linha **F** manda o `replanejar-execucao` sem antecipar a recusa; a recusa de contrato só aparece na resposta dele. Como ela não grava nada (DS-148), o custo é uma chamada que devolve `fronteira_insegura` e para — o mesmo desfecho de antes, com a decisão no dono.
 
 **O que invalida:** a sprintx devolver a verificação da fronteira a quem a chama; `fronteira_insegura` virar recusa durável (aí ganha família por decisão nova, D-38); ou a sprintx passar a mover, limpar ou commitar o parcial por conta própria.
+
+---
+
+## D-41 — `commit_nao_registrado` é trabalho novo: reparar o registro, não refazer o produto
+
+*(Consome a mergex `25d4797` — a V11 e a causa `commit_nao_registrado` no enum de `causa-do-portao.sh`. Refina a D-36: a tabela `causa` → classe ganha uma linha. Não muda enum de classe: continuam três.)*
+
+**Decisão:** `commit_nao_registrado` (V11) → `trabalho_novo`, regra `entrega_bloqueada/causa_commit_nao_registrado`. A sucessora é o **reparo da evidência**: registrar em `ENTREGA.commits` o commit de produto que já existe, pela recuperação da própria mergex (`fechamento-do-e1.sh --registrar-existente`, que valida SHA, alcance, trailers e ownership e não cria commit novo de produto). Ela não repete a implementação.
+
+**Alternativas descartadas:** (1) `decisao_humana`; (2) `recurso_externo`; (3) deixar a causa sem classe, com a triagem falhando fechada.
+
+**Por quê:** (1) a causa diz que a cadeia de evidência do E1 está quebrada ou incompleta, não que falta um julgamento: a mergex já sabe consertá-la de forma mecânica e idempotente, e pedir ao humano o que a máquina repara é interrupção sem necessidade. (2) nada fora do projeto é preciso: o commit está na branch, a recuperação está na skill. (3) com a mergex candidata, uma entrega bloqueada por V11 pararia a triagem do buildx — falha fechada correta até haver regra, mas uma parada que a D-36 manda resolver por tabela, não por exceção.
+
+**Risco assumido:** a sucessora nasce da `CONTROL` e não reaproveita a branch da feature bloqueada; o reparo dela precisa enxergar o commit que ficou sem registro. Se a mergex mudar a V11 para cobrir algo além de "commit existe, registro não", a linha precisa ser revista.
+
+**O que invalida:** a V11 passar a sinalizar commit de produto **inexistente** ou inválido (aí é produto a refazer, ou decisão); a mergex remover o `--registrar-existente`; ou uma regra do buildx que mande o reparo de evidência para a própria feature, sem sucessora.
