@@ -8,7 +8,7 @@
 # scripts/ci/certifica-p02.sh FALHE — e falhe no checkpoint que prova aquilo, não
 # num checkpoint qualquer: cada mutante declara onde tem de morrer.
 #
-# As do B1, ancoradas nos pins de produção (D-42):
+# As do B1, ancoradas nos pins de produção (o freeze vigente, D-43):
 #   X1  a sprintx deixa de barrar o arquivo de task irmã
 #   X2  a sprintx lê o plano de uma feature histórica com o mesmo id de task
 #   X3  o rastro volta a escolher o trabalho por mtime

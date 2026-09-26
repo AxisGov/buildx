@@ -698,3 +698,33 @@ Dois casos particulares, e os dois importam:
 **Risco assumido:** o teste dos pins compara o valor do harness com o desta tabela — uma cópia, por construção, e a única, que existe para o teste falhar quando os dois divergem. Atualizar o pin exige atualizar a tabela e recertificar; é o preço de o congelamento ser verificável.
 
 **O que invalida:** a mergex, a sprintx ou o ExpxDev mudarem de commit (nova certificação e nova decisão); o `expx-lock` passar a gravar o commit completo (aí ele vira prova de proveniência e o item 5 cai); ou o buildx ganhar um segundo harness que precise dos pins sem carregar o `integracao.sh`.
+
+## D-43 — A sprintx do D-01 substitui a do freeze D-42, e o B1R prova a reivindicação pelo agente
+
+*(P0.2 / D-01. Não muda comportamento do buildx. Consome a sprintx `4e1f7b8` — DS-159, o escritor público do rastro. Não reescreve a D-42: ela continua registrando o freeze anterior, e o `253b592` fica nela como evidência. Supera, na D-42, só a linha `sprintx` da tabela e o `buildx_b1r` como o BuildX certificado vigente; mergex e ExpxDev permanecem.)*
+
+**Contexto:** o C7-C, o primeiro piloto real, encontrou o D-01. A `references/08-rastro.md` da sprintx ensinava gravar `task_iniciada` com `printf >> docs/eventos/<trabalho>.jsonl`, sem `sessao` nem `harness`; o `escopo-da-task` (DS-150) só reconhece reivindicação com identidade, a primeira edição caiu em `sessao_ambigua`, e o agente leu o hook e fabricou a identidade à mão. O B1R não viu, porque também fabricava: a `task_iniciada` do runner saía do próprio roteiro, com a sessão e o harness certos (`evento_skill`). Provava que o enforcement aceita um evento correto — não que um agente, seguindo a referência pública, o produz.
+
+**Decisão:** os componentes do P0.2 ficam congelados nos SHAs que a recertificação D-01 aprovou:
+
+| Componente | SHA completo | Papel |
+|---|---|---|
+| `buildx_d01` | `6daf8f915ffc948d32288be51acf0d71ad52d0fa` | o BuildX que a recertificação D-01 certificou; **anterior** a este commit |
+| `sprintx` | `4e1f7b88d85f3fe9f87ae578f7789760d92d6829` | pin de produção (`SPRINTX_SHA_FIXO`) |
+| `sprintx_substituida` | `253b59233e6d7a225a05f011cf52668b708e448b` | a sprintx do freeze D-42, que o D-01 substitui; só evidência |
+| `mergex` | `25d479725b0d91d7b794899c9e25e214bb55fb04` | pin de produção (`MERGEX_SHA_FIXO`), o mesmo da D-42 |
+| `expxdev` | `c9b3058fcce7caebfb9a00de990bbff085f56c6f` | o instalador (`EXPXDEV_SHA_FIXO`), o mesmo da D-42 |
+
+1. **A sprintx do D-01 substitui a do freeze D-42.** A `4e1f7b8` publica o escritor `scripts/rastro.sh` e a referência que manda gravar `task_iniciada`, `task_concluida` e `task_bloqueada` só por ele; o `escopo-da-task` não muda de semântica. O `253b592` passa a pin antigo: só aparece como evidência (D-40, D-42 e esta) ou numa linha marcada `[pin-antigo]`.
+2. **O B1R ganhou a prova agent-driven da reivindicação.** A seção **R** de `certifica-p02.sh` instala um produto novo pelo `expxdev init`, põe a feature na F6 pela sprintx instalada, e entrega a um agente real só o objetivo da task e as referências públicas, com a leitura de `.claude/hooks/**` negada. Ele reivindica pelo escritor, faz o primeiro Edit da task, é barrado na irmã e fecha pelo escritor; o transcrito é auditado pelo buildx (nenhuma leitura de hook, nenhuma linha de rastro à mão, nenhuma identidade tocada). Dois controles negativos ficam permanentes: o escritor fora do harness falha fechado, e a linha do modelo antigo, sem identidade, cai em `sessao_ambigua`.
+3. **Fixture determinística não é prova de agente.** `evento_skill` continua, e só para as sessões S0 e S2, que nenhum runner dirige: prova que o enforcement aceita (ou recusa) uma linha dada. Toda sessão que o runner real dirige — a S1 e a do H/M — reivindica pelo escritor, executado pelo próprio runner. A guarda estrutural barra a volta do modelo antigo: `evento_skill` com outra sessão (G8), identidade, evento `task_*` ou `docs/eventos` numa região runner-real/agente-real (G9), `EXPX_SESSAO`/`EXPX_HARNESS` ou o id da sessão injetados pelo roteiro (G10) e escrita direta no rastro (G11). No runner `settings` não há agente: a seção R despacha a sequência do procedimento, e o relatório o diz.
+4. **Certificação antes do pin.** A certificação completa rodou com `C7B_MODO_TESTE=1` e override **só** da sprintx, com o runner e o agente reais, sobre a árvore do `buildx_d01`; só depois este pin foi promovido. A certificação final roda sem override sobre o commit que carrega este texto.
+5. **O `BuildX freeze D-01` não está nesta tabela, de propósito.** O `buildx_d01` não contém a promoção do pin; o freeze é o commit `chore(buildx): promove sprintx reparada do d01`, que carrega este texto, e o SHA dele não cabe no próprio conteúdo — como na D-42.
+
+**Alternativas descartadas:** (1) reescrever a D-42 com a sprintx nova; (2) manter `evento_skill` como única prova da reivindicação e só documentar o limite; (3) auditar o transcrito com o verificador da própria sprintx; (4) provar a reivindicação só no runner `settings`.
+
+**Por quê:** (1) apagaria o registro do que o B2 congelou e do que o C7-C rodou. (2) é exatamente a lacuna: uma prova que passa com a linha que a bancada monta não distingue um agente que segue a referência de um que forja a identidade. (3) uma sprintx regredida afrouxaria o próprio fiscal; a auditoria do transcrito é do buildx. (4) no `settings` a identidade é emulada pelo roteiro, e a pergunta é se o **harness real** a entrega ao processo do agente.
+
+**Risco assumido:** o agente real não é determinístico — um modelo pode falhar a tarefa por razão alheia ao contrato, e a certificação falha fechado nesse caso, sem pulo. As mutações rodam no `settings`, onde as da reivindicação (Y16–Y21) morrem na guarda ou no `escopo-da-task`.
+
+**O que invalida:** a sprintx, a mergex ou o ExpxDev mudarem de commit (nova certificação e nova decisão); o Claude Code deixar de dar ao processo do Bash o id da sessão (o escritor falha fechado com código `3`, e a seção R cai); ou a sprintx passar a aceitar reivindicação sem identidade.
