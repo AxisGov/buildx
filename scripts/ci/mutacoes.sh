@@ -31,7 +31,9 @@
 # primeiro caminho sujo, ENTREGA ausente ou aberta autorizando, allowlist de artefato
 # de método, stage passando por desvio e `desvios: []` valendo por "nada a restringir"
 # — e, no C7-B, a V11 da mergex (`commit_nao_registrado`) voltando a ficar sem classe
-# (D-41) — e exige que o harness FALHE.
+# (D-41) — e, no B2, o pin que diverge do freeze da D-42, o pin curto, o SHA literal na
+# certificação, o pin antigo em posição executável e o override sem modo de teste
+# (M56 a M60, bloco `pins`) — e exige que o harness FALHE.
 # Mutação que sobrevive é teste que falta.
 #
 # O repositório real nunca é alterado: a cópia vive num diretório temporário e é
@@ -53,6 +55,7 @@ HARNESS=scripts/ci/integracao.sh
 RECURSAO_REF=.claude/skills/buildx/references/06-recursao.md
 TEMPLATE_RECURSAO=.claude/skills/buildx/assets/TEMPLATE-RECURSAO.md
 PROVA_E=.claude/skills/buildx/scripts/prova-e.sh
+CERT=scripts/ci/certifica-p02.sh
 
 # copia <destino> — os arquivos rastreados, com o conteúdo do working tree.
 copia() {
@@ -373,6 +376,27 @@ EOF
     commit_nao_registrado_desligado) echo "trabalho_novo $r/causa_$1" ;;     # [M55]
 EOF
       ;;
+    M56) # a mergex do harness diverge do freeze registrado na D-42
+      troca "$d/$HARNESS" 'MERGEX_SHA_FIXO=' <<'INNER'
+MERGEX_SHA_FIXO=0123456789abcdef0123456789abcdef01234567
+INNER
+      ;;
+    M57) # o pin da sprintx vira SHA curto: prefixo nao e pin
+      troca "$d/$HARNESS" '# [M43]' <<'INNER'
+SPRINTX_SHA_FIXO=89abcdef0123                                              # [M43]
+INNER
+      ;;
+    M58) # a certificacao volta a ter default literal do SHA: duas fontes de verdade
+      printf '\nC7B_SPRINTX_SHA="${C7B_SPRINTX_SHA:-%s}"\n' "$(sed -n 's/^SPRINTX_SHA_FIXO=\([0-9a-f]\{40\}\).*/\1/p' "$d/$HARNESS")" >> "$d/$CERT"
+      ;;
+    M59) # um pin antigo volta a ficar em posicao executavel
+      printf '\nSPRINTX_ANTIGO=c8bf65f\n' >> "$d/$CERT"   # [pin-antigo]
+      ;;
+    M60) # a certificacao aceita override de SHA sem o modo de teste declarado
+      troca "$d/$CERT" 'if [ "${C7B_MODO_TESTE:-0}" = 1 ]; then' <<'INNER'
+  if true; then
+INNER
+      ;;
     *) echo "mutacao desconhecida: $1" >&2; return 1 ;;
   esac
 }
@@ -399,6 +423,7 @@ blocos() {
     M28|M33|M35|M36|M37|M38|M39|M40|M41|M42|M43|M44) echo "f6d" ;;
     M45|M46|M47|M48|M49|M50|M51|M52|M53|M54) echo "desvios" ;;
     M55) echo "causa" ;;
+    M56|M57|M58|M59|M60) echo "pins" ;;
   esac
 }
 
@@ -406,7 +431,7 @@ roda() { # roda <nome> <arvore> <blocos> -> grava <nome>.log e <nome>.rc
   ( cd "$TMP" && BLOCOS="$3" bash "$2/$HARNESS" > "$TMP/$1.log" 2>&1; echo $? > "$TMP/$1.rc" )
 }
 
-MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23 M24 M25 M26 M27 M28 M29 M30 M31 M32 M33 M34 M35 M36 M37 M38 M39 M40 M41 M42 M43 M44 M45 M46 M47 M48 M49 M50 M51 M52 M53 M54 M55}"
+MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23 M24 M25 M26 M27 M28 M29 M30 M31 M32 M33 M34 M35 M36 M37 M38 M39 M40 M41 M42 M43 M44 M45 M46 M47 M48 M49 M50 M51 M52 M53 M54 M55 M56 M57 M58 M59 M60}"
 TODOS_BLOCOS="$(for m in $MUTACOES; do blocos "$m"; done | tr ' ' '\n' | sort -u | tr '\n' ' ')"
 
 echo "controle — a árvore sem mutação passa nos blocos: $TODOS_BLOCOS"

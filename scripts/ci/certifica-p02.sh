@@ -9,7 +9,7 @@
 # recertificação troca as três coisas:
 #
 #   INSTALAÇÃO  um produto Git novo chega ao estado operacional SÓ pelo
-#               `expxdev init` do candidato — hooks, settings, manifesto de modos,
+#               `expxdev init` do pin — hooks, settings, manifesto de modos,
 #               catálogo de método e lock são dele, e o doctor os declara íntegros.
 #   RUNNER      as escritas que definem a fronteira de segurança passam pelo
 #               `claude -p` real (2.1.x), com os hooks que o settings.json
@@ -34,20 +34,24 @@
 #   P12 prova E; P13 o buildx segue pela entrega commitada, sem PEND nem sucessora
 #   H/M backstop do E1 numa fixture recém-instalada, e a ordem inversa da instalação
 #   L   os terminais da F6 e as causas, pelas bancadas determinísticas do harness,
-#       com os candidatos
+#       nos pins de produção
 #
-# Os SHAs são de CERTIFICAÇÃO, não de produção: os pinos do harness e o
-# expx-lock são do B2.
+# Os SHAs são os PINS DE PRODUÇÃO (B2): a certificação os lê do harness
+# (`integracao.sh`, a única fonte de execução) e não os repete. Um SHA diferente do
+# pin só entra com C7B_MODO_TESTE=1, declarado — e então o resultado NÃO é a
+# certificação final. O expx-lock não é a fonte da proveniência Git: D-42.
 #
 # Uso:
 #   bash scripts/ci/certifica-p02.sh
 #   bash scripts/ci/certifica-p02.sh --ambiente     # só confere as ferramentas
+#   bash scripts/ci/certifica-p02.sh --pins         # só resolve e imprime os pins
 #
-#   C7B_SPRINTX_SHA / C7B_MERGEX_SHA / C7B_EXPXDEV_SHA   o candidato, 40 hex
+#   C7B_MODO_TESTE=1       declara o modo de teste: sem ele, override de SHA FALHA
+#   C7B_SPRINTX_SHA / C7B_MERGEX_SHA / C7B_EXPXDEV_SHA   SÓ com o modo de teste; 40 hex
 #   C7B_SPRINTX_FONTE / C7B_MERGEX_FONTE / C7B_EXPXDEV_FONTE
 #                          repositório de onde clonar no SHA; padrão: a irmã ao lado
 #   C7B_EXPXDEV_BUILD      checkout do expxdev JÁ construído no SHA (dist/); sem ele,
-#                          o candidato é clonado e construído aqui (npm ci + build)
+#                          o expxdev do pin é clonado e construído aqui (npm ci + build)
 #   C7B_RUNNER=claude      padrão: o `claude -p` real dirige as escritas críticas
 #   C7B_RUNNER=settings    SEM runner real: os hooks do settings.json instalado são
 #                          despachados como o Claude Code os despacha. É o modo das
@@ -69,9 +73,6 @@ SLUG=feature-atual
 PROJ_NOME=c7b
 PROJ=buildx/$PROJ_NOME
 
-C7B_SPRINTX_SHA="${C7B_SPRINTX_SHA:-253b59233e6d7a225a05f011cf52668b708e448b}"
-C7B_MERGEX_SHA="${C7B_MERGEX_SHA:-25d479725b0d91d7b794899c9e25e214bb55fb04}"
-C7B_EXPXDEV_SHA="${C7B_EXPXDEV_SHA:-c9b3058fcce7caebfb9a00de990bbff085f56c6f}"
 C7B_SPRINTX_FONTE="${C7B_SPRINTX_FONTE:-$REPO/../sprintx}"
 C7B_MERGEX_FONTE="${C7B_MERGEX_FONTE:-$REPO/../mergex}"
 C7B_EXPXDEV_FONTE="${C7B_EXPXDEV_FONTE:-$REPO/../expxdev}"
@@ -134,6 +135,31 @@ BUILDX_BIBLIOTECA=1
 # O jq do Windows escreve CRLF; o código de saída continua o dele (pipefail).
 jq() { command jq "$@" | tr -d '\r'; }
 
+# Os pins de produção vêm do harness: SPRINTX_SHA_FIXO, MERGEX_SHA_FIXO e
+# EXPXDEV_SHA_FIXO, 40 hex. Nenhum SHA é escrito aqui. Override é exceção declarada.
+PINS_MODO=producao; PINS_DIVERGENTES=""
+for pin_n in SPRINTX MERGEX EXPXDEV; do
+  pin_f="${pin_n}_SHA_FIXO"; pin_v="C7B_${pin_n}_SHA"
+  printf '%s\n' "${!pin_f}" | grep -Eq '^[0-9a-f]{40}$' ||
+    { printf 'pins: %s nao e SHA completo (40 hex): %s\n' "$pin_f" "${!pin_f}" >&2; exit 1; }
+  [ "${!pin_v:-${!pin_f}}" = "${!pin_f}" ] || PINS_DIVERGENTES="$PINS_DIVERGENTES $pin_v"
+  printf -v "$pin_v" %s "${!pin_v:-${!pin_f}}"
+done
+if [ -n "$PINS_DIVERGENTES" ]; then
+  if [ "${C7B_MODO_TESTE:-0}" = 1 ]; then
+    PINS_MODO=teste
+  else
+    printf 'pins: override de SHA sem modo de teste declarado:%s (o pin de producao e o do harness; C7B_MODO_TESTE=1 declara o teste)\n' \
+      "$PINS_DIVERGENTES" >&2
+    exit 1
+  fi
+fi
+if [ "${1:-}" = --pins ]; then
+  printf 'pins: modo=%s\nsprintx=%s\nmergex=%s\nexpxdev=%s\n' "$PINS_MODO" "$C7B_SPRINTX_SHA" "$C7B_MERGEX_SHA" "$C7B_EXPXDEV_SHA"
+  [ "$PINS_MODO" = producao ] || printf 'MODO DE TESTE (override:%s): NAO e a certificacao final\n' "$PINS_DIVERGENTES"
+  exit 0
+fi
+
 INICIO_TOTAL="$EPOCHREALTIME"
 PASSOU=0
 DIAG=""
@@ -195,6 +221,11 @@ anota_tempo() { TEMPOS="$TEMPOS$1	$2
 printf 'certificacao P0.2 — C7-B / B1R (instalacao real, runner %s)\n' "$C7B_RUNNER"
 printf '  sprintx %s  (%s)\n  mergex  %s  (%s)\n  expxdev %s  (%s)\n' \
   "$C7B_SPRINTX_SHA" "$C7B_SPRINTX_FONTE" "$C7B_MERGEX_SHA" "$C7B_MERGEX_FONTE" "$C7B_EXPXDEV_SHA" "$C7B_EXPXDEV_FONTE"
+if [ "$PINS_MODO" = producao ]; then
+  printf '  pins: os de producao, sem override\n'
+else
+  printf '  ATENCAO: MODO DE TESTE, override de SHA (%s ): NAO e a certificacao final\n' "${PINS_DIVERGENTES# }"
+fi
 [ -z "${C7B_POS_EXTRACAO:-}" ] || printf '  ATENCAO: C7B_POS_EXTRACAO=%s (mutacao de integracao)\n' "$C7B_POS_EXTRACAO"
 
 passo "G guarda estrutural: nenhuma instalacao manual, nenhum hook direto no runner real"
@@ -206,7 +237,7 @@ ambiente || { printf '  FALHA  ambiente nao controlado\n'; quebra; }
 case "$C7B_RUNNER" in claude|settings) ;; *) DIAG="C7B_RUNNER=$C7B_RUNNER"; quebra ;; esac
 
 # ---------------------------------------------------------------------------
-# A — fontes por SHA completo, e o ExpxDev candidato
+# A — fontes por SHA completo, e o ExpxDev dos pins de produção
 # ---------------------------------------------------------------------------
 sha_completo() { printf '%s\n' "$1" | grep -Eq '^[0-9a-f]{40}$'; }
 
@@ -233,7 +264,13 @@ clona() {
   printf '%s\n' "$ref" > "$TMP_RAIZ/ref-$nome"
 }
 
-passo "A fontes por SHA completo e o ExpxDev candidato"
+passo "A fontes por SHA completo e o ExpxDev dos pins de producao"
+if [ "$PINS_MODO" = producao ]; then
+  ck A.0 "os SHAs desta certificacao sao os pins de producao do harness, sem override" \
+    "$SPRINTX_SHA_FIXO $MERGEX_SHA_FIXO $EXPXDEV_SHA_FIXO" "$C7B_SPRINTX_SHA $C7B_MERGEX_SHA $C7B_EXPXDEV_SHA"
+else
+  printf '          A.0 pulado de proposito: modo de teste declarado (override:%s)\n' "$PINS_DIVERGENTES"
+fi
 for s in "$C7B_SPRINTX_SHA" "$C7B_MERGEX_SHA" "$C7B_EXPXDEV_SHA"; do
   ck A.1 "o SHA $s e completo (40 hex)" sim "$(sn sha_completo "$s")"
 done
@@ -245,8 +282,8 @@ ck A.2 "a sprintx e clonada no SHA" sim "$(sn clona sprintx "$C7B_SPRINTX_FONTE"
 ck A.3 "a mergex e clonada no SHA"  sim "$(sn clona mergex "$C7B_MERGEX_FONTE" "$C7B_MERGEX_SHA" "$SRC/mergex")"
 ck A.4 "o checkout da sprintx usou o SHA completo, nao branch nem SHA curto" "$C7B_SPRINTX_SHA" "$(cat "$TMP_RAIZ/ref-sprintx")"
 ck A.5 "o checkout da mergex usou o SHA completo, nao branch nem SHA curto"  "$C7B_MERGEX_SHA" "$(cat "$TMP_RAIZ/ref-mergex")"
-ck A.6 "a fonte da sprintx esta no candidato" "$C7B_SPRINTX_SHA" "$(git -C "$SRC/sprintx" rev-parse HEAD)"
-ck A.7 "a fonte da mergex esta no candidato"  "$C7B_MERGEX_SHA" "$(git -C "$SRC/mergex" rev-parse HEAD)"
+ck A.6 "a fonte da sprintx esta no pin" "$C7B_SPRINTX_SHA" "$(git -C "$SRC/sprintx" rev-parse HEAD)"
+ck A.7 "a fonte da mergex esta no pin"  "$C7B_MERGEX_SHA" "$(git -C "$SRC/mergex" rev-parse HEAD)"
 if [ -n "${C7B_POS_EXTRACAO:-}" ]; then
   bash "$C7B_POS_EXTRACAO" "$SRC/sprintx" "$SRC/mergex" || { DIAG="C7B_POS_EXTRACAO recusou"; quebra; }
 else
@@ -262,7 +299,7 @@ else
   ( cd "$XD" && npm ci --no-audit --no-fund > "$EVID/expxdev-build.log" 2>&1 && npm run build:server >> "$EVID/expxdev-build.log" 2>&1 ) ||
     { DIAG="npm ci / build do expxdev falhou: $(tail -5 "$EVID/expxdev-build.log")"; quebra; }
 fi
-ck A.10 "o expxdev usado esta no candidato" "$C7B_EXPXDEV_SHA" "$(git -c safe.directory='*' -C "$XD" rev-parse HEAD 2>/dev/null)"
+ck A.10 "o expxdev usado esta no pin" "$C7B_EXPXDEV_SHA" "$(git -c safe.directory='*' -C "$XD" rev-parse HEAD 2>/dev/null)"
 ck A.11 "e sem mudanca rastreada: o dist e do proprio SHA" "" "$(git -c safe.directory='*' -C "$XD" status --porcelain --untracked-files=no 2>/dev/null)"
 ck A.12 "o binario oficial existe: dist/cli/expx-bin.js" sim "$(sn test -f "$XD/dist/cli/expx-bin.js")"
 NODE="$(command -v node)"
@@ -310,7 +347,7 @@ PLUGINS_ANTES="$(expx_no_claude_global)"
 # ---------------------------------------------------------------------------
 # A instalação real e a prova dela
 # ---------------------------------------------------------------------------
-instala() { # <produto> <ordem> — só o binário oficial do candidato
+instala() { # <produto> <ordem> — só o binário oficial do pin
   local log="$EVID/init-$(basename "$1").log"
   ( cd "$1" && "${SEM_CLAUDE[@]}" PATH="$INIT_PATH" EXPX_SKILLS_LOCAIS="$(nativo "$SRC")" \
       "$NODE" "$XBIN" init --skills "$2" --yes ) > "$log" 2>&1
@@ -358,13 +395,13 @@ $(tuplas "$p/.claude/settings.json" | grep -c '^\["PreToolUse","Bash",[^,]*hooks
     ck "$x.8$s" "hooks e skill da $s instalados byte a byte ($(publicados "$SRC/$s" "$s" | wc -l | tr -d ' ') arquivos)" "" "$d"
   done
   f=.claude/skills/mergex/scripts/catalogo-de-metodo.sh
-  ck "$x.9" "catalogo-de-metodo.sh instalado, identico ao do candidato" sim \
+  ck "$x.9" "catalogo-de-metodo.sh instalado, identico ao do pin" sim \
     "$(sn test "$(sha_de "$p/$f" 2>/dev/null)" = "$(sha_de "$SRC/mergex/$f")")"
   ck "$x.10" "nucleo do ExpxDev: expx-session-sync (SessionStart) e expx-lembrete (UserPromptSubmit)" "sim sim 1 1" \
     "$(sn test -f "$p/.claude/hooks/expx-session-sync.mjs") $(sn test -f "$p/.claude/hooks/expx-lembrete.sh") \
 $(tr -d '\r' < "$p/.claude/settings.json" | jq '[.hooks.SessionStart[]?.hooks[]? | select((.args // []) | join(" ") | test("expx-session-sync\\.mjs"))] | length') \
 $(tr -d '\r' < "$p/.claude/settings.json" | jq '[.hooks.UserPromptSubmit[]?.hooks[]? | select(.command | test("expx-lembrete\\.sh"))] | length')"
-  ck "$x.11" "o lock trava as duas skills no commit do candidato" "${C7B_MERGEX_SHA:0:12}-local ${C7B_SPRINTX_SHA:0:12}-local" \
+  ck "$x.11" "o lock trava as duas skills no identificador local do commit (informativo: a proveniencia e o SHA completo, D-42)" "${C7B_MERGEX_SHA:0:12}-local ${C7B_SPRINTX_SHA:0:12}-local" \
     "$(tr -d '\r' < "$p/.expx/expx-lock.json" | jq -r '.skills.mergex.commit + " " + .skills.sprintx.commit')"
   ck "$x.12" "todo arquivo do lock confere com o disco" "" \
     "$(tr -d '\r' < "$p/.expx/expx-lock.json" | jq -r '.instalacao.arquivos | to_entries[] | .key + "\t" + .value' |
@@ -698,7 +735,7 @@ chaves_fm() { # <arquivo> — as chaves de topo do frontmatter que começa em ex
 # ---------------------------------------------------------------------------
 # P0 — o projeto: o controle do buildx nasce sem skill nenhuma; o ExpxDev instala
 # ---------------------------------------------------------------------------
-passo "I instalacao real pelo ExpxDev candidato (sprintx, mergex)"
+passo "I instalacao real pelo ExpxDev do pin (sprintx, mergex)"
 C="$(novo_projeto "$PROJ_NOME" sim)"; cd "$C" || quebra
 git config core.autocrlf false
 ck I.0 "o produto nasce sem .claude e sem .expx" "nao nao" "$(sn test -e .claude) $(sn test -e .expx)"
@@ -1457,9 +1494,9 @@ evidencia "comportamento: $MINI"
 ck M.3o "a ordem inversa produz o mesmo comportamento" "$MINI_H" "$MINI"
 
 # ---------------------------------------------------------------------------
-# L — terminais da F6 e causas, nas bancadas determinísticas, com os candidatos
+# L — terminais da F6 e causas, nas bancadas determinísticas, nos pins de produção
 # ---------------------------------------------------------------------------
-passo "L terminais da F6 e causas: bancadas do harness, pinos trocados pelos candidatos numa copia"
+passo "L terminais da F6 e causas: bancadas do harness, nos pins de producao"
 # As causas da mergex candidata, uma a uma, pela classe que o buildx dá.
 for c in $(bash "$MERGEX_CAUSA" --causas | tr -d '\r' | cut -d'|' -f2); do
   case "$c" in
@@ -1472,21 +1509,28 @@ done
 printf '%s' "$CAUSAS" | sed 's/^/          causa: /'
 ck L.1 "toda causa da mergex candidata tem classe no buildx (a V11 pela D-41)" "" \
   "$(printf '%s' "$CAUSAS" | grep 'SEM CLASSE' | cut -d' ' -f1 | paste -sd' ' -)"
-IC="$TMP_RAIZ/integ"; mkdir -p "$IC"
-( cd "$REPO" && git -c safe.directory='*' ls-files -z --cached --others --exclude-standard | tar --null -T - -cf - ) | tar -C "$IC" -xf - || quebra
-sed -i -e "s/c8bf65f825f96d49d2079286603d7d86e5e257d9/$C7B_SPRINTX_SHA/g" -e "s/b51ba94305ba6857653f0636813ebd6823c5b082/$C7B_MERGEX_SHA/g" "$IC/scripts/ci/integracao.sh"
-ck L.2 "a copia usa os candidatos, e o repositorio continua nos pinos de producao" "2 0 2" \
-  "$(grep -c -e "^SPRINTX_SHA_FIXO=$C7B_SPRINTX_SHA" -e "^MERGEX_SHA_FIXO=$C7B_MERGEX_SHA" "$IC/scripts/ci/integracao.sh") \
-$(grep -c -e "$C7B_SPRINTX_SHA" "$REPO/scripts/ci/integracao.sh") \
-$(grep -c -e '^SPRINTX_SHA_FIXO=c8bf65f825f96d49d2079286603d7d86e5e257d9' -e '^MERGEX_SHA_FIXO=b51ba94305ba6857653f0636813ebd6823c5b082' "$REPO/scripts/ci/integracao.sh")"
+if [ "$PINS_MODO" = producao ]; then
+  # O caminho final: o proprio harness do repositorio, sem copia e sem troca de pin.
+  IC="$REPO"
+  ck L.2 "a bancada roda o harness do repositorio nos pins de producao: as fontes clonadas sao esses SHAs, sem copia" \
+    "$SPRINTX_SHA_FIXO $MERGEX_SHA_FIXO" "$(git -C "$SRC/sprintx" rev-parse HEAD) $(git -C "$SRC/mergex" rev-parse HEAD)"
+else
+  # SO no modo de teste declarado: uma copia com os pins trocados pelo override.
+  IC="$TMP_RAIZ/integ"; mkdir -p "$IC"
+  ( cd "$REPO" && git -c safe.directory='*' ls-files -z --cached --others --exclude-standard | tar --null -T - -cf - ) | tar -C "$IC" -xf - || quebra
+  sed -i -e "s/^SPRINTX_SHA_FIXO=$SPRINTX_SHA_FIXO/SPRINTX_SHA_FIXO=$C7B_SPRINTX_SHA/" -e "s/^MERGEX_SHA_FIXO=$MERGEX_SHA_FIXO/MERGEX_SHA_FIXO=$C7B_MERGEX_SHA/" "$IC/scripts/ci/integracao.sh"
+  ck L.2 "MODO DE TESTE: a copia usa os SHAs do override, e o repositorio continua nos pins de producao" "2 2" \
+    "$(grep -c -e "^SPRINTX_SHA_FIXO=$C7B_SPRINTX_SHA" -e "^MERGEX_SHA_FIXO=$C7B_MERGEX_SHA" "$IC/scripts/ci/integracao.sh") \
+$(grep -c -e "^SPRINTX_SHA_FIXO=$SPRINTX_SHA_FIXO" -e "^MERGEX_SHA_FIXO=$MERGEX_SHA_FIXO" "$REPO/scripts/ci/integracao.sh")"
+fi
 INI="$EPOCHREALTIME"
 ( cd "$TMP_RAIZ" && SPRINTX_REPO="$SRC/sprintx" MERGEX_REPO="$SRC/mergex" BLOCOS="causa f6 f6d" \
     bash "$IC/scripts/ci/integracao.sh" > "$EVID/terminais-f6.log" 2>&1; echo $? > "$EVID/terminais-f6.rc" )
-anota_tempo "integracao.sh causa f6 f6d (candidatos)" "$(ms_desde "$INI")"
+anota_tempo "integracao.sh causa f6 f6d ($PINS_MODO)" "$(ms_desde "$INI")"
 RESUMO="$(tail -1 "$EVID/terminais-f6.log" | tr -d '\r')"
 evidencia "bancada: $RESUMO"
 grep -E '^  (FALHA|PULO)' "$EVID/terminais-f6.log" | head -5 | sed 's/^/          /'
-ck L.3 "causa, f6, f6d com os candidatos: 0 falhas, 0 pulos" "0 0 0" \
+ck L.3 "causa, f6, f6d nos pins ($PINS_MODO): 0 falhas, 0 pulos" "0 0 0" \
   "$(cat "$EVID/terminais-f6.rc") $(printf '%s' "$RESUMO" | sed -n 's/^[0-9]* ok, \([0-9]*\) falha(s), \([0-9]*\) pulo(s)$/\1 \2/p')"
 for k in "X2D o B5 classifica e persiste" "Q2 mas o esgotamento commitado no mesmo HEAD vence" \
          "S.fronteira a sprintx recusa: fronteira_insegura" "S.fronteira o buildx nao pre-julga" \
@@ -1561,5 +1605,10 @@ printf '%s' "$TEMPOS" | awk -F'\t' 'NF == 2 { n[$1]++; s[$1] += $2; if ($2 > m[$
   END { for (k in n) printf "  %-46s n=%-3d media=%6d ms  max=%6d ms%s\n", k, n[k], s[k] / n[k], m[k], (m[k] > 10000 ? "  ACIMA DE 10 s" : "") }' | LC_ALL=C sort
 printf '  %-46s %d ms\n' "total da certificacao" "$(ms_desde "$INICIO_TOTAL")"
 
-printf '\n%d checkpoints, 0 falhas, 0 pulos — certificacao P0.2 B1R OK (runner %s%s)\n' "$PASSOU" "$C7B_RUNNER" \
-  "$([ "$C7B_RUNNER" = claude ] && printf ', %s' "$CLAUDE_VERSAO")"
+if [ "$PINS_MODO" = producao ]; then
+  printf '\n%d checkpoints, 0 falhas, 0 pulos — certificacao P0.2 OK nos pins de producao, sem override (runner %s%s)\n' "$PASSOU" "$C7B_RUNNER" \
+    "$([ "$C7B_RUNNER" = claude ] && printf ', %s' "$CLAUDE_VERSAO")"
+else
+  printf '\n%d checkpoints, 0 falhas, 0 pulos — MODO DE TESTE (override:%s): NAO e a certificacao final (runner %s%s)\n' "$PASSOU" "$PINS_DIVERGENTES" "$C7B_RUNNER" \
+    "$([ "$C7B_RUNNER" = claude ] && printf ', %s' "$CLAUDE_VERSAO")"
+fi

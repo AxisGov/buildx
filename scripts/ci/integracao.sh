@@ -24,7 +24,7 @@
 # Desde o P0.2-B, o retorno da F6 ao planejamento: o teto da F6 declarado no
 # `criar`, a rodada ativa como feature em execução, o terminal próprio
 # `replanejamento_execucao_esgotado`, a recusa em duas famílias e a precedência
-# dela sobre `defeito_de_plano -> trabalho_novo` — pela sprintx real de 5cdde90.
+# dela sobre `defeito_de_plano -> trabalho_novo` — pela sprintx real do pin (SPRINTX_SHA_FIXO, abaixo).
 #
 # Não depende de rede, de jq, nem de nenhum dos repositórios reais do produto.
 # Os cenários da sprintx usam a skill REAL, no SHA fixado abaixo, extraída com
@@ -67,13 +67,17 @@ pulo() { PULOS=$((PULOS+1)); printf '  PULO  %s\n' "$1"; }
 # A sprintx real, no SHA fixo do contrato P0.1
 # ---------------------------------------------------------------------------
 
-# P0.2-B (c8bf65f): o retorno da F6 ao planejamento — o estado `replanejar_execucao`,
-# o orçamento `max_replanejamentos_f6` no quarto argumento do `criar`, o terminal
-# `replanejamento_execucao_esgotado`, e a recusa operacional DURÁVEL
+# OS PINS DE PRODUÇÃO DO P0.2 (B2): esta é a ÚNICA fonte de execução dos três SHAs.
+# A certificação (`certifica-p02.sh`) e as mutações (`mutacoes-p02.sh`) leem daqui;
+# nenhum outro arquivo executável repete o valor. Sempre 40 hex, nunca prefixo.
+# O registro do freeze — os quatro componentes, com o BuildX — é a D-42.
+#
+# sprintx: o retorno da F6 ao planejamento — o estado `replanejar_execucao`, o
+# orçamento `max_replanejamentos_f6` no quarto argumento do `criar`, o terminal
+# `replanejamento_execucao_esgotado`, a recusa operacional DURÁVEL
 # (`replanejamento_execucao_recusado`, com o motivo em `recusa_replanejamento_f6`,
-# DS-148) — e o `bloqueios.sh resolver`. O `classe` do B-NN (P0.2-A5, 7300e47)
-# continua o mesmo.
-SPRINTX_SHA_FIXO=c8bf65f825f96d49d2079286603d7d86e5e257d9                   # [M43]
+# DS-148), o `bloqueios.sh resolver` e o parcial seguro (DS-156).
+SPRINTX_SHA_FIXO=253b59233e6d7a225a05f011cf52668b708e448b                   # [M43]
 SPRINTX_REPO="${SPRINTX_REPO:-$REPO/../sprintx}"
 PLANEJAMENTO=""
 SPRINTX_BLOQUEIOS=""
@@ -108,9 +112,11 @@ com_sprintx() { # com_sprintx <cenario> — pula, e conta o pulo, sem a sprintx 
   return 1
 }
 
-# A mergex real, no SHA do P0.2-A4 (b51ba94): `falhas_portao` e `causa` no
-# ENTREGA.md, e o causa-do-portao.sh que as deriva e as lê.
-MERGEX_SHA_FIXO=b51ba94305ba6857653f0636813ebd6823c5b082
+# mergex: `falhas_portao` e `causa` no ENTREGA.md, o causa-do-portao.sh que as
+# deriva e as lê, e a V11 (`commit_nao_registrado`).
+MERGEX_SHA_FIXO=25d479725b0d91d7b794899c9e25e214bb55fb04
+# expxdev: o instalador que a certificação usa; o harness de integração não o lê.
+EXPXDEV_SHA_FIXO=c9b3058fcce7caebfb9a00de990bbff085f56c6f
 MERGEX_REPO="${MERGEX_REPO:-$REPO/../mergex}"
 MERGEX_CAUSA=""
 if [ "${BUILDX_BIBLIOTECA:-}" != 1 ] && git -c safe.directory='*' -C "$MERGEX_REPO" cat-file -e "$MERGEX_SHA_FIXO^{commit}" 2>/dev/null; then
@@ -535,7 +541,7 @@ rodada_f6_legitima() { # <slug> <wt>
   [ "$(chave "$(sprintx "$2" fase "$1")" replanejamentos_f6)" = "$(rodadas_abertas "$1")" ]
 }
 
-# Os `motivo=` de `replanejar-execucao` recusado (sprintx c8bf65f), nas duas famílias
+# Os `motivo=` de `replanejar-execucao` recusado (sprintx P0.2-B), nas duas famílias
 # do D-37. Operacional: um resultado durável, gravado pela sprintx no estado
 # `replanejamento_execucao_recusado` (D-38), que o humano resolve. Contrato: o buildx
 # só pergunta com um `defeito_de_plano` aberto, então esses motivos são a sprintx e o
@@ -669,7 +675,7 @@ classe_do_retorno_f6() { # <veredito> -> "classe regra"
 
 # A linha F com um `defeito_de_plano` aberto: a F6 não retoma a execução normal. O
 # único passo é o 3 da F6 (`replanejar-execucao`) — a sprintx decide, e desde o
-# c8bf65f ela GRAVA a decisão: rodada nova, terminal esgotado ou terminal recusado
+# P0.2-B ela GRAVA a decisão: rodada nova, terminal esgotado ou terminal recusado
 # (D-38). A fronteira segura também é dela (DS-156, D-40): o buildx não pré-julga o
 # produto sujo — o trabalho parcial da task bloqueada ela preserva, o resto ela recusa
 # com `fronteira_insegura`, e essa recusa de contrato é parada.
@@ -3844,8 +3850,8 @@ caso "P02D.enum o gatilho da F5 na rodada nao e o normal" nao \
 
 if com_causa "P02B terminais duráveis da F6" && [ -n "$PLANEJAMENTO_LEGADO" ]; then
   # --- O pin: o SHA completo, o enum do contrato da sprintx, o estado novo ---
-  caso "P02D.pin o SHA da sprintx e o completo, 40 hex" "c8bf65f825f96d49d2079286603d7d86e5e257d9 40" \
-    "$SPRINTX_SHA_FIXO $(printf '%s' "$SPRINTX_SHA_FIXO" | tr -cd '0-9a-f' | wc -c | tr -d ' ')"
+  caso "P02D.pin o SHA da sprintx e o completo, 40 hex (o registro dele e o bloco pins)" 40 \
+    "$(printf '%s' "$SPRINTX_SHA_FIXO" | tr -cd '0-9a-f' | wc -c | tr -d ' ')"
   caso "P02D.pin a sprintx fixada grava o terminal da recusa, e le o motivo" "sim sim" \
     "$(sim_nao grep -q 'replanejamento_execucao_recusado "$P_REPROV" "$P_HIST"' "$PLANEJAMENTO") \
 $(sim_nao grep -q 'fm_em P_RECUSA recusa_replanejamento_f6' "$PLANEJAMENTO")"
@@ -4373,6 +4379,75 @@ caso "C6.contrato o mapa guarda a evidência" sim \
   "$(sim_nao grep -q 'Desvios na árvore:' "$REPO/.claude/skills/buildx/assets/TEMPLATE-MAPA.md")"
 fi  # desvios
 
+if bloco pins; then
+echo
+echo "P0.2 / B2 — os pins congelados: uma fonte, 40 hex, nenhum pin antigo, nenhum override"
+
+DEC_B2="$REPO/.claude/skills/buildx/DECISOES-DA-SKILL.md"
+CERT_B2="$REPO/scripts/ci/certifica-p02.sh"
+e40() { if [[ "$1" =~ ^[0-9a-f]{40}$ ]]; then echo sim; else echo nao; fi; }
+registro_d42() { tr -d '\r' < "$DEC_B2" | sed -n "s/^| \`$1\` | \`\([0-9a-f]*\)\` |.*/\1/p"; }
+
+# --- 40 hex, sempre: nada de 7, de 12, de prefixo ---
+for v in SPRINTX_SHA_FIXO MERGEX_SHA_FIXO EXPXDEV_SHA_FIXO SPRINTX_SHA_LEGADO; do
+  caso "B2.1 $v e SHA completo: exatamente 40 hex" sim "$(e40 "${!v}")"
+done
+caso "B2.1 nenhuma atribuicao de SHA em scripts/ci e curta (fora o texto dos mutantes)" "" \
+  "$(grep -hE '^[[:space:]]*[A-Z0-9_]*SHA[A-Z0-9_]*=[0-9a-f]+' "$REPO"/scripts/ci/integracao.sh "$REPO"/scripts/ci/certifica-p02.sh | grep -vE '=[0-9a-f]{40}([^0-9a-f]|$)' | paste -sd' ' -)"
+
+# --- os pins de execucao sao os do freeze registrado na D-42 ---
+caso "B2.2 a D-42 registra o SHA da sprintx, igual ao pin" "$SPRINTX_SHA_FIXO" "$(registro_d42 sprintx)"
+caso "B2.2 a D-42 registra o SHA da mergex, igual ao pin"  "$MERGEX_SHA_FIXO"  "$(registro_d42 mergex)"
+caso "B2.2 a D-42 registra o SHA do expxdev, igual ao pin" "$EXPXDEV_SHA_FIXO" "$(registro_d42 expxdev)"
+caso "B2.2 a D-42 registra o BuildX certificado pelo B1R, 40 hex" sim "$(e40 "$(registro_d42 buildx_b1r)")"
+caso "B2.2 a D-42 nao finge que o BuildX do B1R contem o B2" sim \
+  "$(sim_nao grep -qF 'O `BuildX freeze B2` não está nesta tabela, de propósito.' "$DEC_B2")"
+caso "B2.2 a D-42 separa a integridade do lock (hashes) da proveniencia Git (SHA completo)" sim \
+  "$(sim_nao grep -qF 'não é a proveniência Git' "$DEC_B2")"
+
+# --- uma fonte so: o SHA de cada pin so aparece na atribuicao dele ---
+for v in SPRINTX_SHA_FIXO MERGEX_SHA_FIXO EXPXDEV_SHA_FIXO; do
+  caso "B2.3 o SHA de $v so aparece em scripts/ci/integracao.sh, uma vez" "scripts/ci/integracao.sh:1" \
+    "$(cd "$REPO" && grep -rcF --include='*.sh' --include='*.mjs' --include='*.js' --include='*.json' --include='*.yml' \
+         --exclude-dir=node_modules --exclude-dir=.git -- "${!v}" scripts .claude .opencode .github 2>/dev/null | grep -v ':0$' | paste -sd' ' -)"
+done
+caso "B2.3 a certificacao e as mutacoes de integracao nao trazem SHA literal (leem do harness)" "" \
+  "$(grep -nE '[0-9a-f]{40}' "$REPO/scripts/ci/certifica-p02.sh" "$REPO/scripts/ci/mutacoes-p02.sh" | cut -c1-80 | paste -sd' ' -)"
+
+# --- os pins antigos nao sao posicao executavel ---
+PINS_ANTIGOS='c8bf65f|b51ba94'   # [pin-antigo]
+HIST_LINHAS="$(tr -d '\r' < "$DEC_B2" | awk '/^## D-[0-9]+ — / { split($2, a, "-"); em = (a[2] + 0 >= 36 && a[2] + 0 <= 38) } em { print NR }')"
+ANTIGOS_FORA="$(cd "$REPO" && grep -rInE "$PINS_ANTIGOS" . --exclude-dir=.git --exclude-dir=node_modules 2>/dev/null |
+  grep -vF '[pin-antigo]' |
+  while IFS=: read -r f n _; do
+    f="${f#./}"
+    if [ "$f" = .claude/skills/buildx/DECISOES-DA-SKILL.md ] && printf '%s\n' "$HIST_LINHAS" | grep -qx "$n"; then continue; fi
+    printf '%s:%s\n' "$f" "$n"
+  done | paste -sd' ' -)"
+caso "B2.4 os pins antigos so aparecem como evidencia historica (D-36 a D-38) ou na linha marcada do teste" "" "$ANTIGOS_FORA"
+caso "B2.4 a evidencia historica nao foi reescrita: a D-36 e a D-38 continuam citando cada pin antigo" 2 \
+  "$(grep -nE "$PINS_ANTIGOS" "$DEC_B2" | cut -d: -f1 | while read -r n; do printf '%s\n' "$HIST_LINHAS" | grep -qx "$n" && echo "$n"; done | wc -l | tr -d ' ')"
+
+# --- a certificacao nao aceita override de SHA sem o modo de teste declarado ---
+OUTRO="$(printf 'a%.0s' $(seq 1 40))"
+for v in C7B_SPRINTX_SHA C7B_MERGEX_SHA C7B_EXPXDEV_SHA; do
+  R="$(env "$v=$OUTRO" bash "$CERT_B2" --pins 2>&1)"; RC=$?
+  caso "B2.5 $v diferente do pin, sem modo de teste: a certificacao falha antes de qualquer clone" "1 sim" \
+    "$RC $(sim_nao grep -q "sem modo de teste declarado:.*$v" <<<"$R")"
+  R="$(env "$v=$OUTRO" C7B_MODO_TESTE=1 bash "$CERT_B2" --pins 2>&1)"; RC=$?
+  caso "B2.5 $v com o modo de teste declarado: aceito, e o resultado diz que NAO e a certificacao final" "0 sim sim" \
+    "$RC $(sim_nao grep -q '^pins: modo=teste$' <<<"$R") $(sim_nao grep -q 'NAO e a certificacao final' <<<"$R")"
+done
+R="$(bash "$CERT_B2" --pins 2>&1)"; RC=$?
+caso "B2.5 sem override: modo=producao, e os pins impressos sao os do harness" \
+  "0 pins: modo=producao sprintx=$SPRINTX_SHA_FIXO mergex=$MERGEX_SHA_FIXO expxdev=$EXPXDEV_SHA_FIXO" \
+  "$RC $(printf '%s' "$R" | tr '\n' ' ' | sed 's/ $//')"
+R="$(env "C7B_SPRINTX_SHA=$SPRINTX_SHA_FIXO" bash "$CERT_B2" --pins 2>&1)"; RC=$?
+caso "B2.5 override igual ao pin nao e override: continua modo=producao" "0 sim" "$RC $(sim_nao grep -q '^pins: modo=producao$' <<<"$R")"
+R="$(env C7B_MODO_TESTE=1 bash "$CERT_B2" --pins 2>&1)"; RC=$?
+caso "B2.5 modo de teste sem override nao muda nada: continua modo=producao" "0 sim" "$RC $(sim_nao grep -q '^pins: modo=producao$' <<<"$R")"
+fi  # pins
+
 if bloco decisoes; then
 echo
 echo "P0.1 — decisões append-only, D-26 em diante"
@@ -4381,12 +4456,12 @@ DEC_SKILL="$REPO/.claude/skills/buildx/DECISOES-DA-SKILL.md"
 IDS="$(tr -d '\r' < "$DEC_SKILL" | sed -n 's/^## \(D-[0-9][0-9]*\) — .*/\1/p')"
 caso "P01.36 nenhum D-NN repetido" "$(printf '%s\n' "$IDS" | wc -l | tr -d ' ')" "$(printf '%s\n' "$IDS" | sort -u | wc -l | tr -d ' ')"
 FALTA=""
-for n in $(seq 1 41); do
+for n in $(seq 1 42); do
   printf '%s\n' "$IDS" | grep -qx "$(printf 'D-%02d' "$n")" || FALTA="$FALTA D-$n"
 done
-caso "P01.36 D-01 a D-41 presentes" "" "$FALTA"
-caso "P01.36 as decisoes P0.1 e P0.2 vem depois da D-25, em ordem" "D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36 D-37 D-38 D-39 D-40 D-41" \
-  "$(printf '%s\n' "$IDS" | tail -17 | tr '\n' ' ' | sed 's/ $//')"
+caso "P01.36 D-01 a D-42 presentes" "" "$FALTA"
+caso "P01.36 as decisoes P0.1 e P0.2 vem depois da D-25, em ordem" "D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36 D-37 D-38 D-39 D-40 D-41 D-42" \
+  "$(printf '%s\n' "$IDS" | tail -18 | tr '\n' ' ' | sed 's/ $//')"
 for t in 'O orçamento da F5 é do caller; a contagem é da sprintx' \
          'Checkpoint da sprintx é estado legítimo da feature' \
          'Terminal pré-F6 só move a CONTROL com evidência commitada' \
@@ -4398,7 +4473,8 @@ for t in 'O orçamento da F5 é do caller; a contagem é da sprintx' \
          'A recusa do retorno da F6 é estado durável da sprintx, e o buildx a lê do commit' \
          'A prova E admite exclusivamente sujeira explicada por desvio terminal commitado' \
          'A fronteira segura do retorno da F6 é da sprintx, e o parcial seguro não é parada' \
-         '`commit_nao_registrado` é trabalho novo: reparar o registro, não refazer o produto'; do
+         '`commit_nao_registrado` é trabalho novo: reparar o registro, não refazer o produto' \
+         'Os pins do P0.2 são congelados por SHA completo, numa única fonte de execução'; do
   caso "P01.36 decisao registrada: $t" sim "$(sim_nao grep -qF "$t" "$DEC_SKILL")"
 done
 fi  # decisoes

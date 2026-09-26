@@ -8,7 +8,7 @@
 # scripts/ci/certifica-p02.sh FALHE — e falhe no checkpoint que prova aquilo, não
 # num checkpoint qualquer: cada mutante declara onde tem de morrer.
 #
-# As do B1, re-ancoradas nos candidatos (sprintx 253b592, mergex 25d4797):
+# As do B1, ancoradas nos pins de produção (D-42):
 #   X1  a sprintx deixa de barrar o arquivo de task irmã
 #   X2  a sprintx lê o plano de uma feature histórica com o mesmo id de task
 #   X3  o rastro volta a escolher o trabalho por mtime
@@ -172,13 +172,16 @@ export C7B_MERGEX_FONTE="${C7B_MERGEX_FONTE:-$(cd "$REPO/../mergex" 2>/dev/null 
 export C7B_EXPXDEV_FONTE="${C7B_EXPXDEV_FONTE:-$(cd "$REPO/../expxdev" 2>/dev/null && pwd)}"
 export C7B_PRESERVAR=0 C7B_RUNNER=settings
 
-# O ExpxDev candidato, construído uma vez para todas as rodadas.
+# O ExpxDev do PIN de produção (a única fonte é o harness), construído uma vez para
+# todas as rodadas. Override de SHA não existe aqui: a certificação o recusa.
+EXPXDEV_PIN="$(sed -n 's/^EXPXDEV_SHA_FIXO=\([0-9a-f]\{40\}\)\([^0-9a-f].*\)\{0,1\}$/\1/p' "$REPO/$INTEG")"
+[ -n "$EXPXDEV_PIN" ] || { echo "EXPXDEV_SHA_FIXO ausente ou incompleto em $INTEG"; exit 1; }
 if [ -z "${C7B_EXPXDEV_BUILD:-}" ]; then
   C7B_EXPXDEV_BUILD="$TMP/expxdev"
   git -c safe.directory='*' clone -q -c core.autocrlf=false --no-checkout "$C7B_EXPXDEV_FONTE" "$C7B_EXPXDEV_BUILD" &&
-    git -C "$C7B_EXPXDEV_BUILD" -c advice.detachedHead=false checkout -q --detach "${C7B_EXPXDEV_SHA:-c9b3058fcce7caebfb9a00de990bbff085f56c6f}" &&
+    git -C "$C7B_EXPXDEV_BUILD" -c advice.detachedHead=false checkout -q --detach "$EXPXDEV_PIN" &&
     ( cd "$C7B_EXPXDEV_BUILD" && npm ci --no-audit --no-fund >/dev/null 2>&1 && npm run build:server >/dev/null 2>&1 ) ||
-    { echo "nao foi possivel construir o expxdev candidato"; exit 1; }
+    { echo "nao foi possivel construir o expxdev do pin"; exit 1; }
 fi
 export C7B_EXPXDEV_BUILD
 

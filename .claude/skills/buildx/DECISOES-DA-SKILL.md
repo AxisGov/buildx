@@ -669,3 +669,32 @@ Dois casos particulares, e os dois importam:
 **Risco assumido:** a sucessora nasce da `CONTROL` e não reaproveita a branch da feature bloqueada; o reparo dela precisa enxergar o commit que ficou sem registro. Se a mergex mudar a V11 para cobrir algo além de "commit existe, registro não", a linha precisa ser revista.
 
 **O que invalida:** a V11 passar a sinalizar commit de produto **inexistente** ou inválido (aí é produto a refazer, ou decisão); a mergex remover o `--registrar-existente`; ou uma regra do buildx que mande o reparo de evidência para a própria feature, sem sucessora.
+
+---
+
+## D-42 — Os pins do P0.2 são congelados por SHA completo, numa única fonte de execução
+
+*(P0.2 / B2. Não muda comportamento do buildx: troca o que a certificação chamava de "candidato" pelo pin de produção. Consome a certificação B1R, que aprovou exatamente os quatro SHAs abaixo. Substitui os pins anteriores da sprintx — P0.2-B — e da mergex — P0.2-A4 —, que ficam só nas D-36 a D-38, como evidência daquelas decisões.)*
+
+**Decisão:** os componentes do P0.2 ficam congelados nos SHAs certificados pelo B1R:
+
+| Componente | SHA completo | Papel |
+|---|---|---|
+| `buildx_b1r` | `63dbd591df14d9ff01fa8e63f8a4ed77738f40e8` | o BuildX que o B1R certificou; **anterior** ao commit do B2 |
+| `sprintx` | `253b59233e6d7a225a05f011cf52668b708e448b` | pin de produção (`SPRINTX_SHA_FIXO`) |
+| `mergex` | `25d479725b0d91d7b794899c9e25e214bb55fb04` | pin de produção (`MERGEX_SHA_FIXO`) |
+| `expxdev` | `c9b3058fcce7caebfb9a00de990bbff085f56c6f` | o instalador (`EXPXDEV_SHA_FIXO`) |
+
+1. **Uma única fonte de execução.** Os três pins moram em `scripts/ci/integracao.sh`, onde a sprintx e a mergex já moravam. A certificação (`certifica-p02.sh`) e as mutações (`mutacoes-p02.sh`) leem de lá; nenhum outro arquivo executável repete o valor. Sempre 40 hex — 7 ou 12 caracteres nunca são pin.
+2. **O `BuildX freeze B2` não está nesta tabela, de propósito.** O `buildx_b1r` é o commit que o B1R certificou; ele não contém o B2, e este registro não finge que contém. O freeze B2 é o commit `chore(buildx): congela pins certificados do p02` — o `HEAD` de `p0.2/buildx-c7b` que carrega este texto —, e o SHA dele não cabe no próprio conteúdo. Quem o procura o lê do `git log`, e o relatório do B2 o declara.
+3. **Sem override na certificação final.** `C7B_SPRINTX_SHA`, `C7B_MERGEX_SHA` e `C7B_EXPXDEV_SHA` só valem com `C7B_MODO_TESTE=1`, declarado; a certificação diz na primeira linha e na última que rodou em modo de teste, e esse modo não é a certificação. Um SHA diferente do pin, sem o modo declarado, falha antes de qualquer clone.
+4. **Os pins antigos não são posição executável.** Um teste varre os arquivos versionados: as duas identificações antigas só podem aparecer nas D-36 a D-38 (evidência histórica, não se reescreve) e nas linhas marcadas `[pin-antigo]`, que são as do próprio teste.
+5. **O campo `<12 hex>-local` do `expx-lock` não é a proveniência Git.** O `expxdev init` grava ali um identificador curto e local; ele nunca foi, e não passa a ser, a fonte autoritativa. O bloco de hashes do lock prova a **integridade** dos artefatos instalados (a certificação confere cada arquivo contra o disco); os SHAs completos desta tabela provam a **proveniência** dos componentes certificados. O lock não ganha `source_commit` neste bloco, e o ExpxDev não é alterado.
+
+**Alternativas descartadas:** (1) trocar o SHA em cada arquivo que o cita; (2) manter os defaults do candidato na certificação e os pins de produção no harness, deixando o B2 igualar os dois; (3) um arquivo novo só de pins; (4) reescrever as D-36 a D-38 com os pins novos; (5) acrescentar `source_commit` ao lock.
+
+**Por quê:** (1) e (2) repetem o defeito que o B1R viu: dois lugares dizendo "qual sprintx", e uma certificação que passa com um SHA enquanto a produção usa outro. O sentido do B2 é a igualdade *pins oficiais = candidatos certificados*, e ela só se prova se houver um pin só. (3) é um formato novo onde já havia um em uso, com a mutação M43 apontada para ele. (4) apagaria a evidência: a D-37 consumiu aquela sprintx, e o SHA dela é parte do que a decisão registra. (5) muda o ExpxDev, e o B2 não muda componente algum.
+
+**Risco assumido:** o teste dos pins compara o valor do harness com o desta tabela — uma cópia, por construção, e a única, que existe para o teste falhar quando os dois divergem. Atualizar o pin exige atualizar a tabela e recertificar; é o preço de o congelamento ser verificável.
+
+**O que invalida:** a mergex, a sprintx ou o ExpxDev mudarem de commit (nova certificação e nova decisão); o `expx-lock` passar a gravar o commit completo (aí ele vira prova de proveniência e o item 5 cai); ou o buildx ganhar um segundo harness que precise dos pins sem carregar o `integracao.sh`.
