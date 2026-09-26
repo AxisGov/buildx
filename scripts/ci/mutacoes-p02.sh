@@ -42,15 +42,25 @@
 #   Y14 a instalação em ordem inversa muda o resultado
 #   Y15 a certificação roda sem jq no processo dos hooks
 #
-# As da sprintx e da mergex (X1–X7, X10, Y8, Y10, Y11) são aplicadas na FONTE
+# As da reivindicação (D-01 / C7-C): a prova da reivindicação não pode voltar a ser
+# a linha que a bancada monta.
+#   Y16 o B1R volta a fabricar a task_iniciada do runner (evento_skill com a S1)
+#   Y17 o escritor da sprintx grava a reivindicação sem identidade (o modelo antigo)
+#   Y18 o agente não usa o escritor público: a reivindicação vai à mão para o rastro
+#   Y19 a sessão vem do roteiro (EXPX_SESSAO no processo do runner)
+#   Y20 o harness vem do roteiro (EXPX_HARNESS no processo do runner)
+#   Y21 a bancada reivindica pelo agente, com a sessão dele, antes de ele rodar
+#
+# As da sprintx e da mergex (X1–X7, X10, Y8, Y10, Y11, Y17) são aplicadas na FONTE
 # clonada no SHA, antes do `expxdev init`, pelo gancho C7B_POS_EXTRACAO — nunca no
 # repositório fonte: a mutação chega ao produto pelo instalador, como chegaria de
 # verdade. As do buildx e da certificação, numa cópia da árvore. Antes delas, a
 # cópia sem mutação passa (controle). Mutação que sobrevive é teste que falta.
 #
 # Rodam SEM runner real (C7B_RUNNER=settings): os hooks do settings.json instalado
-# são despachados como o Claude Code os despacha. A prova com o runner real é a
-# certificação em si, no Windows; o relatório diz isso.
+# são despachados como o Claude Code os despacha. A prova com o runner real — e a
+# do agente da seção R — é a certificação em si, com o Claude Code (Linux/WSL em
+# ext4, o ambiente canônico); o relatório diz isso. Rodam longas: só no Linux.
 #
 # Uso: bash scripts/ci/mutacoes-p02.sh             # controle + todas
 #      bash scripts/ci/mutacoes-p02.sh X4 Y9       # controle + as nomeadas
@@ -80,6 +90,7 @@ if [ "${1:-}" = --snapshot ]; then
   m="$2"; SXS="$3"; MXS="$4"
   ESC="$SXS/.claude/hooks/sprintx/escopo-da-task.sh"
   PLA="$SXS/.claude/skills/sprintx/scripts/planejamento.sh"
+  ESCRITOR="$SXS/.claude/skills/sprintx/scripts/rastro.sh"
   FECHA="$MXS/.claude/skills/mergex/scripts/fechamento-do-e1.sh"
   case "$m" in
     X1) troca "$ESC" 'if [ "$DECL" = irma ]; then' <<'EOF'
@@ -119,6 +130,13 @@ EOF
   D_PARC=integro; D_DET=""; return 0
 EOF
       ;;
+    Y17) troca "$ESCRITOR" 'if rastro_identidade_em SESSAO HARNESS; then' <<'EOF' &&
+if false; then
+EOF
+         troca "$ESCRITOR" 'elif [ "$EXIGE_IDENTIDADE" = 1 ]; then' <<'EOF'
+elif false; then
+EOF
+      ;;
     Y10) troca "$FECHA" "      para 8 'PARADO — arquivo_de_task_irma: arquivo planejado em outra task da feature' \\" <<'EOF'
       : 8 'PARADO — arquivo_de_task_irma' \
 EOF
@@ -138,7 +156,8 @@ fi
 # Onde cada mutante TEM de morrer: o id do primeiro checkpoint que falha.
 onde() {
   case "$1" in
-    X1|X2|X3) echo '^P1\.' ;;
+    X1)  echo '^(R\.7|P1\.[0-9]+)$' ;;
+    X2|X3) echo '^P1\.' ;;
     X4)  echo '^P1\.16$' ;;
     X5)  echo '^P6\.' ;;
     X6)  echo '^(P0\.13|F6\.[0-9]+|P5\.[0-9]+)$' ;;
@@ -151,7 +170,7 @@ onde() {
     X15) echo '^A\.4$' ;;
     Y1)  echo '^G\.1$' ;;
     Y2|Y3|Y4) echo '^I\.' ;;
-    Y5)  echo '^P1\.(7|9)$' ;;
+    Y5)  echo '^(R\.7|P1\.(7|9))$' ;;
     Y6)  echo '^(P1\.13|T\.[0-9])$' ;;
     Y7)  echo '^P2\.8$' ;;
     Y8)  echo '^P2\.18$' ;;
@@ -162,6 +181,8 @@ onde() {
     Y13) echo '^(P11\.10|K\.[0-9]+)$' ;;
     Y14) echo '^M\.1o$' ;;
     Y15) echo '^J\.1$' ;;
+    Y16|Y19|Y20|Y21) echo '^G\.1$' ;;
+    Y17|Y18) echo '^R\.3$' ;;
   esac
 }
 
@@ -198,7 +219,7 @@ snapshot() { printf '#!/usr/bin/env bash\nexec bash "%s" --snapshot %s "$@"\n' "
 aplica() { # aplica <mutacao> <arvore> — o defeito, e só ele
   local d="$2"
   case "$1" in
-    X1|X2|X3|X4|X5|X6|X7|X10|Y8|Y10|Y11) snapshot "$1" ;;
+    X1|X2|X3|X4|X5|X6|X7|X10|Y8|Y10|Y11|Y17) snapshot "$1" ;;
     X8) troca "$d/$CERT" '# [P8]' <<'EOF'
   case "V11=OK" in                                                                       # [P8]
 EOF
@@ -275,6 +296,29 @@ EOF
 RUNNER_PATH="$RUNNER_DIRS"
 EOF
       ;;
+    Y16) troca "$d/$CERT" '# [Y16]' <<'EOF'
+evento_skill "$SLUG" task_iniciada T-01.01 "$S1"
+EOF
+      ;;
+    Y18) # a reivindicação à mão, sem identidade, com o evento e o caminho do rastro
+         # disfarçados: a guarda textual não a vê — quem a mata é o escopo-da-task
+      troca "$d/$CERT" 'runner_bash "$FR" "$SR" "$RUNNER_PATH" "bash $ESCRITOR task-iniciada $SLR T-01.01"' <<'EOF'
+  runner_bash "$FR" "$SR" "$RUNNER_PATH" "printf '%s\n' '{\"expx_eventos\":1,\"trabalho_id\":\"ft-r\",\"origem\":\"skill\",\"evento\":\"task_'iniciada'\",\"task\":\"T-01.01\"}' >> docs/\"eve\"ntos/ft-r.jsonl"
+EOF
+      ;;
+    Y19) troca "$d/$CERT" 'CLAUDECODE=1 CLAUDE_CODE_SESSION_ID="$u" bash -c "$cmd" 2>&1)"; RUN_RC=$?' <<'EOF'
+  RUN_SAIDA="$(cd "$d" && "${SEM_CLAUDE[@]}" PATH="$p" CLAUDECODE=1 CLAUDE_CODE_SESSION_ID="$u" EXPX_SESSAO="claude-code@$u" bash -c "$cmd" 2>&1)"; RUN_RC=$?   # [harness-emulado]
+EOF
+      ;;
+    Y20) troca "$d/$CERT" 'CLAUDECODE=1 CLAUDE_CODE_SESSION_ID="$u" bash -c "$cmd" 2>&1)"; RUN_RC=$?' <<'EOF'
+  RUN_SAIDA="$(cd "$d" && "${SEM_CLAUDE[@]}" PATH="$p" CLAUDECODE=1 CLAUDE_CODE_SESSION_ID="$u" EXPX_HARNESS=claude-code bash -c "$cmd" 2>&1)"; RUN_RC=$?   # [harness-emulado]
+EOF
+      ;;
+    Y21) troca "$d/$CERT" 'ROT_ANTES="$(git -C "$FR" hash-object --no-filters src/rotulo.sh)"' <<'EOF'
+ROT_ANTES="$(git -C "$FR" hash-object --no-filters src/rotulo.sh)"
+WT_SALVO="$WT"; WT="$FR"; evento_skill "$SLR" task_iniciada T-01.01 "$SR"; WT="$WT_SALVO"
+EOF
+      ;;
     *) echo "mutacao desconhecida: $1" >&2; return 1 ;;
   esac
 }
@@ -285,7 +329,7 @@ roda() { # roda <nome> <arvore>
   ( cd "$TMP" && C7B_POS_EXTRACAO="$pos" bash "$2/$CERT" > "$TMP/$1.log" 2>&1; echo $? > "$TMP/$1.rc" )
 }
 
-MUTACOES="${*:-X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 Y1 Y2 Y3 Y4 Y5 Y6 Y7 Y8 Y9 Y10 Y11 Y12 Y13 Y14 Y15}"
+MUTACOES="${*:-X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 Y1 Y2 Y3 Y4 Y5 Y6 Y7 Y8 Y9 Y10 Y11 Y12 Y13 Y14 Y15 Y16 Y17 Y18 Y19 Y20 Y21}"
 
 printf 'controle — a arvore sem mutacao certifica (runner settings)\n'
 copia "$TMP/controle"
