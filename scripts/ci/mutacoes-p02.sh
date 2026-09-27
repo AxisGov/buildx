@@ -76,6 +76,25 @@
 # de teste (Z10, para a mergex) já morre pelo M60 existente, genérico às três
 # fontes: nenhuma mutação nova é precisa para essa classe.
 #
+# O SessionStart instalado (P0.2 / D-03): a seção S da certificação executa o
+# expx-session-sync INSTALADO num PATH controlado. As W1–W2 trocam o ExpxDev; as
+# W3–W10 regridem o hook instalado da S (`hook_sob_prova`, marcador [W-hook]) DEPOIS
+# da prova de bytes (SI.10s/S5.10s) — a regressão que o ExpxDev pegaria na fonte, aqui
+# para provar que as asserções de comportamento da S não são tautológicas: a prova
+# de bytes sozinha as mataria antes e não diria nada sobre o comportamento.
+#   W1  o ExpxDev volta ao do freeze D-44 (o pin e o binário executado)
+#   W2  o hook instalado não corresponde ao ExpxDev do pin
+#   W3  `<sha>-local` volta a auto-atualizar
+#   W4  `local` exato volta a auto-atualizar
+#   W5  a mistura local/remota atualiza (só congela se TODAS forem locais)
+#   W6  o resume ignora o freeze
+#   W7  o lock inválido alcança o update
+#   W8  o cache Axis é criado no caso local
+#   W9  a barreira local bloqueia também o lock remoto
+#   W10 o `git status` volta a rodar antes da leitura do lock
+# A decisão do freeze D-45 divergindo do pin, e o pin voltando ao do D-44, são do
+# bloco `pins` do harness genérico (scripts/ci/mutacoes.sh, M66/M67), como a Z8/Z9.
+#
 # As da sprintx e da mergex (X1–X7, X10, Y8, Y10, Y11, Y17, Z2, Z4, Z6, Z7) são
 # aplicadas na FONTE clonada no SHA, antes do `expxdev init`, pelo gancho
 # C7B_POS_EXTRACAO — nunca no repositório fonte: a mutação chega ao produto
@@ -91,6 +110,7 @@
 # Uso: bash scripts/ci/mutacoes-p02.sh             # controle + todas
 #      bash scripts/ci/mutacoes-p02.sh X4 Y9       # controle + as nomeadas
 #      C7B_EXPXDEV_BUILD=<checkout construído> bash scripts/ci/mutacoes-p02.sh
+#      C7B_EXPXDEV_BUILD_D44=<checkout construído no ExpxDev da D-44>   # só a W1; sem ele, constrói
 
 set -uo pipefail
 
@@ -243,6 +263,16 @@ onde() {
     Z5)  echo '^QT\.2$' ;;
     Z6)  echo '^QT\.2$' ;;
     Z7)  echo '^QE\.2$' ;;
+    W1)  echo '^S1\.2$' ;;
+    W2)  echo '^I\.10s$' ;;
+    W3)  echo '^S1\.2$' ;;
+    W4)  echo '^S5\.2$' ;;
+    W5)  echo '^S3\.2$' ;;
+    W6)  echo '^S2\.2$' ;;
+    W7)  echo '^S6a\.2$' ;;
+    W8)  echo '^S1\.4$' ;;
+    W9)  echo '^S7\.2$' ;;
+    W10) echo '^S1\.[23]$' ;;
   esac
 }
 
@@ -263,6 +293,13 @@ EXPXDEV_PIN="$(sed -n 's/^EXPXDEV_SHA_FIXO=\([0-9a-f]\{40\}\)\([^0-9a-f].*\)\{0,
 MERGEX_SHA_ANTES_D02="$(sed -n 's/^MERGEX_SHA_D43=\([0-9a-f]\{40\}\)\([^0-9a-f].*\)\{0,1\}$/\1/p' "$REPO/$INTEG")"
 [ -n "$MERGEX_SHA_ANTES_D02" ] || { echo "MERGEX_SHA_D43 ausente ou incompleto em $INTEG"; exit 1; }
 export MERGEX_SHA_ANTES_D02
+
+# O ExpxDev do freeze D-44, anterior ao D-03, para a W1/W2 — lido da tabela da própria
+# D-44 (evidência que não se reescreve), nunca literal aqui.
+EXPXDEV_D44="$(tr -d '\r' < "$REPO/.claude/skills/buildx/DECISOES-DA-SKILL.md" |
+  awk 'index($0, "## D-44 — ") == 1 { em = 1; next } /^## D-[0-9]+ — / { em = 0 } em' |
+  sed -n 's/^| `expxdev` | `\([0-9a-f]\{40\}\)` |.*/\1/p')"
+[ -n "$EXPXDEV_D44" ] || { echo "a D-44 nao registra o expxdev em 40 hex"; exit 1; }
 if [ -z "${C7B_EXPXDEV_BUILD:-}" ]; then
   C7B_EXPXDEV_BUILD="$TMP/expxdev"
   git -c safe.directory='*' clone -q -c core.autocrlf=false --no-checkout "$C7B_EXPXDEV_FONTE" "$C7B_EXPXDEV_BUILD" &&
@@ -281,6 +318,15 @@ copia() {
 }
 
 snapshot() { printf '#!/usr/bin/env bash\nexec bash "%s" --snapshot %s "$@"\n' "$EU" "$1" > "$TMP/$1.pos.sh"; }
+
+# muta_hook <arvore> <trecho do hook> <novo> — a regressão entra no hook INSTALADO da
+# seção S, pelo `hook_sob_prova` da certificação: depois da prova de bytes, antes do
+# commit da instalação. Trecho ausente ou repetido: o hook_sob_prova recusa (3).
+muta_hook() {
+  troca "$1/$CERT" '# [W-hook]' <<EOF
+hook_sob_prova() { "\$NODE" -e 'const fs = require("fs"), [f, a, b] = process.argv.slice(1), s = fs.readFileSync(f, "utf8"); if (s.split(a).length !== 2) process.exit(3); fs.writeFileSync(f, s.replace(a, () => b));' "\$1/\$HOOK_SESSAO" $(printf '%q' "$2") $(printf '%q' "$3"); }
+EOF
+}
 
 aplica() { # aplica <mutacao> <arvore> — o defeito, e só ele
   local d="$2"
@@ -418,6 +464,25 @@ printf '\n# suja pelo mutante Z4\n' >> "$FX/src/q1.sh"
 metodo_fx pre-e2 q1
 EOF
       ;;
+    W1) # o pin e o binario executado voltam ao ExpxDev do freeze D-44
+      sed -i "s/^EXPXDEV_SHA_FIXO=[0-9a-f]\{40\}/EXPXDEV_SHA_FIXO=$EXPXDEV_D44/" "$d/$INTEG" &&
+        printf '%s\n' "$C7B_EXPXDEV_BUILD_D44" > "$TMP/$1.xd"
+      ;;
+    W2) # o hook instalado nao e o do pin: o do D-44 por cima, logo depois do init
+      troca "$d/$CERT" '# [Y2]' <<EOF
+git -c safe.directory='*' -C "\$XD" show "$EXPXDEV_D44:nucleo/hooks/expx-session-sync.mjs" > "\$C/\$HOOK_SESSAO"
+EOF
+      ;;
+    W3) muta_hook "$d" 'return commit === "local" || commit.endsWith("-local");' 'return commit === "local";' ;;
+    W4) muta_hook "$d" 'return commit === "local" || commit.endsWith("-local");' 'return commit.endsWith("-local");' ;;
+    W5) muta_hook "$d" 'if (origem.locais.length > 0) {' \
+          'if (origem.locais.length > 0 && origem.locais.length === Object.keys(JSON.parse(readFileSync(caminhoLock, "utf8")).skills).length) {' ;;
+    W6) muta_hook "$d" 'const origem = lerOrigemDoLock(caminhoLock);' \
+          'const origem = evento.source === "resume" ? { ok: true, locais: [] } : lerOrigemDoLock(caminhoLock);' ;;
+    W7) muta_hook "$d" 'if (!origem.ok) {' 'if (!origem.ok) { origem.locais = []; } if (false) {' ;;
+    W8) muta_hook "$d" 'if (origem.locais.length > 0) {' 'if (origem.locais.length > 0) { mkdirSync(cachePadrao(ambiente), { recursive: true });' ;;
+    W9) muta_hook "$d" 'if (origem.locais.length > 0) {' 'if (true) {' ;;
+    W10) muta_hook "$d" 'const origem = lerOrigemDoLock(caminhoLock);' 'arvoreSuja(projeto, executar); const origem = lerOrigemDoLock(caminhoLock);' ;;
     Z5) # TRACKED perde a entrada historica: a fixture nao a reafirma no acrescimo
       troca "$d/$CERT" 'hist_add q2 T-01.01 teste accountability 0.6 "$HOJE"' <<'EOF'
 HIST_ENTRADAS=""   # [mutacao Z5: descarta a entrada de q1 antes de acrescentar]
@@ -450,9 +515,14 @@ Q_EXTRAI() {
 }
 
 roda() { # roda <nome> <arvore>
-  local pos=""
+  local pos="" xd=()
   [ -f "$TMP/$1.pos.sh" ] && pos="$TMP/$1.pos.sh"
-  ( cd "$TMP" && C7B_POS_EXTRACAO="$pos" bash "$2/$CERT" > "$TMP/$1.log" 2>&1; echo $? > "$TMP/$1.rc" )
+  # W1: o ExpxDev executado é outro — o do D-44; em modo de teste, o override o acompanha
+  if [ -f "$TMP/$1.xd" ]; then
+    xd=(C7B_EXPXDEV_BUILD="$(cat "$TMP/$1.xd")")
+    [ -z "${C7B_EXPXDEV_SHA:-}" ] || xd+=(C7B_EXPXDEV_SHA="$EXPXDEV_D44")
+  fi
+  ( cd "$TMP" && env "${xd[@]}" C7B_POS_EXTRACAO="$pos" bash "$2/$CERT" > "$TMP/$1.log" 2>&1; echo $? > "$TMP/$1.rc" )
 }
 
 roda_q() { # roda_q <nome> <arvore> <modo: q|qe> — só a extração de Q_EXTRAI
@@ -463,7 +533,20 @@ roda_q() { # roda_q <nome> <arvore> <modo: q|qe> — só a extração de Q_EXTRA
   ( cd "$TMP" && C7B_POS_EXTRACAO="$pos" bash "$TMP/$1.qcert.sh" > "$TMP/$1.log" 2>&1; echo $? > "$TMP/$1.rc" )
 }
 
-MUTACOES="${*:-X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 Y1 Y2 Y3 Y4 Y5 Y6 Y7 Y8 Y9 Y10 Y11 Y12 Y13 Y14 Y15 Y16 Y17 Y18 Y19 Y20 Y21 Z1 Z2 Z3 Z4 Z5 Z6 Z7}"
+MUTACOES="${*:-X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 Y1 Y2 Y3 Y4 Y5 Y6 Y7 Y8 Y9 Y10 Y11 Y12 Y13 Y14 Y15 Y16 Y17 Y18 Y19 Y20 Y21 Z1 Z2 Z3 Z4 Z5 Z6 Z7 W1 W2 W3 W4 W5 W6 W7 W8 W9 W10}"
+
+# A W1 executa o ExpxDev do D-44 inteiro: construído uma vez, e só se ela for pedida.
+case " $MUTACOES " in
+  *" W1 "*)
+    if [ -z "${C7B_EXPXDEV_BUILD_D44:-}" ]; then
+      C7B_EXPXDEV_BUILD_D44="$TMP/expxdev-d44"
+      git -c safe.directory='*' clone -q -c core.autocrlf=false --no-checkout "$C7B_EXPXDEV_FONTE" "$C7B_EXPXDEV_BUILD_D44" &&
+        git -C "$C7B_EXPXDEV_BUILD_D44" -c advice.detachedHead=false checkout -q --detach "$EXPXDEV_D44" &&
+        ( cd "$C7B_EXPXDEV_BUILD_D44" && npm ci --no-audit --no-fund >/dev/null 2>&1 && npm run build:server >/dev/null 2>&1 ) ||
+        { echo "nao foi possivel construir o expxdev do D-44"; exit 1; }
+    fi
+    ;;
+esac
 
 printf 'controle — a arvore sem mutacao certifica (runner settings)\n'
 copia "$TMP/controle"
@@ -480,7 +563,7 @@ for m in $MUTACOES; do
   if ! aplica "$m" "$TMP/$m" 2> "$TMP/$m.aplica"; then
     FALHOU=1; printf '  %-4s NAO APLICADA  %s\n' "$m" "$(cat "$TMP/$m.aplica")"; continue
   fi
-  if [ ! -f "$TMP/$m.pos.sh" ] && diff -r -q -x .git "$TMP/controle" "$TMP/$m" >/dev/null 2>&1; then
+  if [ ! -f "$TMP/$m.pos.sh" ] && [ ! -f "$TMP/$m.xd" ] && diff -r -q -x .git "$TMP/controle" "$TMP/$m" >/dev/null 2>&1; then
     FALHOU=1; printf '  %-4s NAO APLICADA  (arvore identica ao controle)\n' "$m"; continue
   fi
   case "$m" in

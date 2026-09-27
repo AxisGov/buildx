@@ -39,6 +39,10 @@
 #       referências públicas da sprintx instalada, reivindica pelo escritor público
 #       (`scripts/rastro.sh`, DS-159), faz o primeiro Edit da task, é barrado na irmã
 #       e fecha a task pelo escritor — sem ler `.claude/hooks/**`, sem linha à mão
+#   S   o SessionStart INSTALADO (D-03): lock com origem local (`<sha>-local` ou
+#       `local`) não recebe auto-update — nem status, nem cache Axis, nem rede, nem
+#       update —, provado por um PATH controlado; lock inválido adia; lock remoto
+#       segue o legado; e o `expx update` explícito continua aplicando
 #
 # A REIVINDICAÇÃO — duas provas, e só uma delas é a do agente (D-01 / C7-C):
 #
@@ -142,7 +146,9 @@ fi
 # processo — EXPX_SESSAO/EXPX_HARNESS nunca, que o Claude Code não os dá, e
 # CLAUDE_CODE_SESSION_ID só nas duas que o emulam no runner settings, marcadas
 # [harness-emulado] (G10); e nenhuma escreve direto no rastro, fora a da fixture
-# determinística, marcada (G11).
+# determinística, marcada (G11). O lock só se escreve nas duas linhas da fixture do
+# lock da seção S (D-03), marcadas [fixture-lock] e contadas (G3, G.5): cópias de um
+# produto já instalado e provado, nunca a instalação que as outras seções provam.
 # As linhas desta função carregam a marca [guarda] e são as únicas isentas.
 # ---------------------------------------------------------------------------
 guarda_estrutural() { # <script> -> uma linha por violação, "<regra>:<linha>"   # [guarda]
@@ -156,7 +162,8 @@ guarda_estrutural() { # <script> -> uma linha por violação, "<regra>:<linha>" 
     /(^|[;&|({[:space:]])(cp|rsync|ln|install|tar)[[:space:]][^#]*\.claude(\/|"|[[:space:]]|$)/ { print "G1-copia-de-.claude:" NR }   # [guarda]
     /settings(\.local)?\.json/ && /(>|tee[[:space:]]|sed[[:space:]]+-i|mv[[:space:]]|cp[[:space:]])/ { print "G2-escreve-settings:" NR }   # [guarda]
     /hooks\.json/ && /(>|tee[[:space:]]|sed[[:space:]]+-i|mv[[:space:]]|cp[[:space:]])/ { print "G3-escreve-hooks.json:" NR }   # [guarda]
-    /expx-lock\.json/ && /(>|tee[[:space:]]|sed[[:space:]]+-i|mv[[:space:]]|cp[[:space:]])/ { print "G3-escreve-lock:" NR }   # [guarda]
+    /expx-lock\.json/ && /(>|tee[[:space:]]|sed[[:space:]]+-i|mv[[:space:]]|cp[[:space:]])/ && !/\[fixture-lock\]/ { print "G3-escreve-lock:" NR }   # [guarda]
+    /\[fixture-lock\]/ { fl++ }                                                 # [guarda]
     /catalogo-de-metodo/ && /(^|[;&|({[:space:]])(cp|rsync|ln|install|mv|tar)[[:space:]]/ { print "G4-copia-catalogo:" NR }   # [guarda]
     /(^|[;&|({[:space:]])(bash|sh|source|exec|\.)[[:space:]]+[^#;|&]*install\.sh/ { print "G5-install.sh:" NR }   # [guarda]
     /(^|[;&|({[:space:]])[^[:space:]]*\/install\.sh([[:space:]]|$)/ { print "G5-install.sh:" NR }   # [guarda]
@@ -168,7 +175,7 @@ guarda_estrutural() { # <script> -> uma linha por violação, "<regra>:<linha>" 
     /(EXPX_SESSAO|EXPX_HARNESS)=/ || (/CLAUDE_CODE_SESSION_ID=/ && !/\[harness-emulado\]/) { print "G10-identidade-injetada-pelo-roteiro:" NR }   # [guarda]
     /\[harness-emulado\]/ { h++ }                                               # [guarda]
     /(>>?|tee([[:space:]]+-a)?)[[:space:]]*"?[^[:space:]|;&]*docs\/eventos/ && !/\[fixture-deterministica\]/ { print "G11-escrita-direta-no-rastro:" NR }   # [guarda]
-    END { if (em || ag) print "G6-regiao-aberta:" ab; print "REGIOES " n + 0; print "AGENTES " a + 0; print "EMULADOS " h + 0 }   # [guarda]
+    END { if (em || ag) print "G6-regiao-aberta:" ab; print "REGIOES " n + 0; print "AGENTES " a + 0; print "EMULADOS " h + 0; print "FIXTURE_LOCK " fl + 0 }   # [guarda]
   '                                                                             # [guarda]
 }                                                                               # [guarda]
 
@@ -277,10 +284,11 @@ fi
 passo "G guarda estrutural: nenhuma instalacao manual, nenhum hook direto no runner real"
 GUARDA="$(guarda_estrutural "$EU")"
 ck G.1 "o script nao copia hooks/skills, nao escreve settings, hooks.json, lock nem catalogo, nao chama install.sh, nao fabrica reivindicacao" "" \
-  "$(printf '%s\n' "$GUARDA" | grep -vE '^(REGIOES|AGENTES|EMULADOS) ' | paste -sd' ' -)"
+  "$(printf '%s\n' "$GUARDA" | grep -vE '^(REGIOES|AGENTES|EMULADOS|FIXTURE_LOCK) ' | paste -sd' ' -)"
 ck G.2 "os casos runner-real estao marcados (J x2, P1 reivindica/teste/X, P2 bloqueia, P4 reivindica/X/impl/fecha, H/M x4)" "REGIOES 14" "$(printf '%s\n' "$GUARDA" | grep '^REGIOES ')"
 ck G.3 "a prova do agente esta marcada: uma regiao agente-real (R)" "AGENTES 1" "$(printf '%s\n' "$GUARDA" | grep '^AGENTES ')"
 ck G.4 "so duas linhas emulam a identidade do Claude Code (hook e Bash do runner settings)" "EMULADOS 2" "$(printf '%s\n' "$GUARDA" | grep '^EMULADOS ')"
+ck G.5 "so duas linhas escrevem um expx-lock: a fixture deterministica da S, marcada" "FIXTURE_LOCK 2" "$(printf '%s\n' "$GUARDA" | grep '^FIXTURE_LOCK ')"
 ambiente || { printf '  FALHA  ambiente nao controlado\n'; quebra; }
 case "$C7B_RUNNER" in claude|settings) ;; *) DIAG="C7B_RUNNER=$C7B_RUNNER"; quebra ;; esac
 
@@ -398,9 +406,9 @@ PLUGINS_ANTES="$(expx_no_claude_global)"
 # ---------------------------------------------------------------------------
 # A instalação real e a prova dela
 # ---------------------------------------------------------------------------
-instala() { # <produto> <ordem> — só o binário oficial do pin
+instala() { # <produto> <ordem> [raiz das fontes; padrão: as clonadas no SHA] — só o binário oficial do pin
   local log="$EVID/init-$(basename "$1").log"
-  ( cd "$1" && "${SEM_CLAUDE[@]}" PATH="$INIT_PATH" EXPX_SKILLS_LOCAIS="$(nativo "$SRC")" \
+  ( cd "$1" && "${SEM_CLAUDE[@]}" PATH="$INIT_PATH" EXPX_SKILLS_LOCAIS="$(nativo "${3:-$SRC}")" \
       "$NODE" "$XBIN" init --skills "$2" --yes ) > "$log" 2>&1
   INIT_RC=$?
   INIT_SAIDA="$(tr -d '\r' < "$log")"
@@ -452,6 +460,7 @@ $(tuplas "$p/.claude/settings.json" | grep -c '^\["PreToolUse","Bash",[^,]*hooks
     "$(sn test -f "$p/.claude/hooks/expx-session-sync.mjs") $(sn test -f "$p/.claude/hooks/expx-lembrete.sh") \
 $(tr -d '\r' < "$p/.claude/settings.json" | jq '[.hooks.SessionStart[]?.hooks[]? | select((.args // []) | join(" ") | test("expx-session-sync\\.mjs"))] | length') \
 $(tr -d '\r' < "$p/.claude/settings.json" | jq '[.hooks.UserPromptSubmit[]?.hooks[]? | select(.command | test("expx-lembrete\\.sh"))] | length')"
+  prova_hook "$p" "$x"
   ck "$x.11" "o lock trava as duas skills no identificador local do commit (informativo: a proveniencia e o SHA completo, D-42)" "${C7B_MERGEX_SHA:0:12}-local ${C7B_SPRINTX_SHA:0:12}-local" \
     "$(tr -d '\r' < "$p/.expx/expx-lock.json" | jq -r '.skills.mergex.commit + " " + .skills.sprintx.commit')"
   ck "$x.12" "todo arquivo do lock confere com o disco" "" \
@@ -463,6 +472,17 @@ $(tr -d '\r' < "$p/.claude/settings.json" | jq '[.hooks.UserPromptSubmit[]?.hook
   ck "$x.14" "o init nao chamou install.sh de skill nenhuma, e nao ha install.sh no produto" "" \
     "$(find "$p/.claude" "$p/.expx" -name install.sh 2>/dev/null)"
   prova_escritor "$p" "$x.15"
+}
+
+# prova_hook <produto> <prefixo> — o expx-session-sync instalado é o do ExpxDev do
+# pin: byte a byte o `nucleo/hooks` do SHA (do objeto Git, não do working tree do
+# checkout), e o lock trava o hash dele. É o arquivo que a seção S executa (D-03).
+HOOK_SESSAO=.claude/hooks/expx-session-sync.mjs
+hook_do_pin() { git -c safe.directory='*' -C "$XD" show "$C7B_EXPXDEV_SHA:nucleo/hooks/expx-session-sync.mjs" 2>/dev/null | sha256sum | cut -d' ' -f1; }
+prova_hook() {
+  ck "$2.10s" "o $HOOK_SESSAO instalado e byte a byte o nucleo/hooks do ExpxDev do pin" "$(hook_do_pin)" "$(sha_de "$1/$HOOK_SESSAO" 2>/dev/null)"
+  ck "$2.10l" "e o hash dele consta em instalacao.arquivos do lock" "$(sha_de "$1/$HOOK_SESSAO" 2>/dev/null)" \
+    "$(tr -d '\r' < "$1/.expx/expx-lock.json" | jq -r --arg f "$HOOK_SESSAO" '.instalacao.arquivos[$f] // empty')"
 }
 
 # prova_escritor <produto> <id> — o escritor público do rastro (DS-159) chegou pelo
@@ -1006,6 +1026,237 @@ git add -A && git commit -q -m "chore(buildx): FT-02 em andamento" && git push -
 BASE="$(git rev-parse HEAD)"
 ck P0.14 "o lock e o settings da instalacao sao versionados" "sim sim" \
   "$(sn git ls-files --error-unmatch .expx/expx-lock.json) $(sn git ls-files --error-unmatch .claude/settings.json)"
+
+# ---------------------------------------------------------------------------
+# S — o SessionStart INSTALADO respeita a instalação local congelada (P0.2 / D-03)
+#
+# O C7-C encontrou o D-03: a instalação P0.2 congelada usa fontes locais e o lock
+# registra `<sha>-local` (ou `local`, quando a fonte não tem commit) — mas o
+# expx-session-sync do ExpxDev anterior, em árvore limpa, fazia bootstrap de
+# AxisGov/expxdev main e `expx update --latest --yes`. Que as skills não mudassem
+# era efeito do comparador, não garantia do freeze. A I prova que o hook está
+# instalado; nada provava o que ele FAZ — e a certificação passava igual com os dois
+# ExpxDev. Esta seção executa o hook INSTALADO, pelo settings.json instalado, como o
+# Claude Code o despacha no SessionStart, num PATH controlado:
+#
+#   git   registra TODA chamada e só executa `-C <dir> rev-parse --show-toplevel`
+#         (a raiz Git); qualquer outra é recusada (97) e fica no registro. No modo
+#         `legado` passam também `status --porcelain`, o `clone` de AxisGov main —
+#         que não vai à rede: planta um expx-bin.js que só se registra — e
+#         `rev-parse HEAD`
+#   npm   registra; recusa no estrito, passa no legado
+#   node  o do sistema
+#
+# e EXPX_AXIS_CACHE e HOME em caminhos temporários que não existem. A prova de que
+# nada aconteceu é o registro e a ausência desses caminhos — nunca a internet.
+#
+#   S1 startup, `<sha>-local` nas duas      S5 `local` exato: init real, fonte sem commit
+#   S2 resume, o mesmo produto              S6 lock inválido: ilegível, sem skills, sem commit
+#   S3 mistura local/remota                 S7 lock remoto: a barreira NÃO intercepta
+#   S4 a mistura com as chaves invertidas   S8 `expx update` explícito continua aplicando
+#
+# Não duplica a bancada do ExpxDev (os casos dela ficam lá): prova a integração.
+# ---------------------------------------------------------------------------
+passo "S SessionStart instalado: lock com origem local nao recebe auto-update (D-03)"
+[ "$WIN" = 0 ] || { DIAG="S (D-03) roda no Linux/WSL: o PATH controlado e um wrapper de git em shell, que o node do Windows nao executa (ambiente canonico: WSL ext4)"; quebra; }
+GIT_REAL="$(type -P git)"
+AXIS_URL=https://github.com/AxisGov/expxdev.git
+CONGELADO_INI='[Expx/Axis] Sincronizacao automatica nao aplicada: instalacao contem origem local travada pelo lock'
+CONGELADO_FIM='. Use `expx update` explicitamente para alterar a distribuicao.'
+SESSAO_N=0
+
+# path_controlado <dir> <estrito|legado> <registro> — o PATH do processo do hook
+path_controlado() {
+  mkdir -p "$1" && ln -s "$NODE" "$1/node" || return 1
+  printf 'require("fs").appendFileSync(%s, "expx-bin " + process.argv.slice(2).join(" ") + " cwd=" + process.cwd() + "\\n");\n' \
+    "$(jq -cn --arg r "$3" '$r')" > "$1/expx-bin-registra.js"
+  cat > "$1/git" <<EOF
+#!/bin/bash
+{ printf git; printf ' %q' "\$@"; printf '\n'; } >> '$3'
+[ "\$#" = 4 ] && [ "\$1 \$3 \$4" = '-C rev-parse --show-toplevel' ] && exec '$GIT_REAL' "\$@"
+if [ '$2' = legado ]; then
+  [ "\$#" = 4 ] && [ "\$1 \$3 \$4" = '-C status --porcelain' ] && exec '$GIT_REAL' "\$@"
+  if [ "\$#" = 6 ] && [ "\$1 \$2 \$3 \$4 \$5" = 'clone --branch main --single-branch $AXIS_URL' ]; then
+    '$(type -P mkdir)' -p "\$6/dist/cli" && '$(type -P cat)' '$1/expx-bin-registra.js' > "\$6/dist/cli/expx-bin.js"; exit
+  fi
+  [ "\$#" = 4 ] && [ "\$1 \$3 \$4" = '-C rev-parse HEAD' ] && { printf '%040d\n' 0; exit 0; }
+fi
+echo RECUSADO >> '$3'; echo "git controlado: chamada inesperada: \$*" >&2; exit 97
+EOF
+  cat > "$1/npm" <<EOF
+#!/bin/bash
+{ printf npm; printf ' %q' "\$@"; printf '\n'; } >> '$3'
+[ '$2' = legado ] && exit 0
+echo RECUSADO >> '$3'; echo "npm controlado: chamada inesperada: \$*" >&2; exit 97
+EOF
+  chmod +x "$1/git" "$1/npm"
+}
+reg_git() { printf git; printf ' %q' "$@"; printf '\n'; }   # a linha que o git controlado registra
+
+# sessao_inicia <produto> <startup|resume> <estrito|legado> — o SessionStart do
+# settings.json INSTALADO, como o Claude Code o despacha: cada comando do evento (com
+# o matcher, se houver, contra o source), os args com ${CLAUDE_PROJECT_DIR}
+# expandido, o payload no stdin, na raiz do produto, num ambiente só com o que o
+# harness dá e a prova controla.
+# -> SS_NCMD SS_RC SS_CTX SS_ERR SS_REG SS_AXIS SS_HOME
+sessao_inicia() {
+  local p="$1" n ini argv=()
+  SESSAO_N=$((SESSAO_N + 1)); n="$TMP_RAIZ/sessao-$SESSAO_N"; mkdir -p "$n"
+  SS_REG="$n/registro"; : > "$SS_REG"; SS_AXIS="$n/axis"; SS_HOME="$n/home"
+  path_controlado "$n/bin" "$3" "$SS_REG" || { DIAG="nao foi possivel montar o PATH controlado em $n"; quebra; }
+  SS_CMDS="$(tr -d '\r' < "$p/.claude/settings.json" | jq -c --arg s "$2" '[.hooks.SessionStart // [] | .[]
+    | select((.matcher // "") as $m | $m == "" or ($s | test("^(" + $m + ")$"))) | .hooks[] | select(.type == "command")
+    | [.command] + (.args // [])]')"
+  SS_NCMD="$(printf '%s' "$SS_CMDS" | jq length)"
+  mapfile -t argv < <(printf '%s' "$SS_CMDS" | jq -r --arg p "$p" '.[0] // [] | .[] | gsub("\\$\\{CLAUDE_PROJECT_DIR\\}"; $p)')
+  ini="$EPOCHREALTIME"
+  jq -cn --arg s "$2" --arg c "$p" '{session_id:"d03", hook_event_name:"SessionStart", source:$s, cwd:$c}' |
+    ( cd "$p" && env -i PATH="$n/bin" HOME="$SS_HOME" CLAUDE_PROJECT_DIR="$p" CLAUDECODE=1 \
+        EXPX_AXIS_CACHE="$SS_AXIS/cache/expxdev" "${argv[@]}" ) > "$n/saida" 2> "$n/erro"
+  SS_RC=$?
+  anota_tempo "SessionStart instalado ($3)" "$(ms_desde "$ini")"
+  SS_CTX="$(tr -d '\r' < "$n/saida" | jq -r 'select(.hookSpecificOutput.hookEventName == "SessionStart") | .hookSpecificOutput.additionalContext' 2>/dev/null)"
+  SS_ERR="$(tr -d '\r' < "$n/erro")"
+  evidencia "SessionStart $2 ($3), $(basename "$p"): rc $SS_RC — ${SS_CTX:-<sem contexto>}"
+}
+
+arvore_sha() { ( cd "$1" && find . -type f | LC_ALL=C sort | while IFS= read -r f; do printf '%s %s\n' "$(sha_de "$f")" "$f"; done ) | sha256sum | cut -d' ' -f1; }
+quatro_de() { # lock, settings, skills e marketplace
+  printf '%s %s %s %s' "$(sha_de "$1/.expx/expx-lock.json")" "$(sha_de "$1/.claude/settings.json")" \
+    "$(arvore_sha "$1/.claude/skills")" "$(arvore_sha "$1/.expx/marketplace")"
+}
+retrato() { # <produto> — cada arquivo fora do .git com o sha dele, o HEAD e o status (ignorados inclusive)
+  ( cd "$1" && find . -path ./.git -prune -o -type f -print | LC_ALL=C sort | while IFS= read -r f; do printf '%s %s\n' "$(sha_de "$f")" "$f"; done
+    git rev-parse HEAD; git status --porcelain --untracked-files=all --ignored ) | tr -d '\r'
+}
+skills_do_lock() { tr -d '\r' < "$1/.expx/expx-lock.json" | jq -r '.skills | to_entries | map(.key + "=" + (.value.commit // "-")) | join(" ")'; }
+copia_produto() { cp -a "$1" "$TMP_RAIZ/$2" && printf '%s\n' "$TMP_RAIZ/$2"; }
+
+# FIXTURE DETERMINÍSTICA DO LOCK — só em cópias do produto da S, já instalado e
+# provado, e sempre commitada (árvore limpa): o lock que o ExpxDev gravaria com
+# outra origem. As duas linhas são as únicas do roteiro que escrevem um lock (G.5).
+lock_fixture() { # <produto> <mensagem> <argumentos do jq>
+  local p="$1" m="$2" t; shift 2
+  t="$(tr -d '\r' < "$p/.expx/expx-lock.json" | jq "$@")" || return 1
+  printf '%s\n' "$t" > "$p/.expx/expx-lock.json" && git -C "$p" commit -q -am "$m"   # [fixture-lock]
+}
+lock_bruto() { printf '%s' "$2" > "$1/.expx/expx-lock.json" && git -C "$1" commit -q -am "$3"; }   # [fixture-lock]
+
+# sem_auto_update <id> <produto> <source> <contexto esperado> <o que se prova> — o
+# freeze inteiro: rc 0 e um comando, o contexto, SÓ a raiz Git no registro, nem
+# cache nem HOME, e o produto byte a byte.
+sem_auto_update() {
+  local x="$1" p="$2" antes quatro
+  ck "$x.0" "arvore limpa antes do SessionStart" "" "$(git -C "$p" status --porcelain --untracked-files=all)"
+  antes="$(retrato "$p")"; quatro="$(quatro_de "$p")"
+  sessao_inicia "$p" "$3" estrito
+  ck "$x.1" "o hook instalado roda sem explodir: um comando, rc 0, stderr vazio" "1 0 sim" "$SS_NCMD $SS_RC $(sn test -z "$SS_ERR")"
+  ck "$x.2" "$5" "$4" "$SS_CTX"
+  ck "$x.3" "o unico processo externo e a raiz Git: nenhum status, clone, fetch, npm, expx-bin ou update" \
+    "$(reg_git -C "$p" rev-parse --show-toplevel)" "$(tr -d '\r' < "$SS_REG")"
+  ck "$x.4" "nem cache Axis nem HOME: EXPX_AXIS_CACHE e HOME continuam inexistentes" "nao nao" "$(sn test -e "$SS_AXIS") $(sn test -e "$SS_HOME")"
+  ck "$x.5" "lock, settings, skills e marketplace byte a byte" "$quatro" "$(quatro_de "$p")"
+  ck "$x.6" "nenhum arquivo do produto mudou; HEAD e status iguais" "$antes" "$(retrato "$p")"
+}
+congelado() { # <id> <produto> <source> <skills locais, na ordem do lock>
+  sem_auto_update "$1" "$2" "$3" "$CONGELADO_INI ($4)$CONGELADO_FIM" "$3: a sincronizacao automatica NAO foi aplicada, por origem local ($4)"
+}
+
+# O hook que a S executa é o instalado, e a prova_hook o mostra byte a byte o do pin.
+# As mutações W3–W10 regridem ESTE arquivo, depois dessa prova, para mostrar que as
+# asserções de comportamento abaixo não são tautológicas.
+hook_sob_prova() { :; }                                                      # [W-hook]
+
+fixture fx-s sprintx,mergex SI
+prova_instalacao "$FX" SI
+PS="$FX"
+hook_sob_prova "$PS" || { DIAG="hook_sob_prova recusou $PS"; quebra; }
+git -C "$PS" add -A && git -C "$PS" commit -q -m "chore: instala pelo expxdev" || quebra
+LOCAL_SX="${C7B_SPRINTX_SHA:0:12}-local"; LOCAL_MX="${C7B_MERGEX_SHA:0:12}-local"
+
+congelado S1 "$PS" startup "mergex, sprintx"
+congelado S2 "$PS" resume "mergex, sprintx"
+
+D="$(copia_produto "$PS" fx-s3)" || quebra
+lock_fixture "$D" "chore: lock misto, mergex remota (fixture)" --arg r "$C7B_MERGEX_SHA" '.skills.mergex.commit = $r' || quebra
+ck S3.a "mistura: a mergex com commit remoto (40 hex), a sprintx local; chaves na ordem do init" "mergex=$C7B_MERGEX_SHA sprintx=$LOCAL_SX" "$(skills_do_lock "$D")"
+congelado S3 "$D" startup sprintx
+
+D="$(copia_produto "$PS" fx-s4)" || quebra
+lock_fixture "$D" "chore: lock misto, chaves invertidas (fixture)" --arg r "$C7B_MERGEX_SHA" \
+  '.skills = {sprintx: .skills.sprintx, mergex: (.skills.mergex | .commit = $r)}' || quebra
+ck S4.a "a mesma mistura com as chaves invertidas: a local vem primeiro" "sprintx=$LOCAL_SX mergex=$C7B_MERGEX_SHA" "$(skills_do_lock "$D")"
+congelado S4 "$D" startup sprintx
+
+# `local` exato: o que o copiarLocal grava quando a fonte não tem HEAD. Pelo init, só
+# uma fonte Git SEM commit chega lá: uma pasta sem .git para antes, no resolverAlvo
+# (`git ls-remote`). Só a sprintx, para que nenhum `-local` decida por ela.
+FSC="$TMP_RAIZ/fontes-sem-commit"; mkdir -p "$FSC/sprintx"
+git -C "$SRC/sprintx" archive "$C7B_SPRINTX_SHA" | tar -x -C "$FSC/sprintx" && git -C "$FSC/sprintx" init -q || quebra
+ck S5.a "a fonte da sprintx e um repositorio Git sem commit: nao ha HEAD para o copiarLocal ler" "sim nao" \
+  "$(sn test -d "$FSC/sprintx/.git") $(sn git -C "$FSC/sprintx" rev-parse -q --verify HEAD)"
+PL="$TMP_RAIZ/fx-s5"; mkdir -p "$PL"
+git -C "$PL" init -q -b main && git -C "$PL" config user.email t@t && git -C "$PL" config user.name t &&
+  git -C "$PL" config core.autocrlf false && git -C "$PL" commit -q --allow-empty -m inicial || quebra
+instala "$PL" sprintx "$FSC"
+ck S5.00 "expxdev init --skills sprintx, da fonte sem commit: rc 0" "0 sim" "$INIT_RC $(sn eval 'printf "%s" "$INIT_SAIDA" | grep -q "instaladas: sprintx"')"
+ck S5.b "o lock registra exatamente commit=local, e so a sprintx" "sprintx=local" "$(skills_do_lock "$PL")"
+prova_hook "$PL" S5
+hook_sob_prova "$PL" || { DIAG="hook_sob_prova recusou $PL"; quebra; }
+git -C "$PL" add -A && git -C "$PL" commit -q -m "chore: instala pelo expxdev" || quebra
+congelado S5 "$PL" startup sprintx
+
+# Lock inválido: falha fechado quanto ao update, aberto quanto à sessão.
+D="$(copia_produto "$PS" fx-s6a)" || quebra
+lock_bruto "$D" '{' "chore: lock ilegivel (fixture)" || quebra
+sem_auto_update S6a "$D" startup "[Expx/Axis] Sincronizacao adiada: lock ilegivel; nenhuma atualizacao automatica aplicada." \
+  "lock JSON invalido: sincronizacao adiada, nenhuma atualizacao"
+D="$(copia_produto "$PS" fx-s6b)" || quebra
+lock_fixture "$D" "chore: lock sem skills (fixture)" 'del(.skills)' || quebra
+sem_auto_update S6b "$D" startup "[Expx/Axis] Sincronizacao adiada: lock sem mapa de skills; nenhuma atualizacao automatica aplicada." \
+  "lock sem skills: sincronizacao adiada, nenhuma atualizacao"
+D="$(copia_produto "$PS" fx-s6c)" || quebra
+lock_fixture "$D" "chore: skill sem commit (fixture)" 'del(.skills.sprintx.commit)' || quebra
+ck S6c.a "a sprintx ficou sem commit; a mergex continua local" "mergex=$LOCAL_MX sprintx=-" "$(skills_do_lock "$D")"
+sem_auto_update S6c "$D" startup "[Expx/Axis] Sincronizacao adiada: lock sem commit legivel para sprintx; nenhuma atualizacao automatica aplicada." \
+  "skill sem commit: sincronizacao adiada, nenhuma atualizacao"
+
+# Lock remoto: a barreira local NÃO o intercepta. Nada vai à rede: o git controlado
+# (legado) planta o expx-bin que só se registra; o que se prova é que o fluxo
+# legado inteiro é alcançado, até o `update --latest --yes`.
+D="$(copia_produto "$PS" fx-s7)" || quebra
+lock_fixture "$D" "chore: lock remoto (fixture)" --arg s "$C7B_SPRINTX_SHA" --arg m "$C7B_MERGEX_SHA" \
+  '.skills.sprintx.commit = $s | .skills.mergex.commit = $m' || quebra
+ck S7.a "nenhuma origem local: os dois commits sao remotos (40 hex)" "mergex=$C7B_MERGEX_SHA sprintx=$C7B_SPRINTX_SHA" "$(skills_do_lock "$D")"
+ck S7.0 "arvore limpa antes do SessionStart" "" "$(git -C "$D" status --porcelain --untracked-files=all)"
+ANTES="$(retrato "$D")"
+sessao_inicia "$D" startup legado
+ck S7.1 "o hook instalado roda sem explodir: um comando, rc 0, stderr vazio" "1 0 sim" "$SS_NCMD $SS_RC $(sn test -z "$SS_ERR")"
+ck S7.2 "a barreira NAO intercepta o lock remoto: raiz, status, clone de AxisGov main, npm ci, build, update --latest --yes" \
+  "$(reg_git -C "$D" rev-parse --show-toplevel)
+$(reg_git -C "$D" status --porcelain)
+$(reg_git clone --branch main --single-branch "$AXIS_URL" "$SS_AXIS/cache/expxdev.tmp-PID")
+npm ci
+npm run build:server
+$(reg_git -C "$SS_AXIS/cache/expxdev.tmp-PID" rev-parse HEAD)
+expx-bin update --latest --yes cwd=$D" \
+  "$(tr -d '\r' < "$SS_REG" | sed -E 's/\.tmp-[0-9]+/.tmp-PID/g')"
+ck S7.3 "o bootstrap legado montou o cache (so no caminho temporario), e o HOME nao foi tocado" "sim nao" \
+  "$(sn test -f "$SS_AXIS/cache/expxdev/dist/cli/expx-bin.js") $(sn test -e "$SS_HOME")"
+ck S7.4 "sem atualizacao aplicada, o hook nao relata nada; o produto nao mudou" "|$ANTES" "$SS_CTX|$(retrato "$D")"
+
+# `expx update` EXPLÍCITO numa instalação local congelada: continua aplicando, e o
+# SessionStart seguinte continua sem auto-update. O D-03 bloqueia o AUTO, não o manual.
+D="$(copia_produto "$PS" fx-s8)" || quebra
+REF_ANTES="$(tr -d '\r' < "$D/.expx/expx-lock.json" | jq -r '.skills.sprintx.referencia')"
+UPD="$(cd "$D" && "${SEM_CLAUDE[@]}" PATH="$INIT_PATH" "$NODE" "$XBIN" update sprintx --to d03-manual --yes 2>&1 | tr -d '\r')"; UPD_RC=$?
+printf '%s\n' "$UPD" > "$EVID/update-manual-s8.log"
+ck S8.u1 "expx update sprintx --to d03-manual --yes: rc 0, aplica a sprintx e avisa o rollback" "0 sim sim" \
+  "$UPD_RC $(sn eval 'printf "%s" "$UPD" | grep -qF "sprintx: $REF_ANTES → d03-manual"') $(sn eval 'printf "%s" "$UPD" | grep -qF "para desfazer esta atualizacao"')"
+ck S8.u2 "o lock mudou pelo update: sprintx em d03-manual, travada, e a origem continua local" "d03-manual true $LOCAL_SX" \
+  "$(tr -d '\r' < "$D/.expx/expx-lock.json" | jq -r '.skills.sprintx | .referencia + " " + (.travado | tostring) + " " + .commit')"
+git -C "$D" add -A && git -C "$D" commit -q -m "chore: expx update explicito" || quebra
+congelado S8 "$D" startup "mergex, sprintx"
 
 # ---------------------------------------------------------------------------
 # F1–F5 da feature corrente, pela sprintx INSTALADA na worktree
