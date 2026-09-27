@@ -35,7 +35,8 @@
 # certificação, o pin antigo em posição executável e o override sem modo de teste
 # (M56 a M60, bloco `pins`) — e, no D-01, a sprintx voltando à do freeze D-42, a
 # decisão do freeze vigente (D-43) divergindo do pin e a D-42 reescrita (M61 a M63,
-# bloco `pins`) — e exige que o harness FALHE.
+# bloco `pins`) — e, no D-02, a mergex voltando ao freeze D-43 e a decisão do freeze
+# vigente (D-44) divergindo do pin (M64 e M65, bloco `pins`) — e exige que o harness FALHE.
 # Mutação que sobrevive é teste que falta.
 #
 # O repositório real nunca é alterado: a cópia vive num diretório temporário e é
@@ -409,6 +410,12 @@ INNER
     M63) # a D-42 e reescrita com a sprintx nova: o freeze anterior some
       sed -i '/^## D-42 — /,/^## D-43 — / s/^| `sprintx` | `[0-9a-f]*` |/| `sprintx` | `'"$(sed -n 's/^SPRINTX_SHA_FIXO=\([0-9a-f]\{40\}\).*/\1/p' "$d/$HARNESS")"'` |/' "$d/$DECISOES"
       ;;
+    M64) # a mergex volta a do freeze D-43, anterior ao reparo do primeiro HISTORICO (D-02)
+      sed -i 's/^MERGEX_SHA_FIXO=[0-9a-f]\{40\}/MERGEX_SHA_FIXO=25d479725b0d91d7b794899c9e25e214bb55fb04/' "$d/$HARNESS"   # [pin-antigo]
+      ;;
+    M65) # a decisao do freeze vigente diverge do pin da mergex
+      sed -i '/^## D-44 — /,$ s/^| `mergex` | `[0-9a-f]*` |/| `mergex` | `0123456789abcdef0123456789abcdef01234567` |/' "$d/$DECISOES"
+      ;;
     *) echo "mutacao desconhecida: $1" >&2; return 1 ;;
   esac
 }
@@ -435,7 +442,7 @@ blocos() {
     M28|M33|M35|M36|M37|M38|M39|M40|M41|M42|M43|M44) echo "f6d" ;;
     M45|M46|M47|M48|M49|M50|M51|M52|M53|M54) echo "desvios" ;;
     M55) echo "causa" ;;
-    M56|M57|M58|M59|M60|M61|M62|M63) echo "pins" ;;
+    M56|M57|M58|M59|M60|M61|M62|M63|M64|M65) echo "pins" ;;
   esac
 }
 
@@ -443,7 +450,7 @@ roda() { # roda <nome> <arvore> <blocos> -> grava <nome>.log e <nome>.rc
   ( cd "$TMP" && BLOCOS="$3" bash "$2/$HARNESS" > "$TMP/$1.log" 2>&1; echo $? > "$TMP/$1.rc" )
 }
 
-MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23 M24 M25 M26 M27 M28 M29 M30 M31 M32 M33 M34 M35 M36 M37 M38 M39 M40 M41 M42 M43 M44 M45 M46 M47 M48 M49 M50 M51 M52 M53 M54 M55 M56 M57 M58 M59 M60 M61 M62 M63}"
+MUTACOES="${*:-M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23 M24 M25 M26 M27 M28 M29 M30 M31 M32 M33 M34 M35 M36 M37 M38 M39 M40 M41 M42 M43 M44 M45 M46 M47 M48 M49 M50 M51 M52 M53 M54 M55 M56 M57 M58 M59 M60 M61 M62 M63 M64 M65}"
 TODOS_BLOCOS="$(for m in $MUTACOES; do blocos "$m"; done | tr ' ' '\n' | sort -u | tr '\n' ' ')"
 
 echo "controle — a árvore sem mutação passa nos blocos: $TODOS_BLOCOS"
