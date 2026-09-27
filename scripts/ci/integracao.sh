@@ -117,7 +117,8 @@ com_sprintx() { # com_sprintx <cenario> — pula, e conta o pulo, sem a sprintx 
 
 # mergex: `falhas_portao` e `causa` no ENTREGA.md, o causa-do-portao.sh que as
 # deriva e as lê, e a V11 (`commit_nao_registrado`).
-MERGEX_SHA_FIXO=d3ca3aa687bdbcb033fe9c8a5e79ba067186ff69
+# A do D-04: a imutabilidade do HISTORICO compara o valor efetivo do escalar YAML.
+MERGEX_SHA_FIXO=e06a6eecf6d95a5645df7ba95737f5ec15cd622c
 # expxdev: o instalador que a certificação usa; o harness de integração não o lê.
 # O do D-03: o SessionStart não aplica auto-update a lock com origem local.
 EXPXDEV_SHA_FIXO=44759910fa971e791d050b9178ebb3e77fbef1a5
@@ -4392,11 +4393,12 @@ CERT_B2="$REPO/scripts/ci/certifica-p02.sh"
 e40() { if [[ "$1" =~ ^[0-9a-f]{40}$ ]]; then echo sim; else echo nao; fi; }
 secao_dec() { tr -d '\r' < "$DEC_B2" | awk -v d="## $1 — " 'index($0, d) == 1 { em = 1; next } /^## D-[0-9]+ — / { em = 0 } em'; }
 registro_em() { secao_dec "$1" | sed -n "s/^| \`$2\` | \`\([0-9a-f]*\)\` |.*/\1/p"; }   # <D-NN> <componente>
-FREEZE=D-45   # o freeze vigente; a D-42, a D-43 e a D-44 sao os anteriores
-# Os freezes anteriores, so como evidencia: o que a D-42/D-43/D-44 registram, e nunca posicao executavel.
+FREEZE=D-46   # o freeze vigente; a D-42, a D-43, a D-44 e a D-45 sao os anteriores
+# Os freezes anteriores, so como evidencia: o que a D-42/D-43/D-44/D-45 registram, e nunca posicao executavel.
 SPRINTX_SHA_D42=253b59233e6d7a225a05f011cf52668b708e448b   # [pin-antigo]
 MERGEX_SHA_D43=25d479725b0d91d7b794899c9e25e214bb55fb04   # [pin-antigo]
 EXPXDEV_SHA_D44=c9b3058fcce7caebfb9a00de990bbff085f56c6f   # [pin-antigo]
+MERGEX_SHA_D45=d3ca3aa687bdbcb033fe9c8a5e79ba067186ff69   # [pin-antigo]
 
 # --- 40 hex, sempre: nada de 7, de 12, de prefixo ---
 for v in SPRINTX_SHA_FIXO MERGEX_SHA_FIXO EXPXDEV_SHA_FIXO SPRINTX_SHA_LEGADO; do
@@ -4405,16 +4407,16 @@ done
 caso "B2.1 nenhuma atribuicao de SHA em scripts/ci e curta (fora o texto dos mutantes)" "" \
   "$(grep -hE '^[[:space:]]*[A-Z0-9_]*SHA[A-Z0-9_]*=[0-9a-f]+' "$REPO"/scripts/ci/integracao.sh "$REPO"/scripts/ci/certifica-p02.sh | grep -vE '=[0-9a-f]{40}([^0-9a-f]|$)' | paste -sd' ' -)"
 
-# --- os pins de execucao sao os do freeze vigente, registrado na D-45 ---
+# --- os pins de execucao sao os do freeze vigente, registrado na D-46 ---
 caso "B2.2 a $FREEZE registra o SHA da sprintx, igual ao pin" "$SPRINTX_SHA_FIXO" "$(registro_em "$FREEZE" sprintx)"
 caso "B2.2 a $FREEZE registra o SHA da mergex, igual ao pin"  "$MERGEX_SHA_FIXO"  "$(registro_em "$FREEZE" mergex)"
 caso "B2.2 a $FREEZE registra o SHA do expxdev, igual ao pin" "$EXPXDEV_SHA_FIXO" "$(registro_em "$FREEZE" expxdev)"
-caso "B2.2 a $FREEZE registra o BuildX certificado pela recertificacao D-03, 40 hex" sim "$(e40 "$(registro_em "$FREEZE" buildx_d03)")"
+caso "B2.2 a $FREEZE registra o BuildX certificado pela recertificacao D-04, 40 hex" sim "$(e40 "$(registro_em "$FREEZE" buildx_d04)")"
 caso "B2.2 a $FREEZE nao finge que o BuildX certificado contem a promocao do pin" sim \
-  "$(sim_nao eval 'secao_dec "$FREEZE" | grep -F "O \`BuildX freeze D-03\` não está nesta tabela, de propósito."')"
-caso "B2.2 a $FREEZE registra o expxdev substituido, o do freeze anterior" "$EXPXDEV_SHA_D44" \
-  "$(secao_dec "$FREEZE" | sed -n 's/^| `expxdev_substituido` | `\([0-9a-f]*\)` |.*/\1/p')"
-# --- os freezes anteriores continuam la, como evidencia: a D-42, a D-43 e a D-44 nao foram reescritas ---
+  "$(sim_nao eval 'secao_dec "$FREEZE" | grep -F "O \`BuildX freeze D-04\` não está nesta tabela, de propósito."')"
+caso "B2.2 a $FREEZE registra a mergex substituida, a do freeze anterior" "$MERGEX_SHA_D45" \
+  "$(secao_dec "$FREEZE" | sed -n 's/^| `mergex_substituida` | `\([0-9a-f]*\)` |.*/\1/p')"
+# --- os freezes anteriores continuam la, como evidencia: a D-42 a D-45 nao foram reescritas ---
 caso "B2.2 a D-42 continua registrando o freeze anterior: sprintx, mergex, expxdev e o BuildX do B1R" \
   "$SPRINTX_SHA_D42 $MERGEX_SHA_D43 $EXPXDEV_SHA_D44 sim" \
   "$(registro_em D-42 sprintx) $(registro_em D-42 mergex) $(registro_em D-42 expxdev) $(e40 "$(registro_em D-42 buildx_b1r)")"
@@ -4428,10 +4430,15 @@ caso "B2.2 a D-43 continua registrando o freeze anterior: sprintx, mergex, expxd
 caso "B2.2 a D-43 nao finge que o BuildX do D-01 contem o D-02" sim \
   "$(sim_nao eval 'secao_dec D-43 | grep -F "O \`BuildX freeze D-01\` não está nesta tabela, de propósito."')"
 caso "B2.2 a D-44 continua registrando o freeze anterior: sprintx, mergex, expxdev e o BuildX do D-02" \
-  "$SPRINTX_SHA_FIXO $MERGEX_SHA_FIXO $EXPXDEV_SHA_D44 $MERGEX_SHA_D43 sim" \
+  "$SPRINTX_SHA_FIXO $MERGEX_SHA_D45 $EXPXDEV_SHA_D44 $MERGEX_SHA_D43 sim" \
   "$(registro_em D-44 sprintx) $(registro_em D-44 mergex) $(registro_em D-44 expxdev) $(registro_em D-44 mergex_substituida) $(e40 "$(registro_em D-44 buildx_d02)")"
 caso "B2.2 a D-44 nao finge que o BuildX do D-02 contem o D-03" sim \
   "$(sim_nao eval 'secao_dec D-44 | grep -F "O \`BuildX freeze D-02\` não está nesta tabela, de propósito."')"
+caso "B2.2 a D-45 continua registrando o freeze anterior: sprintx, mergex, expxdev e o BuildX do D-03" \
+  "$SPRINTX_SHA_FIXO $MERGEX_SHA_D45 $EXPXDEV_SHA_FIXO $EXPXDEV_SHA_D44 sim" \
+  "$(registro_em D-45 sprintx) $(registro_em D-45 mergex) $(registro_em D-45 expxdev) $(registro_em D-45 expxdev_substituido) $(e40 "$(registro_em D-45 buildx_d03)")"
+caso "B2.2 a D-45 nao finge que o BuildX do D-03 contem o D-04" sim \
+  "$(sim_nao eval 'secao_dec D-45 | grep -F "O \`BuildX freeze D-03\` não está nesta tabela, de propósito."')"
 
 # --- a sprintx do pin e a do D-01: publica o escritor do rastro, e a referencia manda usa-lo ---
 # Pin que nem e SHA completo nao se extrai: e falha (a B2.1 ja a acusa), nunca pulo.
@@ -4504,6 +4511,18 @@ D03_FORA="$(cd "$REPO" && grep -rIn "$PIN_D03" . --exclude-dir=.git --exclude-di
     printf '%s:%s\n' "$f" "$n"
   done | paste -sd' ' -)"
 caso "B2.4 o expxdev substituido pelo D-03 so aparece como evidencia (D-42, D-43, D-44, D-45) ou na linha marcada" "" "$D03_FORA"
+# A mergex que o D-04 substituiu: evidencia so nas decisoes que a congelaram (D-44,
+# D-45) e a substituiram (D-46), ou numa linha marcada.
+PIN_D04='d3ca3aa'   # [pin-antigo]
+HIST_D04="$(tr -d '\r' < "$DEC_B2" | awk '/^## D-[0-9]+ — / { split($2, a, "-"); em = (a[2] + 0 >= 44 && a[2] + 0 <= 46) } em { print NR }')"
+D04_FORA="$(cd "$REPO" && grep -rIn "$PIN_D04" . --exclude-dir=.git --exclude-dir=node_modules 2>/dev/null |
+  grep -vF '[pin-antigo]' |
+  while IFS=: read -r f n _; do
+    f="${f#./}"
+    if [ "$f" = .claude/skills/buildx/DECISOES-DA-SKILL.md ] && printf '%s\n' "$HIST_D04" | grep -qx "$n"; then continue; fi
+    printf '%s:%s\n' "$f" "$n"
+  done | paste -sd' ' -)"
+caso "B2.4 a mergex substituida pelo D-04 so aparece como evidencia (D-44, D-45, D-46) ou na linha marcada" "" "$D04_FORA"
 
 # --- a certificacao nao aceita override de SHA sem o modo de teste declarado ---
 OUTRO="$(printf 'a%.0s' $(seq 1 40))"
@@ -4533,12 +4552,12 @@ DEC_SKILL="$REPO/.claude/skills/buildx/DECISOES-DA-SKILL.md"
 IDS="$(tr -d '\r' < "$DEC_SKILL" | sed -n 's/^## \(D-[0-9][0-9]*\) — .*/\1/p')"
 caso "P01.36 nenhum D-NN repetido" "$(printf '%s\n' "$IDS" | wc -l | tr -d ' ')" "$(printf '%s\n' "$IDS" | sort -u | wc -l | tr -d ' ')"
 FALTA=""
-for n in $(seq 1 45); do
+for n in $(seq 1 46); do
   printf '%s\n' "$IDS" | grep -qx "$(printf 'D-%02d' "$n")" || FALTA="$FALTA D-$n"
 done
-caso "P01.36 D-01 a D-45 presentes" "" "$FALTA"
-caso "P01.36 as decisoes P0.1 e P0.2 vem depois da D-25, em ordem" "D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36 D-37 D-38 D-39 D-40 D-41 D-42 D-43 D-44 D-45" \
-  "$(printf '%s\n' "$IDS" | tail -21 | tr '\n' ' ' | sed 's/ $//')"
+caso "P01.36 D-01 a D-46 presentes" "" "$FALTA"
+caso "P01.36 as decisoes P0.1 e P0.2 vem depois da D-25, em ordem" "D-25 D-26 D-27 D-28 D-29 D-30 D-31 D-32 D-33 D-34 D-35 D-36 D-37 D-38 D-39 D-40 D-41 D-42 D-43 D-44 D-45 D-46" \
+  "$(printf '%s\n' "$IDS" | tail -22 | tr '\n' ' ' | sed 's/ $//')"
 for t in 'O orçamento da F5 é do caller; a contagem é da sprintx' \
          'Checkpoint da sprintx é estado legítimo da feature' \
          'Terminal pré-F6 só move a CONTROL com evidência commitada' \
@@ -4554,7 +4573,8 @@ for t in 'O orçamento da F5 é do caller; a contagem é da sprintx' \
          'Os pins do P0.2 são congelados por SHA completo, numa única fonte de execução' \
          'A sprintx do D-01 substitui a do freeze D-42, e o B1R prova a reivindicação pelo agente' \
          'A mergex do D-02 substitui a do freeze D-43, e a certificação prova FIRST e TRACKED do primeiro HISTORICO global' \
-         'O ExpxDev do D-03 substitui o do freeze D-44, e a certificação prova o SessionStart instalado sobre o lock local'; do
+         'O ExpxDev do D-03 substitui o do freeze D-44, e a certificação prova o SessionStart instalado sobre o lock local' \
+         'A mergex do D-04 substitui a do freeze D-45, e a certificação prova o valor efetivo do escalar YAML no HISTORICO tracked'; do
   caso "P01.36 decisao registrada: $t" sim "$(sim_nao grep -qF "$t" "$DEC_SKILL")"
 done
 fi  # decisoes
