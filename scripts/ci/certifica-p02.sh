@@ -2206,16 +2206,18 @@ passo "Q primeiro HISTORICO global da sprintx (D-02): FIRST, TRACKED, e8 sem pre
 
 HIST_REL=docs/sprintx/estimativas/HISTORICO.md
 
-# hist_add <trabalho> <task> <tipo> <area> <real> <registrado_em> — acumula
+# hist_add <trabalho> <task> <tipo> <area> <real> <registrado_em> [grafia] — acumula
 # em HIST_ENTRADAS (TAB-separado); hist_render lê tudo de novo a cada chamada,
 # então a mesma lista sempre produz o mesmo arquivo, entrada antiga incluída.
+# A grafia, quando dada, é o escalar YAML que o frontmatter escreve no lugar da
+# área (a QV, D-04); a tabela humana continua com o valor.
 HIST_ENTRADAS=""
-hist_add() { HIST_ENTRADAS="$HIST_ENTRADAS$1	$2	$3	$4	$5	$6"$'\n'; }
+hist_add() { HIST_ENTRADAS="$HIST_ENTRADAS$1	$2	$3	$4	$5	$6	${7:-}"$'\n'; }
 hist_render() { # -> stdout: o HISTORICO.md inteiro, contratualmente valido
   awk -F'\t' -v hoje="$HOJE" '
     BEGIN { printf "---\nexpx_schema: 1\nexpx_tool: sprintx\nkind: estimativa_historico\ntrabalho_id: null\natualizado_em: %s\nunidade: h\nentradas:\n", hoje }
     NF {
-      printf "  - trabalho_id: %s\n    task_id: %s\n    tipo_task: %s\n    area: %s\n    sinais: []\n    estimado_min: null\n    estimado_max: null\n    estimado_media: null\n    real: %s\n    desvio: null\n    registrado_em: %s\n", $1, $2, $3, $4, $5, $6
+      printf "  - trabalho_id: %s\n    task_id: %s\n    tipo_task: %s\n    area: %s\n    sinais: []\n    estimado_min: null\n    estimado_max: null\n    estimado_media: null\n    real: %s\n    desvio: null\n    registrado_em: %s\n", $1, $2, $3, ($7 != "" ? $7 : $4), $5, $6
       n[$3]++
     }
     END {
@@ -2321,6 +2323,154 @@ hist_render > "$FX/$HIST_REL"
 metodo_fx e8 q8
 ck QE.2 "e8 sozinho, sem pre-e2 nenhum antes, persiste a primeira criacao: rc 0" 0 "$METODO_RC"
 ck QE.3 "o HISTORICO entrou tracked" sim "$(sn git -C "$FX" ls-tree -r HEAD --name-only --full-name -- "$HIST_REL")"
+
+# ---------------------------------------------------------------------------
+# QV — valor efetivo de escalar YAML no HISTORICO tracked (P0.2 / D-04)
+#
+# O CodeAnt achou no PR #136, e um microteste confirmou contra a mergex do
+# freeze D-45, que a imutabilidade do HISTORICO tracked (DM-175) comparava a
+# grafia do escalar, não o valor: 'd''agua' no lugar de d'agua barrava como
+# entrada reescrita, e "a\n" (com quebra de linha) passava igual ao texto
+# literal a\n. A Q não via nada disso: hist_render só escreve escalar plain.
+# A D-04 da mergex (DM-176) compara o valor efetivo, no subconjunto YAML que
+# o leitor suporta, e barra o que não cabe no contrato de uma linha.
+#
+# Um produto novo, instalado pelo expxdev do pin. Cada HEAD da cadeia é um
+# commit de método real do passo anterior, nunca fixture:
+#   QV0  FIRST com apóstrofo plain (d'agua): a base da cadeia
+#   QV1  d'agua -> 'd''agua' (aspas simples), com produto sujo que não entra
+#   QV2  tela de cadastro -> "tela\x20de cadastro" (aspas duplas, escape)
+#   QV3  'd''agua' já em HEAD -> "d'agua": o lado de HEAD também é decodificado
+#   QN1  a\n literal em HEAD -> "a\n": barra antes do git add
+#   QN2  'a\n' em HEAD -> "a\n": o segundo controle
+#   QV9  o candidato instalado é o que carrega o reparo (DM-176)
+#
+# Não duplica a bancada D-04 da mergex (test-d04-historico-yaml-escalar.sh):
+# prova a integração do contrato, com o binário do pin.
+# ---------------------------------------------------------------------------
+passo "QV valor efetivo de escalar YAML no HISTORICO tracked (D-04): grafia equivalente passa, valor diferente barra"
+
+# entrada_hist <HEAD|-> <trabalho> — o bloco da entrada no frontmatter, de HEAD ou da working tree
+entrada_hist() {
+  { if [ "$1" = - ]; then cat "$FX/$HIST_REL"; else git -C "$FX" show "$1:$HIST_REL"; fi; } | tr -d '\r' |
+    awk -v t="  - trabalho_id: $2" '$0 == t { em = 1; print; next } em && (/^  - / || /^[a-z]/) { exit } em'
+}
+# reexpressa <trabalho> — o que mudou na entrada dele entre HEAD e a working tree: "- antes + depois"
+reexpressa() { diff <(entrada_hist HEAD "$1") <(entrada_hist - "$1") | sed -n 's/^< */- /p; s/^> */+ /p' | paste -sd' ' -; }
+trava_fx() { sn test -e "$(cd "$FX" && bash .claude/skills/mergex/scripts/trava-do-e1.sh --caminho 2>/dev/null)"; }
+blob_hist() { git -C "$FX" rev-parse -q --verify "HEAD:$HIST_REL" 2>/dev/null; }
+
+# qv_passa <id> <trabalho> <antigo> <descricao> <reexpressao> — o pre-e2 sobre a
+# working tree montada aceita, e commita só o HISTORICO, byte a byte.
+qv_passa() {
+  local x="$1" t="$2" antes
+  ck "$x.0" "$4: a working tree muda so a grafia da entrada antiga" "$5" "$(reexpressa "$3")"
+  antes="$(sha_de "$FX/$HIST_REL")"
+  metodo_fx pre-e2 "$t"
+  ck "$x.1" "pre-e2 aceita a entrada antiga reexpressa: rc 0" "0" "$METODO_RC"
+  ck "$x.2" "o commit de metodo leva so o HISTORICO" "$HIST_REL" \
+    "$(git -C "$FX" -c core.quotepath=false diff-tree --root --no-commit-id -r --name-only HEAD)"
+  ck "$x.3" "stage vazio e trava liberada" "|nao" "$(git -C "$FX" diff --cached --name-only)|$(trava_fx)"
+  ck "$x.4" "o HISTORICO commitado e byte a byte a working tree: a grafia nova nao foi normalizada" \
+    "$antes" "$(git -C "$FX" show "HEAD:$HIST_REL" | sha256sum | cut -d' ' -f1)"
+  ck "$x.5" "a entrada antiga continua em HEAD, na grafia nova, e a entrada nova de $t entrou" \
+    "${5##*+ } 1" "$(entrada_hist HEAD "$3" | sed -n 's/^    area: /area: /p') $(git -C "$FX" show "HEAD:$HIST_REL" | grep -cxF "  - trabalho_id: $t")"
+  ck "$x.6" "o contrato de metodo aceita o commit" "classe=metodo checkpoint=pre-e2" \
+    "$(cd "$FX" && bash .claude/skills/mergex/scripts/contrato-de-commit.sh --validar-metodo --trabalho "$t" --checkpoint pre-e2 --commit HEAD | tr -d '\r' | paste -sd' ' -)"
+  ck "$x.7" "a barreira pre-e2 verifica ok, depois de persistida" "0 ok=true" \
+    "$(cd "$FX" && bash .claude/skills/mergex/scripts/persistir-metodo.sh --verificar --entrega "docs/entregas/$t/ENTREGA.md" --origem sprintx --trabalho "$t" --checkpoint pre-e2 >"$TMP_RAIZ/qv.log" 2>&1; printf '%s %s' "$?" "$(tr -d '\r' < "$TMP_RAIZ/qv.log")"; rm -f "$TMP_RAIZ/qv.log")"
+}
+
+# qv_barra <id> <trabalho> <antigo> <descricao> <reexpressao> — o pre-e2 barra
+# antes do `git add`: nenhum commit, stage vazio, HISTORICO intacto, trava livre.
+qv_barra() {
+  local x="$1" t="$2" head0 blob0 antes
+  ck "$x.0" "$4: a working tree muda so a grafia da entrada antiga" "$5" "$(reexpressa "$3")"
+  head0="$(git -C "$FX" rev-parse HEAD)"; blob0="$(blob_hist)"; antes="$(sha_de "$FX/$HIST_REL")"
+  metodo_fx pre-e2 "$t"
+  ck "$x.1" "pre-e2 barra o valor diferente: rc != 0" sim "$([ "$METODO_RC" != 0 ] && echo sim || echo nao)"
+  ck "$x.2" "o motivo e o escape que produz quebra de linha, lido na working tree" sim \
+    "$(sn eval 'printf "%s" "$METODO_SAIDA" | grep -F "HISTORICO global fora do contrato" | grep -qF "controle ou quebra de linha"')"
+  ck "$x.3" "nenhum commit: HEAD e o HISTORICO de HEAD continuam os mesmos" "$head0 $blob0" "$(git -C "$FX" rev-parse HEAD) $(blob_hist)"
+  ck "$x.4" "stage vazio e trava liberada" "|nao" "$(git -C "$FX" diff --cached --name-only)|$(trava_fx)"
+  ck "$x.5" "o HISTORICO da working tree ficou intacto, sujo como estava" "$antes  M $HIST_REL" \
+    "$(sha_de "$FX/$HIST_REL") $(git -C "$FX" status --porcelain -- "$HIST_REL")"
+  git -C "$FX" checkout -q -- "$HIST_REL"
+}
+
+fixture fx-qv sprintx,mergex QVI
+git -C "$FX" config core.autocrlf false
+prova_instalacao "$FX" QVI
+git -C "$FX" add -A && git -C "$FX" commit -q -m "chore: instala pelo expxdev" || quebra
+printf 'docs/eventos/\n' > "$FX/.gitignore"; git -C "$FX" add -A && git -C "$FX" commit -q -m "chore: gitignore" || quebra
+
+# --- QV0: a base — FIRST com o apóstrofo plain ---
+fixture_trabalho v1 T-01.01 "$(git -C "$FX" rev-parse HEAD)"
+HIST_ENTRADAS=""; hist_add v1 T-01.01 teste "d'agua" 0.5 "$HOJE"
+mkdir -p "$(dirname "$FX/$HIST_REL")"
+hist_render > "$FX/$HIST_REL"
+metodo_fx pre-e2 v1
+ck QV0.1 "FIRST com d'agua plain: rc 0, e HEAD passa a ter a entrada v1" "0 area: d'agua" \
+  "$METODO_RC $(entrada_hist HEAD v1 | sed -n 's/^    area: /area: /p')"
+
+# --- QV1: d'agua -> 'd''agua', com produto sujo ao lado ---
+fixture_trabalho v2 T-01.01 "$(git -C "$FX" rev-parse HEAD)"
+HIST_ENTRADAS=""
+hist_add v1 T-01.01 teste "d'agua" 0.5 "$HOJE" "'d''agua'"
+hist_add v2 T-01.01 teste 'tela de cadastro' 0.6 "$HOJE"
+hist_render > "$FX/$HIST_REL"
+printf '# produto sujo: nao entra no commit de metodo\n' >> "$FX/src/v2.sh"
+qv_passa QV1 v2 v1 "d'agua -> 'd''agua' (aspas simples)" "- area: d'agua + area: 'd''agua'"
+ck QV1.8 "o produto sujo ficou fora do commit de metodo, e sujo" " M src/v2.sh" "$(git -C "$FX" status --porcelain -- src)"
+git -C "$FX" checkout -q -- src/v2.sh
+
+# --- QV2: tela de cadastro -> "tela\x20de cadastro" ---
+fixture_trabalho v3 T-01.01 "$(git -C "$FX" rev-parse HEAD)"
+HIST_ENTRADAS=""
+hist_add v1 T-01.01 teste "d'agua" 0.5 "$HOJE" "'d''agua'"
+hist_add v2 T-01.01 teste 'tela de cadastro' 0.6 "$HOJE" '"tela\x20de cadastro"'
+hist_add v3 T-01.01 teste 'a\n' 0.7 "$HOJE"
+hist_render > "$FX/$HIST_REL"
+qv_passa QV2 v3 v2 'tela de cadastro -> "tela\x20de cadastro" (aspas duplas, escape \x20)' '- area: tela de cadastro + area: "tela\x20de cadastro"'
+
+# --- QV3: 'd''agua', já tracked em HEAD, -> "d'agua" ---
+fixture_trabalho v4 T-01.01 "$(git -C "$FX" rev-parse HEAD)"
+HIST_ENTRADAS=""
+hist_add v1 T-01.01 teste "d'agua" 0.5 "$HOJE" "\"d'agua\""
+hist_add v2 T-01.01 teste 'tela de cadastro' 0.6 "$HOJE" '"tela\x20de cadastro"'
+hist_add v3 T-01.01 teste 'a\n' 0.7 "$HOJE"
+hist_add v4 T-01.01 teste 'a\n' 0.8 "$HOJE" "'a\n'"
+hist_render > "$FX/$HIST_REL"
+qv_passa QV3 v4 v1 "'d''agua' em HEAD -> \"d'agua\" (HEAD tambem e decodificado)" "- area: 'd''agua' + area: \"d'agua\""
+
+# --- QN1 e QN2: "a\n" é quebra de linha, não o texto a\n ---
+fixture_trabalho v5 T-01.01 "$(git -C "$FX" rev-parse HEAD)"
+HIST_ENTRADAS=""
+hist_add v1 T-01.01 teste "d'agua" 0.5 "$HOJE" "\"d'agua\""
+hist_add v2 T-01.01 teste 'tela de cadastro' 0.6 "$HOJE" '"tela\x20de cadastro"'
+hist_add v3 T-01.01 teste 'a\n' 0.7 "$HOJE" '"a\n"'
+hist_add v4 T-01.01 teste 'a\n' 0.8 "$HOJE" "'a\n'"
+hist_add v5 T-01.01 teste accountability 0.9 "$HOJE"
+hist_render > "$FX/$HIST_REL"
+qv_barra QN1 v5 v3 'a\n literal em HEAD -> "a\n"' '- area: a\n + area: "a\n"'
+HIST_ENTRADAS=""
+hist_add v1 T-01.01 teste "d'agua" 0.5 "$HOJE" "\"d'agua\""
+hist_add v2 T-01.01 teste 'tela de cadastro' 0.6 "$HOJE" '"tela\x20de cadastro"'
+hist_add v3 T-01.01 teste 'a\n' 0.7 "$HOJE"
+hist_add v4 T-01.01 teste 'a\n' 0.8 "$HOJE" '"a\n"'
+hist_add v5 T-01.01 teste accountability 0.9 "$HOJE"
+hist_render > "$FX/$HIST_REL"
+qv_barra QN2 v5 v4 "'a\\n' em HEAD -> \"a\\n\"" "- area: 'a\n' + area: \"a\n\""
+
+# --- QV9: o candidato instalado é o que carrega o reparo — depois do comportamento,
+# para que uma regressão da fonte morra na prova de comportamento, não aqui ---
+MX_PM=.claude/skills/mergex/scripts/persistir-metodo.sh
+MX_DEC=.claude/skills/mergex/DECISOES-DA-SKILL.md
+ck QV9.1 "o persistir-metodo instalado e byte a byte o do commit da mergex certificada (objeto Git do SHA)" \
+  "$(git -C "$SRC/mergex" show "$C7B_MERGEX_SHA:$MX_PM" | sha256sum | cut -d' ' -f1)" "$(sha_de "$FX/$MX_PM")"
+ck QV9.2 "e carrega o decodificador unico de escalar entre aspas (DM-176)" 1 "$(grep -c '^    function decodifica(' "$FX/$MX_PM")"
+ck QV9.3 "a DECISOES da mergex instalada registra a DM-176, na secao do D-04" "sim sim" \
+  "$(sn grep -q '^## P0.2 / D-04 — ' "$FX/$MX_DEC") $(sn grep -q '^| DM-176 | ' "$FX/$MX_DEC")"
 
 # ---------------------------------------------------------------------------
 # PORTABILIDADE — o buildx num clone core.autocrlf=true

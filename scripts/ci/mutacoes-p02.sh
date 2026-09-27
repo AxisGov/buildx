@@ -95,7 +95,23 @@
 # A decisão do freeze D-45 divergindo do pin, e o pin voltando ao do D-44, são do
 # bloco `pins` do harness genérico (scripts/ci/mutacoes.sh, M66/M67), como a Z8/Z9.
 #
-# As da sprintx e da mergex (X1–X7, X10, Y8, Y10, Y11, Y17, Z2, Z4, Z6, Z7) são
+# O valor efetivo de escalar YAML no HISTORICO tracked (P0.2 / D-04): a seção QV
+# da certificação encadeia commits de método reais em que a entrada antiga muda
+# só de grafia (passa) ou de valor (barra). Rodam sobre a mesma extração da Z
+# (Q_EXTRAI, modo q): Q roda antes, e a V7 tem de morrer nela. Todas regridem a
+# FONTE da mergex; o QV9 (a prova estrutural do candidato) vem depois do
+# comportamento, de propósito, para não matar nenhuma antes dele.
+#   V1  a mergex volta à do freeze D-45 (lida da tabela dela): a grafia decide
+#   V2  aspas simples deixam de desdobrar '' ('d''agua' volta a barrar)
+#   V3  \x20 deixa de ser decodificado ("tela\x20de cadastro" volta a barrar)
+#   V4  \n entre aspas duplas volta a passar como o texto literal a\n
+#   V5  a base (HEAD) é canonicalizada e a working tree não
+#   V6  a working tree é canonicalizada e a base (HEAD) não
+#   V7  FIRST regride no candidato: o HISTORICO untracked volta a ser recusado
+# O pin voltando ao da D-45, e a decisão do freeze D-46 divergindo do pin, são do
+# bloco `pins` do harness genérico (scripts/ci/mutacoes.sh, M68/M69), como a Z8/Z9.
+#
+# As da sprintx e da mergex (X1–X7, X10, Y8, Y10, Y11, Y17, Z2, Z4, Z6, Z7, V1–V7) são
 # aplicadas na FONTE clonada no SHA, antes do `expxdev init`, pelo gancho
 # C7B_POS_EXTRACAO — nunca no repositório fonte: a mutação chega ao produto
 # pelo instalador, como chegaria de verdade. As do buildx e da certificação,
@@ -221,6 +237,44 @@ EOF
       rm -rf "$MXS/.claude/skills/mergex" "$MXS/.claude/hooks/mergex" &&
         git -C "$MERGEX_FONTE_REAL" archive "$MERGEX_SHA_ANTES_D02" .claude/skills/mergex .claude/hooks/mergex | tar -x -C "$MXS"
       ;;
+    V1) # a mergex regride a do freeze D-45, anterior ao D-04: o leitor tira as aspas sem decodificar
+      [ -n "$MERGEX_FONTE_REAL" ] || { echo "V1: C7B_MERGEX_FONTE indisponivel para o snapshot" >&2; exit 1; }
+      rm -rf "$MXS/.claude/skills/mergex" "$MXS/.claude/hooks/mergex" &&
+        git -C "$MERGEX_FONTE_REAL" archive "$MERGEX_SHA_ANTES_D04" .claude/skills/mergex .claude/hooks/mergex | tar -x -C "$MXS"
+      ;;
+    V2) # aspas simples deixam de desdobrar a aspa dobrada — sed, nao troca: o awk -v
+        # da troca leria o \047 do trecho como a propria aspa
+      sed -i 's/^\( *\)gsub("\\047\\047", "\\047", s)$/\1# (mutacao V2) a aspa dobrada fica como esta/' "$PERSISTE" &&
+        [ "$(grep -cF '(mutacao V2)' "$PERSISTE")" = 1 ] || { echo "V2: trecho ausente em $PERSISTE" >&2; exit 1; }
+      ;;
+    V3) # \xHH deixa de ser decodificado: a barra e o x ficam como texto
+      troca "$PERSISTE" 'else if (c == "x") { r = r ascii_hexa(substr(s, i + 1, 2), v); i += 2 }' <<'EOF'
+        else if (c == "x") r = r "\\" c
+EOF
+      ;;
+    V4) # \n entre aspas duplas volta a ser o texto de dois caracteres
+      troca "$PERSISTE" 'index("0abtnvfreNLP", c)' <<'EOF'
+        else if (c == "n") r = r "\\" c
+        else if (c == "\t" || index("0abtvfreNLP", c)) erro("escape que produz controle ou quebra de linha (campos são de uma linha): " v)
+EOF
+      ;;
+    V5) # so a base (HEAD, lida de head.md) e canonicalizada; a working tree fica crua
+      troca "$PERSISTE" 'function decodifica(v,   q, s, r, i, c) {' <<'EOF'
+    function decodifica(v,   q, s, r, i, c) {
+      if (FILENAME !~ /\/head\.md$/) return substr(v, 2, length(v) - 2)
+EOF
+      ;;
+    V6) # so a working tree e canonicalizada; a base (HEAD) fica crua
+      troca "$PERSISTE" 'function decodifica(v,   q, s, r, i, c) {' <<'EOF'
+    function decodifica(v,   q, s, r, i, c) {
+      if (FILENAME ~ /\/head\.md$/) return substr(v, 2, length(v) - 2)
+EOF
+      ;;
+    V7) # FIRST regride no candidato: todo HISTORICO untracked volta a ser recusado
+      troca "$PERSISTE" '    confere_historico_inicial' <<'EOF'
+    para 'HISTORICO global untracked recusado (mutacao V7)'
+EOF
+      ;;
     *) echo "mutacao de fonte desconhecida: $m" >&2; exit 1 ;;
   esac
   exit $?
@@ -263,6 +317,11 @@ onde() {
     Z5)  echo '^QT\.2$' ;;
     Z6)  echo '^QT\.2$' ;;
     Z7)  echo '^QE\.2$' ;;
+    V1|V2|V5) echo '^QV1\.1$' ;;
+    V3)  echo '^QV2\.1$' ;;
+    V4)  echo '^QN1\.1$' ;;
+    V6)  echo '^QV2\.1$' ;;
+    V7)  echo '^QF\.4$' ;;
     W1)  echo '^S1\.2$' ;;
     W2)  echo '^I\.10s$' ;;
     W3)  echo '^S1\.2$' ;;
@@ -300,6 +359,14 @@ EXPXDEV_D44="$(tr -d '\r' < "$REPO/.claude/skills/buildx/DECISOES-DA-SKILL.md" |
   awk 'index($0, "## D-44 — ") == 1 { em = 1; next } /^## D-[0-9]+ — / { em = 0 } em' |
   sed -n 's/^| `expxdev` | `\([0-9a-f]\{40\}\)` |.*/\1/p')"
 [ -n "$EXPXDEV_D44" ] || { echo "a D-44 nao registra o expxdev em 40 hex"; exit 1; }
+
+# A mergex do freeze D-45, anterior ao D-04, para a V1 regredir a FONTE — lida da
+# tabela da própria D-45 (evidência que não se reescreve), nunca literal aqui.
+MERGEX_SHA_ANTES_D04="$(tr -d '\r' < "$REPO/.claude/skills/buildx/DECISOES-DA-SKILL.md" |
+  awk 'index($0, "## D-45 — ") == 1 { em = 1; next } /^## D-[0-9]+ — / { em = 0 } em' |
+  sed -n 's/^| `mergex` | `\([0-9a-f]\{40\}\)` |.*/\1/p')"
+[ -n "$MERGEX_SHA_ANTES_D04" ] || { echo "a D-45 nao registra a mergex em 40 hex"; exit 1; }
+export MERGEX_SHA_ANTES_D04
 if [ -z "${C7B_EXPXDEV_BUILD:-}" ]; then
   C7B_EXPXDEV_BUILD="$TMP/expxdev"
   git -c safe.directory='*' clone -q -c core.autocrlf=false --no-checkout "$C7B_EXPXDEV_FONTE" "$C7B_EXPXDEV_BUILD" &&
@@ -331,7 +398,7 @@ EOF
 aplica() { # aplica <mutacao> <arvore> — o defeito, e só ele
   local d="$2"
   case "$1" in
-    X1|X2|X3|X4|X5|X6|X7|X10|Y8|Y10|Y11|Y17|Z2|Z6|Z7) snapshot "$1" ;;
+    X1|X2|X3|X4|X5|X6|X7|X10|Y8|Y10|Y11|Y17|Z2|Z6|Z7|V1|V2|V3|V4|V5|V6|V7) snapshot "$1" ;;
     X8) troca "$d/$CERT" '# [P8]' <<'EOF'
   case "V11=OK" in                                                                       # [P8]
 EOF
@@ -533,7 +600,7 @@ roda_q() { # roda_q <nome> <arvore> <modo: q|qe> — só a extração de Q_EXTRA
   ( cd "$TMP" && C7B_POS_EXTRACAO="$pos" bash "$TMP/$1.qcert.sh" > "$TMP/$1.log" 2>&1; echo $? > "$TMP/$1.rc" )
 }
 
-MUTACOES="${*:-X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 Y1 Y2 Y3 Y4 Y5 Y6 Y7 Y8 Y9 Y10 Y11 Y12 Y13 Y14 Y15 Y16 Y17 Y18 Y19 Y20 Y21 Z1 Z2 Z3 Z4 Z5 Z6 Z7 W1 W2 W3 W4 W5 W6 W7 W8 W9 W10}"
+MUTACOES="${*:-X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 Y1 Y2 Y3 Y4 Y5 Y6 Y7 Y8 Y9 Y10 Y11 Y12 Y13 Y14 Y15 Y16 Y17 Y18 Y19 Y20 Y21 Z1 Z2 Z3 Z4 Z5 Z6 Z7 W1 W2 W3 W4 W5 W6 W7 W8 W9 W10 V1 V2 V3 V4 V5 V6 V7}"
 
 # A W1 executa o ExpxDev do D-44 inteiro: construído uma vez, e só se ela for pedida.
 case " $MUTACOES " in
@@ -568,7 +635,7 @@ for m in $MUTACOES; do
   fi
   case "$m" in
     Z7) roda_q "$m" "$TMP/$m" qe ;;
-    Z1|Z2|Z3|Z4|Z5|Z6) roda_q "$m" "$TMP/$m" q ;;
+    Z1|Z2|Z3|Z4|Z5|Z6|V1|V2|V3|V4|V5|V6|V7) roda_q "$m" "$TMP/$m" q ;;
     *) roda "$m" "$TMP/$m" ;;
   esac
   onde_morreu="$(grep -m1 '^  FALHA' "$TMP/$m.log" | awk '{ print $2 }')"
