@@ -984,7 +984,7 @@ ck P0.9 "o E0 segue o template instalado da mergex, chave a chave" \
 bash "$MX/sequencia-de-commits.sh" --acrescentar "$ENT_ANTIGA" T-01.01 "$ANTIGA_E1" >/dev/null || quebra
 fm_set "$ENT_ANTIGA" estado entregue; fm_set "$ENT_ANTIGA" portao pronto; fm_set "$ENT_ANTIGA" entregue_em "$HOJE"
 mkdir -p docs/sprintx/estimativas
-printf -- '---\nexpx_schema: 1\nexpx_tool: sprintx\nkind: estimativa_historico\ntrabalho_id: null\natualizado_em: %s\nunidade: h\nentradas:\n  - trabalho_id: feature-antiga\n    task_id: T-01.01\n    real: 1\n    registrado_em: %s\ncalibracao: []\n---\n\n# Historico de esforco\n\n| Trabalho | Task | Real |\n|---|---|---|\n| feature-antiga | T-01.01 | 1 |\n' \
+printf -- '---\nexpx_schema: 1\nexpx_tool: sprintx\nkind: estimativa_historico\ntrabalho_id: null\natualizado_em: %s\nunidade: h\nentradas:\n  - trabalho_id: feature-antiga\n    task_id: T-01.01\n    tipo_task: teste\n    area: geral\n    sinais: []\n    estimado_min: null\n    estimado_max: null\n    estimado_media: null\n    real: 1\n    desvio: null\n    registrado_em: %s\ncalibracao:\n  - tipo_task: teste\n    entradas: 1\n    desvio_medio: 1.0\n    fator_ativo: false\n---\n\n# Historico de esforco\n\n| Trabalho | Task | Real |\n|---|---|---|\n| feature-antiga | T-01.01 | 1 |\n' \
   "$HOJE" "$HOJE" > docs/sprintx/estimativas/HISTORICO.md
 git add -A && git commit -q -F - <<'EOF' || quebra
 chore(mergex): persiste metodo e8
@@ -1587,7 +1587,7 @@ ck P7.13 "repetir a recuperacao e no-op" "noop=true 1 2 3 4" "$(printf '%s\n' "$
 passo "PASSO 8 persistir-metodo pre-e2"
 { printf -- '---\nexpx_schema: 1\nexpx_tool: sprintx\nkind: fechamento\ntrabalho_id: %s\n---\n\n# Fechamento\n\nQuatro tasks concluidas; B-01 resolvido pela rodada de replanejamento 1/1.\n' "$SLUG"; } > "$PASTA/FECHAMENTO.md"
 HIST="$WT/docs/sprintx/estimativas/HISTORICO.md"
-awk -v s="$SLUG" -v h="$HOJE" 'NR > 1 && /^calibracao:/ && !f { for (i = 1; i <= 4; i++) printf "  - trabalho_id: %s\n    task_id: T-01.0%d\n    real: 1\n    registrado_em: %s\n", s, i, h; f = 1 } { print }' "$HIST" > "$HIST.tmp" && mv -f "$HIST.tmp" "$HIST"
+awk -v s="$SLUG" -v h="$HOJE" 'NR > 1 && /^calibracao:/ && !f { for (i = 1; i <= 4; i++) printf "  - trabalho_id: %s\n    task_id: T-01.0%d\n    tipo_task: teste\n    area: geral\n    sinais: []\n    estimado_min: null\n    estimado_max: null\n    estimado_media: null\n    real: 1\n    desvio: null\n    registrado_em: %s\n", s, i, h; f = 1 } { print }' "$HIST" > "$HIST.tmp" && mv -f "$HIST.tmp" "$HIST"
 for i in 1 2 3 4; do printf '| %s | T-01.0%s | 1 |\n' "$SLUG" "$i" >> "$HIST"; done
 printf '\n# rascunho local que nenhuma task commitou\n' >> "$WT/src/c.sh"
 SQ0="$(seqs)"; PROX0="$(cd "$WT" && bash "$MX/sequencia-de-commits.sh" --proximo "$ENT_REL" | tr -d '\r')"
@@ -1928,6 +1928,148 @@ for k in "X2D o B5 classifica e persiste" "Q2 mas o esgotamento commitado no mes
 done
 ck L.5 "recusa duravel, F5 esgotada na rodada e sem sucessora: casos presentes e verdes" "sim sim sim" \
   "$(sn grep -qE '^  ok .*recusa' "$EVID/terminais-f6.log") $(sn grep -qE '^  ok .*(F5|f5).*rodada' "$EVID/terminais-f6.log") $(sn grep -qE '^  ok .*nenhuma sucessora' "$EVID/terminais-f6.log")"
+
+# ---------------------------------------------------------------------------
+# Q — primeiro HISTORICO.md global da sprintx (P0.2 / D-02)
+#
+# O C7-C travou no primeiro trabalho SprintX de um projeto: HEAD sem
+# docs/sprintx/estimativas/HISTORICO.md, a sprintx cria o arquivo do template
+# no primeiro trabalho, e o lifecycle antigo recusava todo HISTORICO
+# untracked — sem base, sem E2, sem E8. A D-02 repara pelo persistir-metodo.sh
+# (prova integral de ownership na primeira criação; DM-174) e prova o
+# tracked pelo mesmo leitor, base × final (DM-175).
+#
+# Q  FIRST: HEAD sem o HISTORICO -> a fundacao da feature nao o cria ->
+#    escrito untracked -> persistir-metodo pre-e2 o versiona, sozinho no
+#    commit de metodo
+# Q2 TRACKED: um segundo trabalho, sobre o HISTORICO ja tracked pela Q,
+#    acrescenta duas entradas (recalibra o fator para "sim" com 3 entradas
+#    do mesmo tipo) sem apagar nem reescrever a entrada antiga
+# Q8 controle: primeira criacao chegando direto a e8, sem pre-e2 anterior —
+#    o segundo travamento que o C7-C revelou
+#
+# Nao duplica a bancada unitaria da mergex (D-02): prova só a integração
+# expxdev -> buildx -> sprintx -> mergex, com o binário do pin.
+# ---------------------------------------------------------------------------
+passo "Q primeiro HISTORICO global da sprintx (D-02): FIRST, TRACKED, e8 sem pre-e2"
+
+HIST_REL=docs/sprintx/estimativas/HISTORICO.md
+
+# hist_add <trabalho> <task> <tipo> <area> <real> <registrado_em> — acumula
+# em HIST_ENTRADAS (TAB-separado); hist_render lê tudo de novo a cada chamada,
+# então a mesma lista sempre produz o mesmo arquivo, entrada antiga incluída.
+HIST_ENTRADAS=""
+hist_add() { HIST_ENTRADAS="$HIST_ENTRADAS$1	$2	$3	$4	$5	$6"$'\n'; }
+hist_render() { # -> stdout: o HISTORICO.md inteiro, contratualmente valido
+  awk -F'\t' -v hoje="$HOJE" '
+    BEGIN { printf "---\nexpx_schema: 1\nexpx_tool: sprintx\nkind: estimativa_historico\ntrabalho_id: null\natualizado_em: %s\nunidade: h\nentradas:\n", hoje }
+    NF {
+      printf "  - trabalho_id: %s\n    task_id: %s\n    tipo_task: %s\n    area: %s\n    sinais: []\n    estimado_min: null\n    estimado_max: null\n    estimado_media: null\n    real: %s\n    desvio: null\n    registrado_em: %s\n", $1, $2, $3, $4, $5, $6
+      n[$3]++
+    }
+    END {
+      printf "calibracao:\n"
+      for (t in n) printf "  - tipo_task: %s\n    entradas: %d\n    desvio_medio: 1.0\n    fator_ativo: %s\n", t, n[t], (n[t] >= 3 ? "true" : "false")
+      printf "---\n\n# Histórico de esforço\n\nEntrada antiga não se apaga nem se reescreve; trabalho novo acrescenta.\n\n## Entradas\n\n| Trabalho | Task | Tipo | Área | Sinais | Estimado (min–max) | Média est. | Real | Desvio |\n|---|---|---|---|---|---|---|---|---|\n"
+    }' <<<"$HIST_ENTRADAS"
+  awk -F'\t' 'NF { printf "| %s | %s | %s | %s | — | — | — | %s h | — |\n", $1, $2, $3, $4, $5 }' <<<"$HIST_ENTRADAS"
+  awk -F'\t' 'NF { n[$3]++ } END { printf "\n## Calibração por tipo de task\n\n| Tipo de task | Entradas | Desvio médio | Fator ativo? |\n|---|---|---|---|\n"
+    for (t in n) printf "| %s | %d | 1,0 | %s |\n", t, n[t], (n[t] >= 3 ? "sim" : "não — menos de 3 entradas") }' <<<"$HIST_ENTRADAS"
+}
+
+# fixture_trabalho <slug> <task> <branch_base> — a fundação de um trabalho
+# sprintx concluído (uma task), na branch dele, sem tocar o HISTORICO global.
+fixture_trabalho() {
+  local slug="$1" task="$2" base="$3" p="$FX/docs/sprintx/features/$1/sprint-01"
+  mkdir -p "$p" "$FX/docs/entregas/$1" "$FX/src"
+  printf 'q() { echo %s; }\n' "$1" > "$FX/src/$1.sh"
+  printf -- '---\nexpx_schema: 1\nexpx_tool: sprintx\nkind: tasks\ntrabalho_id: %s\nsprint_id: sprint-01\natualizado_em: %s\ntasks:\n  - id: %s\n    titulo: %s\n    status: concluida\n    suite: verde\n    teste_integracao: a\n    teste_funcional: b\n    arquivos:\n      cria: []\n      altera: [src/%s.sh]\n---\n\n# Sprint 01\n' \
+    "$slug" "$HOJE" "$task" "$slug" "$slug" > "$p/tasks.md"
+  printf -- '---\nexpx_schema: 1\nexpx_tool: sprintx\nkind: orquestrador\ntrabalho_id: %s\n---\n\n# Orquestrador\n' "$slug" > "$FX/docs/sprintx/features/$1/ORQUESTRADOR.md"
+  git -C "$FX" switch -q -c "feature/$slug" "$base"
+  entrega_nova "$FX/docs/entregas/$1/ENTREGA.md" "$slug" "feature/$slug" "$base"
+  git -C "$FX" add -A && git -C "$FX" commit -q -m "chore: fundacao $slug" || quebra
+}
+
+metodo_fx() { # <checkpoint> <trabalho> — persistir-metodo.sh no produto $FX
+  local ini="$EPOCHREALTIME"
+  METODO_SAIDA="$(cd "$FX" && bash .claude/skills/mergex/scripts/persistir-metodo.sh --persistir \
+    --entrega "docs/entregas/$2/ENTREGA.md" --origem sprintx --trabalho "$2" --checkpoint "$1" 2>&1)"; METODO_RC=$?
+  anota_tempo "Q persistir-metodo $1 $2" "$(ms_desde "$ini")"
+}
+
+fixture fx-q sprintx,mergex QI
+git -C "$FX" config core.autocrlf false
+prova_instalacao "$FX" QI
+git -C "$FX" add -A && git -C "$FX" commit -q -m "chore: instala pelo expxdev" || quebra
+printf 'docs/eventos/\n' > "$FX/.gitignore"; git -C "$FX" add -A && git -C "$FX" commit -q -m "chore: gitignore" || quebra
+BASE_Q="$(git -C "$FX" rev-parse HEAD)"
+
+ck QF.1 "HEAD nao contem o HISTORICO global — a lacuna que o C7-C revelou" "" \
+  "$(git -C "$FX" ls-tree -r HEAD --name-only | grep -xF "$HIST_REL" || true)"
+
+fixture_trabalho q1 T-01.01 "$BASE_Q"
+ck QF.2 "a fundacao do primeiro trabalho ainda nao cria o HISTORICO" nao "$(sn test -e "$FX/$HIST_REL")"
+
+hist_add q1 T-01.01 teste accountability 0.5 "$HOJE"
+mkdir -p "$(dirname "$FX/$HIST_REL")"
+hist_render > "$FX/$HIST_REL"
+ck QF.3 "o HISTORICO nasce untracked na working tree, como a sprintx o deixaria" \
+  "?? $HIST_REL" "$(git -C "$FX" status --porcelain -- "$HIST_REL" | tr -s ' ')"
+QF_SHA_ANTES="$(sha_de "$FX/$HIST_REL")"
+
+metodo_fx pre-e2 q1
+ck QF.4 "persistir-metodo pre-e2 cria o primeiro HISTORICO global: rc 0" 0 "$METODO_RC"
+ck QF.5 "e o HISTORICO entra, sozinho, no commit de metodo (nenhum produto pegou carona)" "$HIST_REL" \
+  "$(git -C "$FX" -c core.quotepath=false diff-tree --root --no-commit-id -r --name-only HEAD)"
+ck QF.6 "stage vazio depois do pre-e2" "" "$(git -C "$FX" diff --cached --name-only)"
+ck QF.7 "o HISTORICO commitado e byte a byte o que a working tree tinha (nada foi reescrito)" \
+  "$QF_SHA_ANTES" "$(git -C "$FX" show "HEAD:$HIST_REL" | sha256sum | cut -d' ' -f1)"
+ck QF.8 "o contrato de metodo aceita o commit da primeira criacao" "classe=metodo checkpoint=pre-e2" \
+  "$(cd "$FX" && bash .claude/skills/mergex/scripts/contrato-de-commit.sh --validar-metodo --trabalho q1 --checkpoint pre-e2 --commit HEAD | tr -d '\r' | paste -sd' ' -)"
+ck QF.9 "a barreira pre-e2 verifica ok, depois de persistida" "0 ok=true" \
+  "$(cd "$FX" && bash .claude/skills/mergex/scripts/persistir-metodo.sh --verificar --entrega docs/entregas/q1/ENTREGA.md --origem sprintx --trabalho q1 --checkpoint pre-e2 >"$TMP_RAIZ/qf9.log" 2>&1; printf '%s %s' "$?" "$(tr -d '\r' < "$TMP_RAIZ/qf9.log")"; rm -f "$TMP_RAIZ/qf9.log")"
+
+# --- TRACKED: um segundo trabalho recalibra o HISTORICO ja versionado pela QF ---
+BASE_Q2="$(git -C "$FX" rev-parse HEAD)"
+fixture_trabalho q2 T-01.01 "$BASE_Q2"
+Q2_TASKS="$FX/docs/sprintx/features/q2/sprint-01/tasks.md"
+printf -- '  - id: T-01.02\n    titulo: q2b\n    status: concluida\n    suite: verde\n    teste_integracao: a\n    teste_funcional: b\n    arquivos:\n      cria: []\n      altera: [src/q2.sh]\n' > "$TMP_RAIZ/q2-task2.yml"
+awk -v novo="$TMP_RAIZ/q2-task2.yml" '{ print } /^tasks:$/ { while ((getline l < novo) > 0) print l; close(novo) }' "$Q2_TASKS" > "$Q2_TASKS.tmp" && mv -f "$Q2_TASKS.tmp" "$Q2_TASKS"
+git -C "$FX" add -A && git -C "$FX" commit -q -m "chore: q2 acrescenta T-01.02" || quebra
+
+hist_add q2 T-01.01 teste accountability 0.6 "$HOJE"
+hist_add q2 T-01.02 teste accountability 0.7 "$HOJE"
+hist_render > "$FX/$HIST_REL"
+ck QT.1 "o HISTORICO da q2 fica dirty (recalibracao), tracked desde a QF" " M $HIST_REL" \
+  "$(git -C "$FX" status --porcelain -- "$HIST_REL")"
+
+metodo_fx pre-e2 q2
+ck QT.2 "pre-e2 recalibra o HISTORICO tracked: rc 0" 0 "$METODO_RC"
+ck QT.3 "a entrada antiga (q1/T-01.01) continua, sem alteracao" sim \
+  "$(sn eval 'git -C "$FX" show "HEAD:$HIST_REL" | grep -A11 "trabalho_id: q1" | grep -q "real: 0.5"')"
+ck QT.4 "as duas entradas novas da q2 entraram" "2" \
+  "$(git -C "$FX" show "HEAD:$HIST_REL" | grep -c 'trabalho_id: q2')"
+ck QT.5 "a calibracao recalculou: 3 entradas do tipo teste, fator ativo" "entradas: 3
+fator_ativo: true" \
+  "$(git -C "$FX" show "HEAD:$HIST_REL" | awk '/^calibracao:/{c=1;next} c && /^---$/{exit} c && /entradas:|fator_ativo:/ { sub(/^ +/, ""); print }')"
+ck QT.6 "a tabela oficial preserva a linha antiga e ganha as duas novas" "3" \
+  "$(git -C "$FX" show "HEAD:$HIST_REL" | grep -cE '^\| q[12] \|')"
+ck QT.7 "de novo, so o HISTORICO entrou no commit de metodo" "$HIST_REL" \
+  "$(git -C "$FX" -c core.quotepath=false diff-tree --root --no-commit-id -r --name-only HEAD)"
+
+# --- controle: e8 sem pre-e2 anterior — o segundo travamento do C7-C ---
+fixture fx-q8 sprintx,mergex QI8
+git -C "$FX" config core.autocrlf false
+printf 'docs/eventos/\n' > "$FX/.gitignore"; git -C "$FX" add -A && git -C "$FX" commit -q -m "chore: instala e gitignore" || quebra
+fixture_trabalho q8 T-01.01 "$(git -C "$FX" rev-parse HEAD)"
+ck QE.1 "HEAD ainda sem o HISTORICO global" "" "$(git -C "$FX" ls-tree -r HEAD --name-only | grep -xF "$HIST_REL" || true)"
+HIST_ENTRADAS=""; hist_add q8 T-01.01 teste accountability 0.5 "$HOJE"
+mkdir -p "$(dirname "$FX/$HIST_REL")"
+hist_render > "$FX/$HIST_REL"
+metodo_fx e8 q8
+ck QE.2 "e8 sozinho, sem pre-e2 nenhum antes, persiste a primeira criacao: rc 0" 0 "$METODO_RC"
+ck QE.3 "o HISTORICO entrou tracked" sim "$(sn git -C "$FX" ls-tree -r HEAD --name-only --full-name -- "$HIST_REL")"
 
 # ---------------------------------------------------------------------------
 # PORTABILIDADE — o buildx num clone core.autocrlf=true

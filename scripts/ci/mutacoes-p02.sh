@@ -51,11 +51,37 @@
 #   Y20 o harness vem do roteiro (EXPX_HARNESS no processo do runner)
 #   Y21 a bancada reivindica pelo agente, com a sessão dele, antes de ele rodar
 #
-# As da sprintx e da mergex (X1–X7, X10, Y8, Y10, Y11, Y17) são aplicadas na FONTE
-# clonada no SHA, antes do `expxdev init`, pelo gancho C7B_POS_EXTRACAO — nunca no
-# repositório fonte: a mutação chega ao produto pelo instalador, como chegaria de
-# verdade. As do buildx e da certificação, numa cópia da árvore. Antes delas, a
-# cópia sem mutação passa (controle). Mutação que sobrevive é teste que falta.
+# O primeiro HISTORICO.md global da sprintx (P0.2 / D-02): a seção Q da
+# certificação prova FIRST (HEAD sem base), TRACKED (recalibração) e e8 sem
+# pre-e2 anterior. Estas mutações rodam sobre uma extração isolada de Q — só
+# A + os instrumentos + a seção Q, pelos marcadores estáveis do próprio
+# roteiro (`Q_EXTRAI`, abaixo) — porque P8, mais cedo no mesmo script, já
+# exercita o caminho TRACKED da mergex sobre a HISTORICO da feature-antiga:
+# sem o isolamento, uma regressão de fonte morreria ali, não em Q, e não
+# provaria o que esta bateria existe para provar. X1–Y21 continuam rodando
+# sobre o script inteiro; só a bateria Z usa a extração.
+#   Z1  a certificação volta a pré-criar o HISTORICO antes do cenário FIRST
+#   Z2  a mergex regride ao pin anterior ao D-02: FIRST volta a recusar
+#   Z3  FIRST não verifica a ausência do HISTORICO em HEAD
+#   Z4  o commit de método sai sem o HISTORICO (a mergex some com o `git add`
+#       e o gate que compara staged×catálogo)
+#   Z5  TRACKED perde a entrada histórica (a fixture não a reafirma)
+#   Z6  a mergex passa a recusar toda recalibração TRACKED, mesmo válida
+#   Z7  e8 sem pre-e2 anterior volta a recusar a primeira criação
+#
+# Z8 e Z9 (o pin retrocede; a decisão de freeze diverge do pin) são do bloco
+# `pins` do harness genérico — scripts/ci/mutacoes.sh, M64/M65 — porque já
+# há ali a máquina de freeze/pin (D-42/D-43/D-44) para reaproveitar; adicionar
+# uma segunda aqui duplicaria a mesma verificação. O override de SHA sem modo
+# de teste (Z10, para a mergex) já morre pelo M60 existente, genérico às três
+# fontes: nenhuma mutação nova é precisa para essa classe.
+#
+# As da sprintx e da mergex (X1–X7, X10, Y8, Y10, Y11, Y17, Z2, Z4, Z6, Z7) são
+# aplicadas na FONTE clonada no SHA, antes do `expxdev init`, pelo gancho
+# C7B_POS_EXTRACAO — nunca no repositório fonte: a mutação chega ao produto
+# pelo instalador, como chegaria de verdade. As do buildx e da certificação,
+# numa cópia da árvore. Antes delas, a cópia sem mutação passa (controle).
+# Mutação que sobrevive é teste que falta.
 #
 # Rodam SEM runner real (C7B_RUNNER=settings): os hooks do settings.json instalado
 # são despachados como o Claude Code os despacha. A prova com o runner real — e a
@@ -92,6 +118,9 @@ if [ "${1:-}" = --snapshot ]; then
   PLA="$SXS/.claude/skills/sprintx/scripts/planejamento.sh"
   ESCRITOR="$SXS/.claude/skills/sprintx/scripts/rastro.sh"
   FECHA="$MXS/.claude/skills/mergex/scripts/fechamento-do-e1.sh"
+  PERSISTE="$MXS/.claude/skills/mergex/scripts/persistir-metodo.sh"
+  MERGEX_FONTE_REAL="${C7B_MERGEX_FONTE:-}"
+  # MERGEX_SHA_ANTES_D02 vem do ambiente (lido do harness, abaixo) — nunca literal aqui.
   case "$m" in
     X1) troca "$ESC" 'if [ "$DECL" = irma ]; then' <<'EOF'
 if false; then
@@ -148,6 +177,30 @@ EOF
         printf '%s\n' "$caminho"
 EOF
       ;;
+    Z2) # a mergex regride ao pin anterior ao D-02: confere_historico_inicial nunca existiu
+      [ -n "$MERGEX_FONTE_REAL" ] || { echo "Z2: C7B_MERGEX_FONTE indisponivel para o snapshot" >&2; exit 1; }
+      rm -rf "$MXS/.claude/skills/mergex" "$MXS/.claude/hooks/mergex" &&
+        git -C "$MERGEX_FONTE_REAL" archive "$MERGEX_SHA_ANTES_D02" .claude/skills/mergex .claude/hooks/mergex | tar -x -C "$MXS"
+      ;;
+    Z4) # o commit de metodo leva produto junto (a mesma fonte que a X10 muda, no
+        # PASSO 8): o catalogo deixa de ser fechado, e o produto que a Z4 suja no
+        # certifica-p02.sh (abaixo) entra com o HISTORICO no mesmo commit
+      troca "$PERSISTE" 'LC_ALL=C sort -u -o "$TMP_LISTA" "$TMP_LISTA"' <<'EOF'
+git -C "$RAIZ" -c core.quotepath=false diff --name-only >> "$TMP_LISTA"
+LC_ALL=C sort -u -o "$TMP_LISTA" "$TMP_LISTA"
+EOF
+      ;;
+    Z6) # a mergex passa a recusar toda recalibracao TRACKED, mesmo valida
+      troca "$PERSISTE" 'local caminho="$HISTORICO_GLOBAL" modo motivo' <<'EOF'
+  local caminho="$HISTORICO_GLOBAL" modo motivo
+  para 'bloqueado por mutacao (Z6): recalibracao TRACKED recusada mesmo valida'
+EOF
+      ;;
+    Z7) # a mesma regressao da Z2, para a extracao QE-only (e8 sem pre-e2 anterior)
+      [ -n "$MERGEX_FONTE_REAL" ] || { echo "Z7: C7B_MERGEX_FONTE indisponivel para o snapshot" >&2; exit 1; }
+      rm -rf "$MXS/.claude/skills/mergex" "$MXS/.claude/hooks/mergex" &&
+        git -C "$MERGEX_FONTE_REAL" archive "$MERGEX_SHA_ANTES_D02" .claude/skills/mergex .claude/hooks/mergex | tar -x -C "$MXS"
+      ;;
     *) echo "mutacao de fonte desconhecida: $m" >&2; exit 1 ;;
   esac
   exit $?
@@ -183,6 +236,13 @@ onde() {
     Y15) echo '^J\.1$' ;;
     Y16|Y19|Y20|Y21) echo '^G\.1$' ;;
     Y17|Y18) echo '^R\.3$' ;;
+    Z1)  echo '^QF\.1$' ;;
+    Z2)  echo '^QF\.4$' ;;
+    Z3)  echo '^QF\.2$' ;;
+    Z4)  echo '^QF\.5$' ;;
+    Z5)  echo '^QT\.2$' ;;
+    Z6)  echo '^QT\.2$' ;;
+    Z7)  echo '^QE\.2$' ;;
   esac
 }
 
@@ -197,6 +257,12 @@ export C7B_PRESERVAR=0 C7B_RUNNER=settings
 # todas as rodadas. Override de SHA não existe aqui: a certificação o recusa.
 EXPXDEV_PIN="$(sed -n 's/^EXPXDEV_SHA_FIXO=\([0-9a-f]\{40\}\)\([^0-9a-f].*\)\{0,1\}$/\1/p' "$REPO/$INTEG")"
 [ -n "$EXPXDEV_PIN" ] || { echo "EXPXDEV_SHA_FIXO ausente ou incompleto em $INTEG"; exit 1; }
+
+# A mergex de antes do D-02 (evidência do freeze D-43), para as mutações Z2/Z7
+# regredirem a FONTE — nunca literal aqui, lida do harness como o EXPXDEV_PIN acima.
+MERGEX_SHA_ANTES_D02="$(sed -n 's/^MERGEX_SHA_D43=\([0-9a-f]\{40\}\)\([^0-9a-f].*\)\{0,1\}$/\1/p' "$REPO/$INTEG")"
+[ -n "$MERGEX_SHA_ANTES_D02" ] || { echo "MERGEX_SHA_D43 ausente ou incompleto em $INTEG"; exit 1; }
+export MERGEX_SHA_ANTES_D02
 if [ -z "${C7B_EXPXDEV_BUILD:-}" ]; then
   C7B_EXPXDEV_BUILD="$TMP/expxdev"
   git -c safe.directory='*' clone -q -c core.autocrlf=false --no-checkout "$C7B_EXPXDEV_FONTE" "$C7B_EXPXDEV_BUILD" &&
@@ -219,7 +285,7 @@ snapshot() { printf '#!/usr/bin/env bash\nexec bash "%s" --snapshot %s "$@"\n' "
 aplica() { # aplica <mutacao> <arvore> — o defeito, e só ele
   local d="$2"
   case "$1" in
-    X1|X2|X3|X4|X5|X6|X7|X10|Y8|Y10|Y11|Y17) snapshot "$1" ;;
+    X1|X2|X3|X4|X5|X6|X7|X10|Y8|Y10|Y11|Y17|Z2|Z6|Z7) snapshot "$1" ;;
     X8) troca "$d/$CERT" '# [P8]' <<'EOF'
   case "V11=OK" in                                                                       # [P8]
 EOF
@@ -319,8 +385,68 @@ ROT_ANTES="$(git -C "$FR" hash-object --no-filters src/rotulo.sh)"
 WT_SALVO="$WT"; WT="$FR"; evento_skill "$SLR" task_iniciada T-01.01 "$SR"; WT="$WT_SALVO"
 EOF
       ;;
+    Z1) # a certificacao volta a pre-criar o HISTORICO antes do cenario FIRST
+      troca "$d/$CERT" 'BASE_Q="$(git -C "$FX" rev-parse HEAD)"' <<'EOF'
+mkdir -p "$FX/docs/sprintx/estimativas"
+printf -- '---\nexpx_schema: 1\nexpx_tool: sprintx\nkind: estimativa_historico\ntrabalho_id: null\natualizado_em: 2020-01-01\nunidade: h\nentradas: []\ncalibracao: []\n---\n\n# x\n' > "$FX/docs/sprintx/estimativas/HISTORICO.md"
+git -C "$FX" add -A && git -C "$FX" commit -q -m "chore: pre-cria historico (mutacao Z1)"
+BASE_Q="$(git -C "$FX" rev-parse HEAD)"
+EOF
+      ;;
+    Z3) # FIRST nao verifica a ausencia do HISTORICO em HEAD pelo ls-tree: some
+        # com a QF.1 (e reintroduz a pre-criacao da Z1, senao nao ha nada a pegar).
+        # A QF.2 — existencia crua na working tree, depois da fundacao — ainda
+        # morre por conta propria: prova que a rede de checagem nao depende so
+        # da QF.1 para recusar um HISTORICO que ja chegou tracked.
+      troca "$d/$CERT" 'BASE_Q="$(git -C "$FX" rev-parse HEAD)"' <<'EOF' &&
+mkdir -p "$FX/docs/sprintx/estimativas"
+printf -- '---\nexpx_schema: 1\nexpx_tool: sprintx\nkind: estimativa_historico\ntrabalho_id: null\natualizado_em: 2020-01-01\nunidade: h\nentradas: []\ncalibracao: []\n---\n\n# x\n' > "$FX/docs/sprintx/estimativas/HISTORICO.md"
+git -C "$FX" add -A && git -C "$FX" commit -q -m "chore: pre-cria historico (mutacao Z3)"
+BASE_Q="$(git -C "$FX" rev-parse HEAD)"
+EOF
+      troca "$d/$CERT" 'ck QF.1 "HEAD nao contem o HISTORICO global — a lacuna que o C7-C revelou" "" \' <<'EOF'
+:  # [mutacao Z3: QF.1 removida]
+EOF
+      ;;
+    Z4) # o commit de metodo leva produto junto: o catalogo perde o fechamento
+        # (a mesma fonte que a X10 muda, no PASSO 8) — precisa de algo dirty
+        # fora do catalogo para provar; a QF nao suja produto nenhum sozinha,
+        # entao esta suja src/q1.sh logo antes do pre-e2.
+      snapshot Z4
+      troca "$d/$CERT" 'metodo_fx pre-e2 q1' <<'EOF'
+printf '\n# suja pelo mutante Z4\n' >> "$FX/src/q1.sh"
+metodo_fx pre-e2 q1
+EOF
+      ;;
+    Z5) # TRACKED perde a entrada historica: a fixture nao a reafirma no acrescimo
+      troca "$d/$CERT" 'hist_add q2 T-01.01 teste accountability 0.6 "$HOJE"' <<'EOF'
+HIST_ENTRADAS=""   # [mutacao Z5: descarta a entrada de q1 antes de acrescentar]
+hist_add q2 T-01.01 teste accountability 0.6 "$HOJE"
+EOF
+      ;;
     *) echo "mutacao desconhecida: $1" >&2; return 1 ;;
   esac
+}
+
+# Q_EXTRAI <script-fonte> <modo: q|qe> -> stdout: A + instrumentos + a seção Q
+# do certifica-p02.sh, pelos marcadores estáveis do próprio roteiro — nunca por
+# número de linha. modo=qe também pula a fixture fx-q inteira (FIRST + TRACKED),
+# deixando só o controle e8 sem pre-e2 anterior (fx-q8): a regressão de fonte
+# não pode morrer em QF antes de a QE ter a chance de provar o próprio ponto.
+Q_EXTRAI() {
+  awk -v modo="$2" '
+    /^passo "G guarda estrutural/ { skipg = 1 }
+    skipg { if (/^case "\$C7B_RUNNER" in claude\|settings\) ;;/) { skipg = 0; print }; next }
+    /^passo "I instalacao real pelo ExpxDev/ { skipbody = 1 }
+    /^passo "Q primeiro HISTORICO global/ { skipbody = 0; inq = 1 }
+    skipbody { next }
+    inq && modo == "qe" && /^fixture fx-q sprintx,mergex QI$/ { skipqf = 1 }
+    skipqf && /^# --- controle: e8 sem pre-e2/ { skipqf = 0 }
+    skipqf { next }
+    /^passo "PORTABILIDADE LF/ { exit }
+    { print }
+  ' "$1"
+  printf 'printf "%%s\\n" fim-extracao-q\nexit 0\n'
 }
 
 roda() { # roda <nome> <arvore>
@@ -329,7 +455,15 @@ roda() { # roda <nome> <arvore>
   ( cd "$TMP" && C7B_POS_EXTRACAO="$pos" bash "$2/$CERT" > "$TMP/$1.log" 2>&1; echo $? > "$TMP/$1.rc" )
 }
 
-MUTACOES="${*:-X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 Y1 Y2 Y3 Y4 Y5 Y6 Y7 Y8 Y9 Y10 Y11 Y12 Y13 Y14 Y15 Y16 Y17 Y18 Y19 Y20 Y21}"
+roda_q() { # roda_q <nome> <arvore> <modo: q|qe> — só a extração de Q_EXTRAI
+  local pos=""
+  [ -f "$TMP/$1.pos.sh" ] && pos="$TMP/$1.pos.sh"
+  Q_EXTRAI "$2/$CERT" "$3" > "$TMP/$1.qcert.sh"
+  sed -i "s|^REPO=.*|REPO=\"$(cd "$2" && pwd)\"|" "$TMP/$1.qcert.sh"
+  ( cd "$TMP" && C7B_POS_EXTRACAO="$pos" bash "$TMP/$1.qcert.sh" > "$TMP/$1.log" 2>&1; echo $? > "$TMP/$1.rc" )
+}
+
+MUTACOES="${*:-X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 Y1 Y2 Y3 Y4 Y5 Y6 Y7 Y8 Y9 Y10 Y11 Y12 Y13 Y14 Y15 Y16 Y17 Y18 Y19 Y20 Y21 Z1 Z2 Z3 Z4 Z5 Z6 Z7}"
 
 printf 'controle — a arvore sem mutacao certifica (runner settings)\n'
 copia "$TMP/controle"
@@ -349,7 +483,11 @@ for m in $MUTACOES; do
   if [ ! -f "$TMP/$m.pos.sh" ] && diff -r -q -x .git "$TMP/controle" "$TMP/$m" >/dev/null 2>&1; then
     FALHOU=1; printf '  %-4s NAO APLICADA  (arvore identica ao controle)\n' "$m"; continue
   fi
-  roda "$m" "$TMP/$m"
+  case "$m" in
+    Z7) roda_q "$m" "$TMP/$m" qe ;;
+    Z1|Z2|Z3|Z4|Z5|Z6) roda_q "$m" "$TMP/$m" q ;;
+    *) roda "$m" "$TMP/$m" ;;
+  esac
   onde_morreu="$(grep -m1 '^  FALHA' "$TMP/$m.log" | awk '{ print $2 }')"
   if [ "$(cat "$TMP/$m.rc")" = 0 ] || [ -z "$onde_morreu" ]; then
     FALHOU=1; printf '  %-4s SOBREVIVEU    %s\n' "$m" "$(tail -1 "$TMP/$m.log")"
