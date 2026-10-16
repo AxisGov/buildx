@@ -71,9 +71,9 @@ siga em frente.
 
 ## 4. O que ficou pronto
 
-| Feature | O que você consegue fazer | PR | Testes |
-|---|---|---|---|
-| <titulo> | <a entrega, na linguagem de quem usa> | <#n> | <n> |
+| Feature | O que você consegue fazer | PR | Base do PR | Testes |
+|---|---|---|---|---|
+| <titulo> | <a entrega, na linguagem de quem usa> | <#n> | <base comum \| feature/<predecessora> (empilhado)> | <n> |
 
 <Cada PR está aberto, com a suíte verde e a descrição montada. O pacote de
 teste manual de cada feature está em `docs/entregas/<slug>/QA-PACOTE.md` — é o caminho para
@@ -135,6 +135,10 @@ demonstração.
 3. **Revise os PRs e faça o merge.** Eles estão abertos, verdes e descritos
    — mas **integrar código é decisão sua**, e é a última rede antes de
    produção. Não fiz merge de nada, e não vou fazer.
+   <Se houver PR empilhado:> Os PRs empilhados (seção 4) entram **em ordem**:
+   primeiro o da predecessora. Se a branch dela não for apagada no merge, o
+   GitHub não reaponta o dependente — rode `gh pr edit <n> --base <base comum>`
+   antes de mergeá-lo, ou ele entra na branch da predecessora, não na base.
 
 ---
 

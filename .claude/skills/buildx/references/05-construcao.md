@@ -29,13 +29,16 @@ Marque a feature como `em_andamento` no `MAPA.md` **agora**, não no fim. Se a s
 
 **A branch não é do buildx.** A F1 do sprintx abre `feature/<slug>` num worktree próprio (regra 21 dele), antes da primeira linha de código, e toda a feature corre de dentro dele. O E0 da mergex (`mergex-abrir`) entra no início da F6, acionado pelo próprio sprintx, e só **adota** essa branch: ele exige o `ORQUESTRADOR.md`, que nasce na F4. Invocar `mergex-abrir` antes da F1 não abre nada — sem orquestrador, o E0 encerra dizendo que não há trabalho planejado.
 
-**Feature dependente se encadeia.** O merge é humano e os PRs ficam abertos, então a feature cujo `depende_de` ainda não foi integrado não pode nascer da base comum: nasceria sem o código de que depende. Ela nasce da branch da predecessora — o briefing leva `base: feature/<predecessora>` —, e o PR sai empilhado no dela, mostrando só o próprio diff; o merge segue a ordem do `MAPA.md`. Decida pela lista de predecessoras **ainda não integradas** na base comum (`git merge-base --is-ancestor feature/<p> <base>` diz se já entrou):
+**Feature dependente se encadeia.** O merge é humano e os PRs ficam abertos, então a feature cujo `depende_de` ainda não foi integrado não pode nascer da base comum: nasceria sem o código de que depende. Ela nasce da branch da predecessora — o briefing leva `base: feature/<predecessora>` —, e o PR sai empilhado no dela, mostrando só o próprio diff; o merge segue a ordem do `MAPA.md`. Decida pelas predecessoras **ainda não integradas** na base comum. Integrada é a que tem o PR mergeado (`gh pr view feature/<p> --json state` → `MERGED`), o que vale também para squash e rebase; sem acesso ao serviço, `git merge-base --is-ancestor feature/<p> <base>`, que só reconhece merge comum — na dúvida, trate como não integrada:
 
 | Predecessoras não integradas | Base |
 |---|---|
 | nenhuma | a comum — o briefing não leva `base` |
-| uma, ou várias numa só cadeia (cada uma contém a anterior) | a branch da última da cadeia |
-| várias em cadeias separadas | nenhuma serve: marque a feature `bloqueada` com o motivo "depende de PRs paralelos não integrados", e o B5 a trata como `decisao_humana` — integrar uma das cadeias é merge, e merge é do humano |
+| alguma que não está `entregue` no `MAPA.md` (`bloqueada`, `pendente`) | nenhuma: a feature fica `bloqueada` com o motivo "depende de FT-NN não entregue". Empilhar sobre ela levaria código que não foi entregue para o PR e para a integração do B6 |
+| uma `entregue`, ou várias `entregue` numa só cadeia (cada uma contém a anterior) | a branch da última da cadeia |
+| várias `entregue` em cadeias separadas | nenhuma serve: marque a feature `bloqueada` com o motivo "depende de PRs paralelos não integrados", e o B5 a trata como `decisao_humana` — integrar uma das cadeias é merge, e merge é do humano |
+
+**PR empilhado depois do merge da predecessora.** Quando o humano mergeia o PR da predecessora, o GitHub só reaponta o PR dependente para a base comum se a branch da predecessora for apagada no merge. O relatório final lista cada PR empilhado com a base dele e diz isso: mergeie em ordem e, se a branch da predecessora ficar, reaponte o dependente (`gh pr edit <n> --base <base comum>`) antes de mergeá-lo — senão ele entra na branch da predecessora, não na base.
 
 ## Passo 2 — A F1, com o briefing do buildx
 
