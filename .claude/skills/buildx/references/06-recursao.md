@@ -19,6 +19,8 @@ Colete de todas as fontes, sem filtrar nada ainda:
 | `PREMISSAS.md` | toda premissa marcada provisória |
 | `RECURSAO.md` do ciclo anterior | toda pendência que continua aberta |
 
+**Os artefatos da feature não estão no checkout principal.** A F1 do sprintx abre cada feature num worktree irmão, na branch `feature/<slug>` (regra 21), e o PR fica aberto até o merge humano, então `00-BLOQUEIOS.md` e `00-AUDITORIA.md` só existem lá. Leia cada um no worktree da feature (`git worktree list --porcelain`, a entrada com `branch refs/heads/feature/<slug>`); se o worktree já foi removido, leia da branch (`git show feature/<slug>:docs/sprintx/features/<slug>/00-BLOQUEIOS.md`). Ler o caminho no checkout principal acharia nada e daria a feature por limpa. O que mora no checkout principal é o que o buildx grava: `docs/projeto/` (`MAPA.md`, `PREMISSAS.md`, `RECURSAO.md`).
+
 Consulte o `memox`, se instalado: uma pendência que já apareceu em ciclo anterior e voltou não é a mesma pendência — é sinal de que a tentativa anterior não resolveu, e repetir a mesma correção vai falhar igual.
 
 ## Passo 2 — A classificação

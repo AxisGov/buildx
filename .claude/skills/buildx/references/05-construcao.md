@@ -25,7 +25,7 @@ Nenhuma etapa é pulada, e o sprintx nunca é invocado fora de ordem — a máqu
 
 ## Passo 1 — Abrir a feature
 
-Marque a feature como `em_andamento` no `MAPA.md` **agora**, não no fim. Se a sessão morrer no meio, o `/buildx-retomar` precisa saber onde estava.
+Marque a feature como `em_andamento` no `MAPA.md` **agora**, não no fim. Se a sessão morrer no meio, o `/buildx-retomar` precisa saber onde estava. O `MAPA.md` mora no checkout principal, onde o buildx roda: é ali que ele é lido e gravado, sempre — nunca na cópia que o worktree da feature herda ao nascer, que fica com o status antigo e não serve de fonte.
 
 **A branch não é do buildx.** A F1 do sprintx abre `feature/<slug>` num worktree próprio (regra 21 dele), antes da primeira linha de código, e toda a feature corre de dentro dele. O E0 da mergex (`mergex-abrir`) entra no início da F6, acionado pelo próprio sprintx, e só **adota** essa branch: ele exige o `ORQUESTRADOR.md`, que nasce na F4. Invocar `mergex-abrir` antes da F1 não abre nada — sem orquestrador, o E0 encerra dizendo que não há trabalho planejado.
 
