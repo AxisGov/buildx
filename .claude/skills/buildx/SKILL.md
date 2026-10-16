@@ -101,7 +101,7 @@ Contrato da feature — toda feature do mapa declara, obrigatoriamente:
 | Campo | Conteúdo |
 |---|---|
 | `id` | `FT-NN` |
-| `slug` | o `<slug-da-feature>` que o sprintx vai usar em `docs/<slug>/` |
+| `slug` | o `<slug-da-feature>` que o sprintx vai usar em `docs/sprintx/features/<slug>/` |
 | `titulo` | título curto |
 | `entrega` | o que o usuário do sistema consegue fazer que não conseguia |
 | `depende_de` | `[ids]` ou `[]` |

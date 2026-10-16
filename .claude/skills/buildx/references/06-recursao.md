@@ -13,8 +13,8 @@ Colete de todas as fontes, sem filtrar nada ainda:
 | Fonte | O que colher |
 |---|---|
 | `MAPA.md` | toda feature `bloqueada`, com o motivo |
-| `docs/<slug>/00-BLOQUEIOS.md` | toda dúvida que a F6 registrou e pulou |
-| `docs/<slug>/00-AUDITORIA.md` | todo achado alto que mandou voltar à F3 |
+| `docs/sprintx/features/<slug>/00-BLOQUEIOS.md` | toda dúvida que a F6 registrou e pulou |
+| `docs/sprintx/features/<slug>/00-AUDITORIA.md` | todo achado alto que mandou voltar à F3 |
 | relatório da `mergex-check` | toda verificação que devolveu BLOQUEADO |
 | `PREMISSAS.md` | toda premissa marcada provisória |
 | `RECURSAO.md` do ciclo anterior | toda pendência que continua aberta |

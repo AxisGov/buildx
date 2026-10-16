@@ -20,7 +20,7 @@ Uma execução do buildx é longa e pode ser interrompida a qualquer momento. To
 
 ## 2. Se havia feature em andamento
 
-Não recomece a feature. A máquina de estados do sprintx detecta a fase pelo disco de `docs/<slug>/` — invoque a skill e ela continua de onde parou.
+Não recomece a feature. A máquina de estados do sprintx detecta a fase pelo disco de `docs/sprintx/features/<slug>/` — invoque a skill e ela continua de onde parou.
 
 Verifique antes: a branch da feature existe? A F1 do sprintx a abre (`feature/<slug>`, no worktree da feature); se a sessão caiu depois disso, ela está lá e não deve ser reaberta — retome de dentro do worktree.
 
