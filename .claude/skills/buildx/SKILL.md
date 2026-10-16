@@ -130,7 +130,7 @@ mergex-check      → portão de prontidão
 mergex-pr         → descrição, push, PR aberto
 ```
 
-**A F2 no modo autônomo.** A regra 10 do sprintx obriga a F2 a entrevistar o humano. No buildx o humano já falou — na descrição e, no modo briefing, na rodada única. Então o buildx **responde a F2 no lugar dele**, derivando cada resposta do `PROJETO.md`, do `PREMISSAS.md` e do `CONVENCOES.md`, e gravando em `00-DECISOES.md` com `respondido_por: buildx`. Nenhuma resposta é inventada: o que não estiver derivável de um desses três arquivos vira premissa nova em `PREMISSAS.md`, registrada antes de ser usada.
+**A F2 no modo autônomo.** A regra 10 do sprintx obriga a F2 a entrevistar o humano. No buildx o humano já falou — na descrição e, no modo briefing, na rodada única. Então o buildx **responde a F2 no lugar dele**, derivando cada resposta do `PROJETO.md`, do `PREMISSAS.md` e do `CONVENCOES.md`, e gravando em `00-DECISOES.md` com `respondido_por: buildx`. Nenhuma resposta é inventada: o que não estiver derivável de um desses três arquivos vira premissa nova em `PREMISSAS.md`, registrada antes de ser usada — **exceto regra de negócio**, que o buildx não decide. Regra de negócio sem resposta vai para `00-BLOQUEIOS.md` e para o `RECURSAO.md` como `decisao_humana`, e a feature segue só com a decisão mais reversível, marcada como provisória no código e na premissa, até o humano decidir (`references/05-construcao.md`, "A fronteira que a F2 não atravessa").
 
 **Bloqueio nunca para o laço.** Feature bloqueada é marcada `bloqueada` no `MAPA.md`, com o motivo, e o laço segue para a próxima. É o B5 que decide o que fazer com ela.
 
