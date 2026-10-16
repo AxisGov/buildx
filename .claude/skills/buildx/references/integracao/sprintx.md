@@ -80,14 +80,18 @@ A R8 merece nota: ela já foi escrita pensando em execução autônoma, e é o q
 | F3 plano | normal. A pergunta da R11 é respondida pelo mesmo procedimento |
 | F3.5 estimativa | **opcional.** Não há prazo a negociar; rode se for barata |
 | F4 orquestrador | normal |
-| F5 auditoria | normal, e obedecida. Reprovado três vezes: a feature vira `bloqueada` |
+| F5 auditoria | normal, e obedecida. Reprovado três vezes: o sprintx para em `orcamento_esgotado` e a feature vira `bloqueada` |
 | F6 execução | normal. O acabamento visual acontece nas tasks de interface, sobre os tokens do design system (P-6, P-7) |
 
 ## O laço F3 ↔ F5
 
 Achado alto manda voltar à F3. Sem limite, isso gira.
 
-**Limite: duas voltas.** Um plano reprovado três vezes tem problema que replanejar não resolve — normalmente o recorte da feature no B3 estava errado. Terceira reprovação: feature `bloqueada`, e o B5 classifica como `replanejamento` (que tem o próprio teto) ou `decisao_humana`.
+**Limite: duas voltas.** Um plano reprovado três vezes tem problema que replanejar não resolve — normalmente o recorte da feature no B3 estava errado.
+
+O limite é do sprintx, não da contagem do buildx: o briefing da F1 declara `max_reprovacoes_f5: 3`, `orcamento_declarado_por: buildx` e `max_replanejamentos_f6: 1` (`05-construcao.md`, passo 2), e a F1 os grava com `planejamento.sh criar <slug> 3 buildx 1`. Sem essa declaração o sprintx não tem teto, e o laço segue até `VEREDITO: SIM`.
+
+Terceira reprovação: o sprintx para em `orcamento_esgotado`, **terminal** — nenhuma volta à F3, nem por ele nem pelo buildx. A feature vira `bloqueada`, e o B5 a classifica como `decisao_humana`, **nunca** `replanejamento`: apagar o plano não tira o planejamento do estado terminal, e recortar a feature de novo ou subir o teto é decisão de quem declarou o orçamento. O mesmo vale para `replanejamento_execucao_esgotado`, quando o replanejamento da execução esgota o seu.
 
 ## Comportamento sem sprintx
 

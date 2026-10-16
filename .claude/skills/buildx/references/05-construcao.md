@@ -43,6 +43,7 @@ O briefing da feature carrega:
 | critérios de aceite de negócio | os do `PROJETO.md` que esta feature cobre |
 | premissas aplicáveis | as `PR-NN` que esta feature realiza |
 | convenções | ponteiro para `docs/stack/CONVENCOES.md` |
+| orçamento | `max_reprovacoes_f5: 3`, `orcamento_declarado_por: buildx`, `max_replanejamentos_f6: 1` — o teto do laço F3 ↔ F5 e do replanejamento da execução (`integracao/sprintx.md`); sem isso o sprintx não tem teto e o laço não para |
 
 Acrescente `origem_buildx` e `feature_id` ao frontmatter dos artefatos da feature (`references/00-schema.md`).
 
@@ -77,7 +78,7 @@ Rodam sem intervenção do buildx. Três pontos de atenção:
 
 **A F3 pode perguntar.** A regra 11 do sprintx permite uma pergunta quando a F3 encontra decisão que exigiria humano em execução. No modo autônomo essa pergunta não chega ao usuário: o buildx a responde pelo mesmo procedimento de quatro degraus do passo 3.
 
-**A F5 é auditoria de verdade.** Achado de severidade alta manda voltar à F3 — e o buildx obedece, sem atalho. A tentação de seguir com um plano que a auditoria reprovou é grande no modo autônomo, e ceder a ela é o que transforma execução autônoma em dano autônomo. Se a F3 e a F5 entrarem em laço (o replanejamento é reprovado três vezes), pare a feature, marque `bloqueada`, e deixe para o B5.
+**A F5 é auditoria de verdade.** Achado de severidade alta manda voltar à F3 — e o buildx obedece, sem atalho. A tentação de seguir com um plano que a auditoria reprovou é grande no modo autônomo, e ceder a ela é o que transforma execução autônoma em dano autônomo. Se a F3 e a F5 entrarem em laço, o teto declarado no briefing o fecha: na terceira reprovação o sprintx para em `orcamento_esgotado`, terminal. Marque a feature `bloqueada` e deixe para o B5, que a classifica como `decisao_humana` (`integracao/sprintx.md`).
 
 **A F3.5 é opcional.** A estimativa não muda nada no modo autônomo — não há prazo a negociar. Rode se for barata; pule sem cerimônia.
 
