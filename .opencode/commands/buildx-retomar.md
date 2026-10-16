@@ -22,7 +22,7 @@ Uma execução do buildx é longa e pode ser interrompida a qualquer momento. To
 
 Não recomece a feature. A máquina de estados do sprintx detecta a fase pelo disco de `docs/sprintx/features/<slug>/` — invoque a skill e ela continua de onde parou.
 
-Verifique antes: a branch da feature existe? A F1 do sprintx a abre (`feature/<slug>`, no worktree da feature); se a sessão caiu depois disso, ela está lá e não deve ser reaberta — retome de dentro do worktree.
+Verifique antes: a branch da feature existe? A F1 do sprintx a abre (`feature/<slug>`, no worktree da feature); se a sessão caiu depois disso, ela está lá e não deve ser reaberta. O sprintx retoma de dentro do worktree da feature; o `MAPA.md` continua sendo lido e gravado no checkout principal, nunca na cópia do worktree.
 
 ## 3. Confirme o modo
 
