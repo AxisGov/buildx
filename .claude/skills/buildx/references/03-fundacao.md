@@ -104,7 +104,7 @@ Depois de copiar, três ajustes — e só esses:
 |---|---|
 | nome do projeto | `package.json`, e o `<title>` em `src/app/layout.tsx` |
 | `JWT_SECRET` | gerado e gravado no `.env` local, **nunca** no `.env.example` nem em artefato |
-| primeiro commit | o template inteiro, antes de qualquer feature |
+| commit do template | o template inteiro num commit só, antes de qualquer feature — o primeiro com conteúdo; se o Passo 1 commitou vazio, vem logo depois dele |
 
 Não renomeie as pastas das três camadas nem as rotas do P-9: o
 `CONVENCOES.md` do Passo 6 as registra, e o B6 as confere pelo caminho.
