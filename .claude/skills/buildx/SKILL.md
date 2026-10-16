@@ -207,10 +207,13 @@ docs/
     RELATORIO.md      o que o usuário lê no fim
   produto/            do prodx
   stack/              do stackx
-  <slug-da-feature>/  do sprintx, uma pasta por feature do MAPA.md
+  sprintx/features/
+    <slug-da-feature>/  do sprintx, uma pasta por feature do MAPA.md (no worktree da feature)
+  entregas/
+    <slug-da-feature>/  da mergex: PR, atenção humana, pacote de QA
 ```
 
-`docs/` é sempre ancorado na raiz do repositório Git mais próxima. Em projeto novo sem `.git`, o B2 inicializa o repositório antes de qualquer coisa.
+`docs/` é sempre ancorado na raiz do repositório Git mais próxima. Em projeto novo sem `.git`, o B2 inicializa o repositório antes de qualquer coisa. `docs/projeto/` mora no checkout principal; as pastas de cada feature nascem no worktree dela (regra 21 do sprintx) e só chegam ao principal com o merge do PR.
 
 ### Frontmatter
 
