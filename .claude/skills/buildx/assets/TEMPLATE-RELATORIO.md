@@ -139,6 +139,11 @@ demonstração.
    primeiro o da predecessora. Se a branch dela não for apagada no merge, o
    GitHub não reaponta o dependente — rode `gh pr edit <n> --base <base comum>`
    antes de mergeá-lo, ou ele entra na branch da predecessora, não na base.
+   Se a predecessora entrou por squash ou rebase, antes de reapontar tire dela
+   os commits originais da dependente, de dentro do worktree dela (o git não
+   rebasea uma branch aberta noutro worktree): `git -C ../<repo>--<dependente>
+   rebase --onto <base comum> feature/<predecessora>` e `git -C
+   ../<repo>--<dependente> push --force-with-lease`.
 
 ---
 
