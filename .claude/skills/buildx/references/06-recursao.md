@@ -13,11 +13,13 @@ Colete de todas as fontes, sem filtrar nada ainda:
 | Fonte | O que colher |
 |---|---|
 | `MAPA.md` | toda feature `bloqueada`, com o motivo |
-| `docs/<slug>/00-BLOQUEIOS.md` | toda dúvida que a F6 registrou e pulou |
-| `docs/<slug>/00-AUDITORIA.md` | todo achado alto que mandou voltar à F3 |
+| `docs/sprintx/features/<slug>/00-BLOQUEIOS.md` | toda dúvida que a F6 registrou e pulou |
+| `docs/sprintx/features/<slug>/00-AUDITORIA.md` | todo achado alto que mandou voltar à F3 |
 | relatório da `mergex-check` | toda verificação que devolveu BLOQUEADO |
 | `PREMISSAS.md` | toda premissa marcada provisória |
 | `RECURSAO.md` do ciclo anterior | toda pendência que continua aberta |
+
+**Os artefatos da feature não estão no checkout principal.** A F1 do sprintx abre cada feature num worktree irmão, na branch `feature/<slug>` (regra 21), e o PR fica aberto até o merge humano, então `00-BLOQUEIOS.md` e `00-AUDITORIA.md` só existem lá. Leia cada um no worktree da feature (`git worktree list --porcelain`, a entrada com `branch refs/heads/feature/<slug>`); se o worktree já foi removido, leia os dois da branch (`git show feature/<slug>:docs/sprintx/features/<slug>/00-BLOQUEIOS.md` e o mesmo para `00-AUDITORIA.md`). Ler o caminho no checkout principal acharia nada e daria a feature por limpa. O que mora no checkout principal é o que o buildx grava: `docs/projeto/` (`MAPA.md`, `PREMISSAS.md`, `RECURSAO.md`).
 
 Consulte o `memox`, se instalado: uma pendência que já apareceu em ciclo anterior e voltou não é a mesma pendência — é sinal de que a tentativa anterior não resolveu, e repetir a mesma correção vai falhar igual.
 
@@ -40,6 +42,8 @@ A feature existe, foi planejada, e o plano é que estava errado. Costuma vir de 
 **Destino:** apague o plano da feature (`sprint-*/`, `ORQUESTRADOR.md`, `00-AUDITORIA.md`), preserve a base e as decisões da F1 e F2, e devolva a feature ao B4 — a máquina de estados do sprintx a encontra na F3.
 
 **Teto próprio:** uma feature replanejada **duas vezes** e reprovada de novo não volta uma terceira. Vira `decisao_humana`. Um plano que a auditoria reprova três vezes tem um problema que replanejar não resolve.
+
+**Nunca é `replanejamento`** a feature que o sprintx parou num estado terminal — `orcamento_esgotado` (o teto da F5 do briefing) ou `replanejamento_execucao_esgotado`. Apagar o plano não tira o planejamento dali, e a feature não voltaria à F3: é `decisao_humana` (`integracao/sprintx.md`).
 
 ### `decisao_humana` — fica para o relatório
 

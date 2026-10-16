@@ -101,7 +101,7 @@ Contrato da feature — toda feature do mapa declara, obrigatoriamente:
 | Campo | Conteúdo |
 |---|---|
 | `id` | `FT-NN` |
-| `slug` | o `<slug-da-feature>` que o sprintx vai usar em `docs/<slug>/` |
+| `slug` | o `<slug-da-feature>` que o sprintx vai usar em `docs/sprintx/features/<slug>/` |
 | `titulo` | título curto |
 | `entrega` | o que o usuário do sistema consegue fazer que não conseguia |
 | `depende_de` | `[ids]` ou `[]` |
@@ -122,16 +122,15 @@ Roteiro: `references/04-decomposicao.md`.
 O laço. Para cada feature do `MAPA.md` em ordem de dependência:
 
 ```
-mergex-abrir      → branch da feature
-sprintx F1        → base de conhecimento
+sprintx F1        → base de conhecimento; abre feature/<slug> no worktree dela
 sprintx F2        → descoberta: RESPONDIDA PELO BUILDX (ver abaixo)
 sprintx F3 → F5   → plano, orquestrador, auditoria
-sprintx F6        → execução autônoma sob TDD
+sprintx F6        → execução autônoma sob TDD; aciona o E0 da mergex, que adota a branch
 mergex-check      → portão de prontidão
 mergex-pr         → descrição, push, PR aberto
 ```
 
-**A F2 no modo autônomo.** A regra 10 do sprintx obriga a F2 a entrevistar o humano. No buildx o humano já falou — na descrição e, no modo briefing, na rodada única. Então o buildx **responde a F2 no lugar dele**, derivando cada resposta do `PROJETO.md`, do `PREMISSAS.md` e do `CONVENCOES.md`, e gravando em `00-DECISOES.md` com `respondido_por: buildx`. Nenhuma resposta é inventada: o que não estiver derivável de um desses três arquivos vira premissa nova em `PREMISSAS.md`, registrada antes de ser usada.
+**A F2 no modo autônomo.** A regra 10 do sprintx obriga a F2 a entrevistar o humano. No buildx o humano já falou — na descrição e, no modo briefing, na rodada única. Então o buildx **responde a F2 no lugar dele**, derivando cada resposta do `PROJETO.md`, do `PREMISSAS.md` e do `CONVENCOES.md`, e gravando em `00-DECISOES.md` com `respondido_por: buildx`. Nenhuma resposta é inventada: o que não estiver derivável de um desses três arquivos vira premissa nova em `PREMISSAS.md`, registrada antes de ser usada — **exceto regra de negócio**, que o buildx não decide. Regra de negócio sem resposta vai para `00-BLOQUEIOS.md` e para o `RECURSAO.md` como `decisao_humana`, e a feature segue só com a decisão mais reversível, marcada como provisória no código e na premissa, até o humano decidir (`references/05-construcao.md`, "A fronteira que a F2 não atravessa").
 
 **Bloqueio nunca para o laço.** Feature bloqueada é marcada `bloqueada` no `MAPA.md`, com o motivo, e o laço segue para a próxima. É o B5 que decide o que fazer com ela.
 
@@ -208,10 +207,13 @@ docs/
     RELATORIO.md      o que o usuário lê no fim
   produto/            do prodx
   stack/              do stackx
-  <slug-da-feature>/  do sprintx, uma pasta por feature do MAPA.md
+  sprintx/features/
+    <slug-da-feature>/  do sprintx, uma pasta por feature do MAPA.md (no worktree da feature)
+  entregas/
+    <slug-da-feature>/  da mergex: PR, atenção humana, pacote de QA
 ```
 
-`docs/` é sempre ancorado na raiz do repositório Git mais próxima. Em projeto novo sem `.git`, o B2 inicializa o repositório antes de qualquer coisa.
+`docs/` é sempre ancorado na raiz do repositório Git mais próxima. Em projeto novo sem `.git`, o B2 inicializa o repositório antes de qualquer coisa. `docs/projeto/` mora no checkout principal; as pastas de cada feature nascem no worktree dela (regra 21 do sprintx) e só chegam ao principal com o merge do PR.
 
 ### Frontmatter
 

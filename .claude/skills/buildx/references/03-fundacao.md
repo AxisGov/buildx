@@ -13,7 +13,7 @@ Se não houver `.git` no diretório de trabalho nem em nenhum ancestral, inicial
 Nunca versione: `.env`, `node_modules/`, o arquivo `.db` do SQLite, artefatos de build, o índice do memox.
 Sempre versione: `.env.example`, `.expx/expx-lock.json`, as migrations, a seed de demonstração.
 
-Commit inicial vazio ou com o esqueleto, na branch padrão. As branches de feature vêm depois, uma por feature, abertas pela `mergex-abrir` no B4.
+Commit inicial vazio ou com o esqueleto, na branch padrão. As branches de feature vêm depois, uma por feature, abertas pela F1 do sprintx no B4 (cada uma no seu worktree).
 
 ## Passo 2 — Escolher a stack
 
@@ -104,7 +104,7 @@ Depois de copiar, três ajustes — e só esses:
 |---|---|
 | nome do projeto | `package.json`, e o `<title>` em `src/app/layout.tsx` |
 | `JWT_SECRET` | gerado e gravado no `.env` local, **nunca** no `.env.example` nem em artefato |
-| primeiro commit | o template inteiro, antes de qualquer feature |
+| commit do template | o template inteiro num commit só, antes de qualquer feature — o primeiro com conteúdo; se o Passo 1 commitou vazio, vem logo depois dele |
 
 Não renomeie as pastas das três camadas nem as rotas do P-9: o
 `CONVENCOES.md` do Passo 6 as registra, e o B6 as confere pelo caminho.

@@ -9,13 +9,13 @@ O B4 é longo mas é a etapa mais simples do buildx: ele quase não decide nada.
 ## O ciclo de uma feature
 
 ```
-1. mergex-abrir      → branch da feature
-2. sprintx F1        → base de conhecimento
+1. marca a feature em_andamento no MAPA.md
+2. sprintx F1        → base de conhecimento; abre feature/<slug> e o worktree dela
 3. sprintx F2        → descoberta, RESPONDIDA PELO BUILDX
 4. sprintx F3        → plano de sprints, fases e tasks
 5. sprintx F4        → ORQUESTRADOR.md
 6. sprintx F5        → auditoria do plano
-7. sprintx F6        → execução autônoma sob TDD
+7. sprintx F6        → execução autônoma sob TDD (aciona o E0 da mergex, que adota a branch)
 8. mergex-check      → portão de prontidão
 9. mergex-pr         → descrição, push, PR aberto
 10. atualiza o MAPA.md
@@ -23,11 +23,11 @@ O B4 é longo mas é a etapa mais simples do buildx: ele quase não decide nada.
 
 Nenhuma etapa é pulada, e o sprintx nunca é invocado fora de ordem — a máquina de estados dele detecta a fase pelo disco, então basta invocar a skill e ela continua de onde parou.
 
-## Passo 1 — Abrir a branch
+## Passo 1 — Abrir a feature
 
-`mergex-abrir`, antes da primeira linha de código. Nome da branch derivado do `slug` da feature.
+Marque a feature como `em_andamento` no `MAPA.md` **agora**, não no fim. Se a sessão morrer no meio, o `/buildx-retomar` precisa saber onde estava. O `MAPA.md` mora no checkout principal, onde o buildx roda: é ali que ele é lido e gravado, sempre — nunca na cópia que o worktree da feature herda ao nascer, que fica com o status antigo e não serve de fonte.
 
-Marque a feature como `em_andamento` no `MAPA.md` **agora**, não no fim. Se a sessão morrer no meio, o `/buildx-retomar` precisa saber onde estava.
+**A branch não é do buildx.** A F1 do sprintx abre `feature/<slug>` num worktree próprio (regra 21 dele), antes da primeira linha de código, e toda a feature corre de dentro dele. O E0 da mergex (`mergex-abrir`) entra no início da F6, acionado pelo próprio sprintx, e só **adota** essa branch: ele exige o `ORQUESTRADOR.md`, que nasce na F4. Invocar `mergex-abrir` antes da F1 não abre nada — sem orquestrador, o E0 encerra dizendo que não há trabalho planejado.
 
 ## Passo 2 — A F1, com o briefing do buildx
 
@@ -43,6 +43,7 @@ O briefing da feature carrega:
 | critérios de aceite de negócio | os do `PROJETO.md` que esta feature cobre |
 | premissas aplicáveis | as `PR-NN` que esta feature realiza |
 | convenções | ponteiro para `docs/stack/CONVENCOES.md` |
+| orçamento | `max_reprovacoes_f5: 3`, `orcamento_declarado_por: buildx`, `max_replanejamentos_f6: 1` — o teto do laço F3 ↔ F5 e do replanejamento da execução (`integracao/sprintx.md`); sem isso o sprintx não tem teto e o laço não para |
 
 Acrescente `origem_buildx` e `feature_id` ao frontmatter dos artefatos da feature (`references/00-schema.md`).
 
@@ -77,7 +78,7 @@ Rodam sem intervenção do buildx. Três pontos de atenção:
 
 **A F3 pode perguntar.** A regra 11 do sprintx permite uma pergunta quando a F3 encontra decisão que exigiria humano em execução. No modo autônomo essa pergunta não chega ao usuário: o buildx a responde pelo mesmo procedimento de quatro degraus do passo 3.
 
-**A F5 é auditoria de verdade.** Achado de severidade alta manda voltar à F3 — e o buildx obedece, sem atalho. A tentação de seguir com um plano que a auditoria reprovou é grande no modo autônomo, e ceder a ela é o que transforma execução autônoma em dano autônomo. Se a F3 e a F5 entrarem em laço (o replanejamento é reprovado três vezes), pare a feature, marque `bloqueada`, e deixe para o B5.
+**A F5 é auditoria de verdade.** Achado de severidade alta manda voltar à F3 — e o buildx obedece, sem atalho. A tentação de seguir com um plano que a auditoria reprovou é grande no modo autônomo, e ceder a ela é o que transforma execução autônoma em dano autônomo. Se a F3 e a F5 entrarem em laço, o teto declarado no briefing o fecha: na terceira reprovação o sprintx para em `orcamento_esgotado`, terminal. Marque a feature `bloqueada` e deixe para o B5, que a classifica como `decisao_humana` (`integracao/sprintx.md`).
 
 **A F3.5 é opcional.** A estimativa não muda nada no modo autônomo — não há prazo a negociar. Rode se for barata; pule sem cerimônia.
 

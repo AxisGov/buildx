@@ -1,12 +1,12 @@
 # Integração — mergex
 
-A mergex leva o trabalho implementado até o repositório e até o revisor humano. O buildx a invoca três vezes por feature, dentro do laço do B4 — e há uma quarta etapa que ele **nunca** invoca.
+A mergex leva o trabalho implementado até o repositório e até o revisor humano. O buildx a invoca três vezes por feature, dentro do laço do B4; o E0 roda pelo sprintx, e há uma etapa que ninguém invoca.
 
 ## Onde a mergex entra no laço
 
 | Etapa | Quando | O que faz |
 |---|---|---|
-| `mergex-abrir` (E0) | antes da F1 | abre a branch da feature |
+| `mergex-abrir` (E0) | início da F6, **acionado pelo sprintx** — o buildx não invoca | adota a `feature/<slug>` que a F1 abriu; exige o `ORQUESTRADOR.md` da F4, então antes dela não abre nada |
 | `mergex-check` (E2) | depois da F6 | portão de prontidão, dez verificações |
 | `mergex-pr` (E4/E6/E7) | com o portão PRONTO | descrição, push, PR aberto |
 | `mergex-qa` (E5) | depois do PR | pacote de teste manual |
@@ -55,6 +55,6 @@ Se um projeto do buildx um dia acumular legado, o legadox entra normalmente, e a
 
 ## Comportamento sem mergex
 
-O buildx **não roda**. Sem `mergex-abrir` não há branch por feature — todo o trabalho cairia na mesma, e o laço do B4 produziria um diff único ingovernável. Sem `mergex-check` não há portão, e sem `mergex-pr` a entrega não chega a lugar nenhum.
+O buildx **não roda**. Sem `mergex-check` não há portão, e sem `mergex-pr` a entrega não chega a lugar nenhum: o laço do B4 deixaria uma branch por feature (a F1 do sprintx as abre de qualquer jeito) que nunca vira PR.
 
 Diga que falta e como instalar (`npx expxdev init`), e pare.
