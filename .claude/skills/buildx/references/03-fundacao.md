@@ -13,7 +13,7 @@ Se não houver `.git` no diretório de trabalho nem em nenhum ancestral, inicial
 Nunca versione: `.env`, `node_modules/`, o arquivo `.db` do SQLite, artefatos de build, o índice do memox.
 Sempre versione: `.env.example`, `.expx/expx-lock.json`, as migrations, a seed de demonstração.
 
-Commit inicial vazio ou com o esqueleto, na branch padrão. As branches de feature vêm depois, uma por feature, abertas pela `mergex-abrir` no B4.
+Commit inicial vazio ou com o esqueleto, na branch padrão. As branches de feature vêm depois, uma por feature, abertas pela F1 do sprintx no B4 (cada uma no seu worktree).
 
 ## Passo 2 — Escolher a stack
 

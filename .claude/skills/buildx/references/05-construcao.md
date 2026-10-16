@@ -9,13 +9,13 @@ O B4 é longo mas é a etapa mais simples do buildx: ele quase não decide nada.
 ## O ciclo de uma feature
 
 ```
-1. mergex-abrir      → branch da feature
-2. sprintx F1        → base de conhecimento
+1. marca a feature em_andamento no MAPA.md
+2. sprintx F1        → base de conhecimento; abre feature/<slug> e o worktree dela
 3. sprintx F2        → descoberta, RESPONDIDA PELO BUILDX
 4. sprintx F3        → plano de sprints, fases e tasks
 5. sprintx F4        → ORQUESTRADOR.md
 6. sprintx F5        → auditoria do plano
-7. sprintx F6        → execução autônoma sob TDD
+7. sprintx F6        → execução autônoma sob TDD (aciona o E0 da mergex, que adota a branch)
 8. mergex-check      → portão de prontidão
 9. mergex-pr         → descrição, push, PR aberto
 10. atualiza o MAPA.md
@@ -23,11 +23,11 @@ O B4 é longo mas é a etapa mais simples do buildx: ele quase não decide nada.
 
 Nenhuma etapa é pulada, e o sprintx nunca é invocado fora de ordem — a máquina de estados dele detecta a fase pelo disco, então basta invocar a skill e ela continua de onde parou.
 
-## Passo 1 — Abrir a branch
-
-`mergex-abrir`, antes da primeira linha de código. Nome da branch derivado do `slug` da feature.
+## Passo 1 — Abrir a feature
 
 Marque a feature como `em_andamento` no `MAPA.md` **agora**, não no fim. Se a sessão morrer no meio, o `/buildx-retomar` precisa saber onde estava.
+
+**A branch não é do buildx.** A F1 do sprintx abre `feature/<slug>` num worktree próprio (regra 21 dele), antes da primeira linha de código, e toda a feature corre de dentro dele. O E0 da mergex (`mergex-abrir`) entra no início da F6, acionado pelo próprio sprintx, e só **adota** essa branch: ele exige o `ORQUESTRADOR.md`, que nasce na F4. Invocar `mergex-abrir` antes da F1 não abre nada — sem orquestrador, o E0 encerra dizendo que não há trabalho planejado.
 
 ## Passo 2 — A F1, com o briefing do buildx
 

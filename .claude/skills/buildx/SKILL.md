@@ -122,11 +122,10 @@ Roteiro: `references/04-decomposicao.md`.
 O laço. Para cada feature do `MAPA.md` em ordem de dependência:
 
 ```
-mergex-abrir      → branch da feature
-sprintx F1        → base de conhecimento
+sprintx F1        → base de conhecimento; abre feature/<slug> no worktree dela
 sprintx F2        → descoberta: RESPONDIDA PELO BUILDX (ver abaixo)
 sprintx F3 → F5   → plano, orquestrador, auditoria
-sprintx F6        → execução autônoma sob TDD
+sprintx F6        → execução autônoma sob TDD; aciona o E0 da mergex, que adota a branch
 mergex-check      → portão de prontidão
 mergex-pr         → descrição, push, PR aberto
 ```
