@@ -252,3 +252,15 @@ Há um terceiro efeito, mais silencioso: um esqueleto gerado tem, no melhor caso
 **O que a decisão obriga.** Um template distribuído a todo projeto novo é uma dívida distribuída se ninguém o mantiver. Daí o `.github/workflows/template.yml`: instala, migra, semeia, linta, checa tipos, builda, testa e audita dependências a cada mudança e toda segunda-feira, falhando em vulnerabilidade `high` ou acima. Defeito no template se corrige na skill, com o CI, e se recopia — nunca só no projeto que o encontrou.
 
 **O que invalida:** o usuário pedir stack que o template não atende (outra linguagem, outro framework, outro banco) — aí o B2 volta a montar o esqueleto à mão e registra a premissa; o projeto não ter interface web.
+
+---
+
+## D-19 — Feature dependente se encadeia na branch da predecessora
+
+**Decisão:** a feature cuja predecessora ainda não foi integrada nasce da branch dela — o briefing da F1 leva `base: feature/<predecessora>`, a sprintx abre o worktree ali e repassa a base ao E0 da mergex, e o PR sai empilhado no da predecessora. Predecessoras em cadeias separadas, nenhuma contendo a outra, bloqueiam a feature como `decisao_humana`. O stackx e o B6 leem uma integração local descartável: um worktree da base comum com as branches entregues mergeadas na ordem do `MAPA.md`, sem push.
+
+**Alternativa descartada:** uma branch de integração do projeto, mantida pelo buildx, onde cada feature entregue seria integrada e de onde as novas nasceriam.
+
+**Por quê:** o merge é humano (D-03) e os PRs ficam abertos, então a base comum nunca tem o código das features entregues; uma feature dependente nascida dali constrói sobre o que não existe. Encadear resolve sem que o buildx integre nada: cada PR mostra só o próprio diff, e a ordem de merge é a do mapa. A branch de integração faria o buildx fazer merge — exatamente a fronteira que ele não atravessa — e ainda deixaria ao humano uma segunda integração no fim. Escolha do usuário, a partir do achado do CodeRabbit na AxisGov/login#2.
+
+**O que invalida:** o humano integrar cada PR antes da feature seguinte começar — aí nenhuma predecessora fica pendente, e a base comum basta.

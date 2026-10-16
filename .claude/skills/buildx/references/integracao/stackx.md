@@ -46,7 +46,7 @@ O momento em que o projeto deixa de acreditar no buildx e passa a acreditar em s
 
 Depois da primeira feature entregue (B4, passo 7), existe código real. Aí:
 
-1. rode o `stackx-detectar` normal — agora ele tem o que varrer
+1. rode o `stackx-detectar` normal — agora ele tem o que varrer. Rode-o no worktree da feature entregue (que já contém as predecessoras encadeadas); a partir da segunda cadeia independente, na integração local do B6 (`references/07-validacao.md`, passo 3), que junta tudo o que foi entregue
 2. compare com o que o B2 decidiu
 3. **regra confirmada pelo código** → converta `decidido_pelo_buildx` para a evidência real (arquivo e linha)
 4. **regra contradita pelo código** → achado. Ou o código se ajusta à convenção, ou a convenção estava errada e é corrigida

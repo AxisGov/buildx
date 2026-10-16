@@ -10,7 +10,7 @@ O B4 é longo mas é a etapa mais simples do buildx: ele quase não decide nada.
 
 ```
 1. marca a feature em_andamento no MAPA.md
-2. sprintx F1        → base de conhecimento; abre feature/<slug> e o worktree dela
+2. sprintx F1        → base de conhecimento; abre feature/<slug> e o worktree dela (na base encadeada, se houver)
 3. sprintx F2        → descoberta, RESPONDIDA PELO BUILDX
 4. sprintx F3        → plano de sprints, fases e tasks
 5. sprintx F4        → ORQUESTRADOR.md
@@ -29,6 +29,14 @@ Marque a feature como `em_andamento` no `MAPA.md` **agora**, não no fim. Se a s
 
 **A branch não é do buildx.** A F1 do sprintx abre `feature/<slug>` num worktree próprio (regra 21 dele), antes da primeira linha de código, e toda a feature corre de dentro dele. O E0 da mergex (`mergex-abrir`) entra no início da F6, acionado pelo próprio sprintx, e só **adota** essa branch: ele exige o `ORQUESTRADOR.md`, que nasce na F4. Invocar `mergex-abrir` antes da F1 não abre nada — sem orquestrador, o E0 encerra dizendo que não há trabalho planejado.
 
+**Feature dependente se encadeia.** O merge é humano e os PRs ficam abertos, então a feature cujo `depende_de` ainda não foi integrado não pode nascer da base comum: nasceria sem o código de que depende. Ela nasce da branch da predecessora — o briefing leva `base: feature/<predecessora>` —, e o PR sai empilhado no dela, mostrando só o próprio diff; o merge segue a ordem do `MAPA.md`. Decida pela lista de predecessoras **ainda não integradas** na base comum (`git merge-base --is-ancestor feature/<p> <base>` diz se já entrou):
+
+| Predecessoras não integradas | Base |
+|---|---|
+| nenhuma | a comum — o briefing não leva `base` |
+| uma, ou várias numa só cadeia (cada uma contém a anterior) | a branch da última da cadeia |
+| várias em cadeias separadas | nenhuma serve: marque a feature `bloqueada` com o motivo "depende de PRs paralelos não integrados", e o B5 a trata como `decisao_humana` — integrar uma das cadeias é merge, e merge é do humano |
+
 ## Passo 2 — A F1, com o briefing do buildx
 
 A F1 do sprintx monta a base de conhecimento da feature. Ela recebe do buildx um briefing por feature, montado a partir do `MAPA.md`, do `PROJETO.md` e do `PREMISSAS.md` — o mesmo papel que o `BRIEFING.md` do prodx cumpre num pedido isolado.
@@ -43,6 +51,7 @@ O briefing da feature carrega:
 | critérios de aceite de negócio | os do `PROJETO.md` que esta feature cobre |
 | premissas aplicáveis | as `PR-NN` que esta feature realiza |
 | convenções | ponteiro para `docs/stack/CONVENCOES.md` |
+| base | `feature/<predecessora>` quando a feature se encadeia (passo 1); ausente quando nasce da base comum. A F1 abre o worktree sobre ela e a F6 a repassa ao E0 da mergex, que mede e abre o PR contra ela |
 | orçamento | `max_reprovacoes_f5: 3`, `orcamento_declarado_por: buildx`, `max_replanejamentos_f6: 1` — o teto do laço F3 ↔ F5 e do replanejamento da execução (`integracao/sprintx.md`); sem isso o sprintx não tem teto e o laço não para |
 
 Acrescente `origem_buildx` e `feature_id` ao frontmatter dos artefatos da feature (`references/00-schema.md`).

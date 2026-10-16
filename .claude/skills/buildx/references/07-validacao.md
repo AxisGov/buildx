@@ -50,7 +50,7 @@ Para cada linha, o buildx procura a evidência e registra uma de quatro conclus�
 
 O que o usuário vai fazer no primeiro minuto, e que nenhum artefato prova:
 
-1. numa cópia limpa: instalar, migrar, semear, subir
+1. numa cópia limpa da **integração local**: instalar, migrar, semear, subir. Com os PRs abertos, o sistema inteiro não está em nenhuma branch — cada feature está na sua, e as encadeadas empilhadas. Monte-o num worktree descartável a partir da base comum, fazendo merge de cada `feature/<slug>` entregue na ordem do `MAPA.md` (`git worktree add --detach ../<repo>--integracao <base>` e `git merge --no-edit feature/<slug>` uma a uma), sem push e sem commit fora dele; conflito é achado `nao_atendido`. Remova o worktree ao fim
 2. entrar com o usuário de demonstração (P-5), com as credenciais que o relatório vai documentar
 3. **cair no painel inicial**, com título e subtítulo próprios (P-9, E-1)
 4. **cadastrar um segundo usuário** pela área de Configurações → Usuários, e entrar com ele (P-9, E-2)
