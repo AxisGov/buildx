@@ -28,7 +28,7 @@ Conferência do construído contra o `PROJETO.md`. **Confere, não conserta.**
 
 ## O sistema de pé
 
-<A verificação que nenhum artefato prova. Numa cópia limpa:>
+<A verificação que nenhum artefato prova. Numa cópia limpa da integração local — as branches entregues mergeadas na ordem do MAPA.md, num worktree descartável (`references/07-validacao.md`, passo 3):>
 
 | Verificação | Resultado |
 |---|---|

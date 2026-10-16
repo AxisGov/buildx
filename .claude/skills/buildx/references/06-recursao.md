@@ -43,7 +43,7 @@ A feature existe, foi planejada, e o plano é que estava errado. Costuma vir de 
 
 **Teto próprio:** uma feature replanejada **duas vezes** e reprovada de novo não volta uma terceira. Vira `decisao_humana`. Um plano que a auditoria reprova três vezes tem um problema que replanejar não resolve.
 
-**Nunca é `replanejamento`** a feature que o sprintx parou num estado terminal — `orcamento_esgotado` (o teto da F5 do briefing) ou `replanejamento_execucao_esgotado`. Apagar o plano não tira o planejamento dali, e a feature não voltaria à F3: é `decisao_humana` (`integracao/sprintx.md`).
+**Nunca é `replanejamento`** a feature que o sprintx parou num estado terminal — `orcamento_esgotado` (o teto da F5 do briefing), `replanejamento_execucao_esgotado` ou `replanejamento_execucao_recusado` (o retorno da F6 que não pôde abrir). Apagar o plano não tira o planejamento dali, e a feature não voltaria à F3: é `decisao_humana` (`integracao/sprintx.md`).
 
 ### `decisao_humana` — fica para o relatório
 
