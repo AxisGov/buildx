@@ -264,3 +264,27 @@ Há um terceiro efeito, mais silencioso: um esqueleto gerado tem, no melhor caso
 **Por quê:** o merge é humano (D-03) e os PRs ficam abertos, então a base comum nunca tem o código das features entregues; uma feature dependente nascida dali constrói sobre o que não existe. Encadear resolve sem que o buildx integre nada: cada PR mostra só o próprio diff, e a ordem de merge é a do mapa. A branch de integração faria o buildx fazer merge — exatamente a fronteira que ele não atravessa — e ainda deixaria ao humano uma segunda integração no fim. Escolha do usuário, a partir do achado do CodeRabbit na AxisGov/login#2.
 
 **O que invalida:** o humano integrar cada PR antes da feature seguinte começar — aí nenhuma predecessora fica pendente, e a base comum basta.
+
+---
+
+## D-20 — A F2 autônoma responde dos três arquivos, conferida contra a `base/` da F1
+
+**Decisão:** as fontes das respostas continuam sendo o `PROJETO.md`, o `PREMISSAS.md` e o `CONVENCOES.md`, e o degrau 4 continua criando premissa. Antes dos degraus, o buildx relê a `base/` que a F1 gravou: cada lacuna de `base/00-LACUNAS.md` vira pergunta, a justificativa cita o arquivo da base que a resposta respeita, e resposta que contradiz a base não vale — a contradição vai para `00-BLOQUEIOS.md` e a pergunta desce como não derivável.
+
+**Alternativa descartada:** acrescentar a `base/` como quarto degrau, uma fonte de respostas ao lado dos três arquivos.
+
+**Por quê:** a `base/` registra o que existe no repositório, não o que o usuário quis; usá-la como fonte de decisão faria o código existente decidir pelo usuário. Ignorá-la, como a regra fazia, deixava a F2 decidir contra fatos já ingeridos — e o próprio sprintx manda a F2 reler a base, transformar lacunas em perguntas e apontar resposta que a contradiz. Achado do CodeAnt na AxisGov/conselhos-municipais#204 (SKILL.md:133).
+
+**O que invalida:** a F1 passar a gravar decisões, e não só fatos, na `base/`.
+
+---
+
+## D-21 — PR não aberto pelo E7 não é entrega
+
+**Decisão:** a feature só fica `entregue` com `pr_url` preenchido no `ENTREGA.md`. Quando o E7 termina sem PR, a feature fica `bloqueada` com o motivo literal do E7: sem ferramenta, sem autenticação ou serviço não suportado é `recurso_externo` (abrir o PR à mão com o `PR.md`, ou autenticar e rodar o `mergex-pr` de novo); PR acima do limite do fatiamento é `decisao_humana` — replanejar dentro do mesmo recorte daria o mesmo PR, e dividir código pronto em PRs ou declarar a exceção mecânica é do desenvolvedor; PR não medido o B5 classifica pelo erro.
+
+**Alternativa descartada:** aceitar o desfecho como a mergex o declara — sucesso — e marcar `entregue`, deixando o "abra à mão" para o relatório final.
+
+**Por quê:** para a mergex, PR não aberto é sucesso porque há um desenvolvedor lendo o relato e abrindo o PR. No modo autônomo ninguém lê até o fim, e o buildx promete PRs abertos, verdes e descritos; uma feature `entregue` sem PR passaria pelo B6 como pronta, e as dependentes se empilhariam numa branch que revisor nenhum vê. Achado do CodeAnt na AxisGov/conselhos-municipais#204 (integracao/mergex.md:11).
+
+**O que invalida:** a mergex passar a tratar PR não aberto como falha, ou o buildx ganhar outro caminho de entrega que não seja PR.

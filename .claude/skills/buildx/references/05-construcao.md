@@ -29,7 +29,7 @@ Marque a feature como `em_andamento` no `MAPA.md` **agora**, não no fim. Se a s
 
 **A branch não é do buildx.** A F1 do sprintx abre `feature/<slug>` num worktree próprio (regra 21 dele), antes da primeira linha de código, e toda a feature corre de dentro dele. O E0 da mergex (`mergex-abrir`) entra no início da F6, acionado pelo próprio sprintx, e só **adota** essa branch: ele exige o `ORQUESTRADOR.md`, que nasce na F4. Invocar `mergex-abrir` antes da F1 não abre nada — sem orquestrador, o E0 encerra dizendo que não há trabalho planejado.
 
-**Feature dependente se encadeia.** O merge é humano e os PRs ficam abertos, então a feature cujo `depende_de` ainda não foi integrado não pode nascer da base comum: nasceria sem o código de que depende. Ela nasce da branch da predecessora — o briefing leva `base: feature/<predecessora>` —, e o PR sai empilhado no dela, mostrando só o próprio diff; o merge segue a ordem do `MAPA.md`. Decida pelas predecessoras **ainda não integradas** na base comum. Integrada é a que tem o PR mergeado (`gh pr view feature/<p> --json state` → `MERGED`), o que vale também para squash e rebase; sem acesso ao serviço, `git merge-base --is-ancestor feature/<p> <base>`, que só reconhece merge comum — na dúvida, trate como não integrada. **Antes de decidir, atualize a base comum** (`git fetch origin +refs/heads/<base>:refs/remotes/origin/<base>`): o merge da predecessora acontece no serviço, e a ref local da base fica atrás dele. O refspec vai explícito porque `git fetch origin <base>` sozinho garante só o `FETCH_HEAD`; num remoto com refspec estreito, `origin/<base>` continuaria velha. Quando alguma predecessora já foi integrada e a feature nasce da base comum, o briefing leva `base: origin/<base>`, a ref recém-buscada — nunca a local, que criaria a feature sem o código integrado de que ela depende:
+**Feature dependente se encadeia.** O merge é humano e os PRs ficam abertos, então a feature cujo `depende_de` ainda não foi integrado não pode nascer da base comum: nasceria sem o código de que depende. Ela nasce da branch da predecessora — o briefing leva `base: feature/<predecessora>` —, e o PR sai empilhado no dela, mostrando só o próprio diff; o merge segue a ordem do `MAPA.md`. Decida pelas predecessoras **ainda não integradas** na base comum. Integrada é a que tem o PR mergeado (`gh pr view feature/<p> --json state` → `MERGED`), o que vale também para squash e rebase; sem acesso ao serviço, `git merge-base --is-ancestor feature/<p> <base>`, que só reconhece merge comum — na dúvida, trate como não integrada. O `pr_url` no `ENTREGA.md` só prova que o PR foi aberto, não que continua: predecessora `entregue` com o PR fechado sem merge (`state` → `CLOSED`) já não está entregue — volte-a a `bloqueada` no `MAPA.md` com o motivo "PR fechado sem merge", pendência `decisao_humana` (alguém o fechou), e trate-a na tabela abaixo como não `entregue`. **Antes de decidir, atualize a base comum** (`git fetch origin +refs/heads/<base>:refs/remotes/origin/<base>`): o merge da predecessora acontece no serviço, e a ref local da base fica atrás dele. O refspec vai explícito porque `git fetch origin <base>` sozinho garante só o `FETCH_HEAD`; num remoto com refspec estreito, `origin/<base>` continuaria velha. Quando alguma predecessora já foi integrada e a feature nasce da base comum, o briefing leva `base: origin/<base>`, a ref recém-buscada — nunca a local, que criaria a feature sem o código integrado de que ela depende:
 
 | Predecessoras não integradas | Base |
 |---|---|
@@ -66,6 +66,12 @@ Acrescente `origem_buildx` e `feature_id` ao frontmatter dos artefatos da featur
 **O ponto mais delicado do método, e a violação mais séria que o buildx comete.**
 
 A regra 10 do sprintx obriga a F2 a entrevistar o humano em blocos de até cinco perguntas, esperando resposta. No buildx o humano já falou — na descrição e, no modo briefing, na rodada única. Então o buildx **responde no lugar dele**.
+
+**Antes dos degraus, a base da F1.** A F1 gravou em `base/` o que o repositório já tem — código, esquema, o template do B2 —, com a fonte de cada fato, e em `base/00-LACUNAS.md` o que procurou e não achou. A base não decide nada: é fato, não escolha. Mas é contra ela que cada resposta é conferida:
+
+- releia `base/00-INDICE.md` e `base/00-LACUNAS.md` antes de responder; cada lacuna vira pergunta da F2, como no sprintx, e desce os degraus como as outras;
+- a justificativa cita o arquivo da `base/` que a resposta respeita, quando houver um;
+- resposta que contradiz a base — que supõe do repositório o contrário do que ela registra — não vale, mesmo que um dos três arquivos a sustente: o arquivo diz o que se queria, a base diz o que existe. Decidir mudar o que existe não é contradizer; supor que não existe, é. Registre a contradição em `00-BLOQUEIOS.md`, citando o arquivo da base e a fonte contrariada, e trate a pergunta como não derivável — degrau 4, ou a fronteira abaixo, se for regra de negócio.
 
 Como responder, na ordem, sem pular degrau:
 
@@ -114,13 +120,15 @@ Toda tela entregue tem as duas variantes de tema, os três estados obrigatórios
 
 Devolveu **PRONTO**: `mergex-pr` monta a descrição, sobe a branch e abre o PR. A descrição referencia o `projeto_id` e o `FT-NN`.
 
+O E7 pode terminar sem PR — sem `gh`/`glab`, sem autenticação, ou com o PR reprovado na medição do fatiamento — e a mergex relata isso como sucesso dela. Para o buildx não é entrega: confira o `pr_url` no `ENTREGA.md` e, vazio ou `null`, a feature fica `bloqueada` com o motivo do E7 (`integracao/mergex.md`, "Quando o E7 não abre o PR").
+
 `mergex-qa` gera o pacote de teste manual. Vale a pena mesmo no modo autônomo: é o que permite a uma pessoa validar a feature sem ler código, e o usuário de demonstração (P-5) é o ambiente desse roteiro.
 
 **O merge não acontece.** O buildx nunca invoca `mergex-revisar`, nunca oferece, nunca sugere no fim. Integrar código é decisão humana e essa é a última rede antes de produção. A entrega do buildx é um conjunto de PRs abertos, verdes e descritos.
 
 ## Passo 7 — Fechar a feature
 
-Atualize o `MAPA.md`: `status` para `entregue` ou `bloqueada`, e os contadores do frontmatter.
+Atualize o `MAPA.md`: `status` para `entregue` ou `bloqueada`, e os contadores do frontmatter. `entregue` exige `pr_url` preenchido no `ENTREGA.md`; sem ele, a feature é `bloqueada`.
 
 **Depois da primeira feature entregue**, rode a revisão de convenções do B2: `stackx-detectar` agora tem código real para varrer. Converta cada regra de `decidido_pelo_buildx` para a evidência encontrada; regra contradita pelo código vira achado a resolver. É quando o projeto passa a acreditar em si mesmo em vez de no buildx.
 

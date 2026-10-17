@@ -49,6 +49,8 @@ Então o buildx responde. O procedimento tem quatro degraus, na ordem, sem pular
 
 O degrau 4 é o que separa decisão auditável de invenção. Nunca responda com algo que não esteja escrito em um dos três — se não estiver, escreva antes.
 
+Os degraus valem sobre o que a F1 já ingeriu. Antes deles, releia `base/00-INDICE.md` e `base/00-LACUNAS.md`: cada lacuna vira pergunta, e cada resposta é conferida contra os fatos da `base/`. Resposta que contradiz a base não vale, mesmo sustentada por um dos três arquivos: a contradição vai para `00-BLOQUEIOS.md` e a pergunta desce como não derivável (`references/05-construcao.md`, passo 3).
+
 Grave em `00-DECISOES.md` com `respondido_por: buildx` e a fonte de cada resposta. O arquivo continua sendo o registro de decisões da feature; muda apenas quem decidiu, e isso fica à vista.
 
 ### A fronteira que a F2 não atravessa
