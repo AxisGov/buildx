@@ -8,7 +8,7 @@ A mergex leva o trabalho implementado até o repositório e até o revisor human
 |---|---|---|
 | `mergex-abrir` (E0) | início da F6, **acionado pelo sprintx** — o buildx não invoca | adota a `feature/<slug>` que a F1 abriu; exige o `ORQUESTRADOR.md` da F4, então antes dela não abre nada |
 | `mergex-check` (E2) | depois da F6 | portão de prontidão, dez verificações |
-| `mergex-pr` (E4/E6/E7) | com o portão PRONTO | descrição, push, PR aberto |
+| `mergex-pr` (E4/E6/E7) | com o portão PRONTO | descrição, push, PR aberto — ou "PR não aberto", que não é entrega (abaixo) |
 | `mergex-qa` (E5) | depois do PR | pacote de teste manual |
 | `mergex-revisar` | **nunca** | integrar código é decisão humana |
 
@@ -36,6 +36,18 @@ Duas verificações merecem nota:
 
 - **segredos no diff** — no modo autônomo é a última barreira antes de um segredo real ir para o repositório. Bloqueio absoluto, sem discussão, sem exceção.
 - **arquivos fora do escopo** — pega feature que invadiu o território de outra, que costuma ser sintoma de recorte errado no B3. Vale como sinal para o B5.
+
+## Quando o E7 não abre o PR
+
+O E7 tem dois desfechos, e para a mergex os dois são sucesso. Sem `gh`/`glab`, sem autenticação ou com serviço sem ferramenta conhecida, ele empurra a branch, deixa o `PR.md` pronto e relata `mergex E7 — pull request não aberto automaticamente`, com o `Motivo:`; o `ENTREGA.md` fica com `pr_url: null` e `pr_estado: null`. Pela medição do `expx-fatiamento` (PR acima do limite ou não medido) ele também não abre, e o `pr_url` fica vazio do mesmo jeito.
+
+Para o buildx, **sem PR não há entrega**. O critério é o `ENTREGA.md`: `pr_url` preenchido é PR aberto; `pr_url` vazio ou `null` é PR não aberto, qualquer que seja o motivo — nunca `entregue` no `MAPA.md`, por mais verde que esteja a suíte. A feature fica `bloqueada`, com o motivo literal do E7, e a pendência vai para o `RECURSAO.md`:
+
+- **ferramenta ausente, não autenticada ou serviço não suportado** → `recurso_externo`. O que providenciar: abrir à mão o PR da branch para a base que o E7 indicou, colando o `PR.md`, ou instalar e autenticar a ferramenta e rodar o `mergex-pr` de novo. O que destrava: a feature passa a `entregue` quando o `ENTREGA.md` tiver `pr_url`. O buildx nunca roda `gh auth login` nem pede credencial;
+- **PR acima do limite** → `replanejamento`: a feature é grande demais para uma revisão, e dividi-la é trabalho do plano;
+- **PR não medido** → o B5 classifica pelo erro literal registrado.
+
+Feature que depende dela segue a regra da predecessora não entregue (`references/05-construcao.md`, passo 1): fica `bloqueada`, e não se empilha sobre uma branch que nenhum PR mostra ao revisor.
 
 ## O pacote de QA
 

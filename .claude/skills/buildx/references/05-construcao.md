@@ -120,13 +120,15 @@ Toda tela entregue tem as duas variantes de tema, os três estados obrigatórios
 
 Devolveu **PRONTO**: `mergex-pr` monta a descrição, sobe a branch e abre o PR. A descrição referencia o `projeto_id` e o `FT-NN`.
 
+O E7 pode terminar sem PR — sem `gh`/`glab`, sem autenticação, ou com o PR reprovado na medição do fatiamento — e a mergex relata isso como sucesso dela. Para o buildx não é entrega: confira o `pr_url` no `ENTREGA.md` e, vazio ou `null`, a feature fica `bloqueada` com o motivo do E7 (`integracao/mergex.md`, "Quando o E7 não abre o PR").
+
 `mergex-qa` gera o pacote de teste manual. Vale a pena mesmo no modo autônomo: é o que permite a uma pessoa validar a feature sem ler código, e o usuário de demonstração (P-5) é o ambiente desse roteiro.
 
 **O merge não acontece.** O buildx nunca invoca `mergex-revisar`, nunca oferece, nunca sugere no fim. Integrar código é decisão humana e essa é a última rede antes de produção. A entrega do buildx é um conjunto de PRs abertos, verdes e descritos.
 
 ## Passo 7 — Fechar a feature
 
-Atualize o `MAPA.md`: `status` para `entregue` ou `bloqueada`, e os contadores do frontmatter.
+Atualize o `MAPA.md`: `status` para `entregue` ou `bloqueada`, e os contadores do frontmatter. `entregue` exige `pr_url` preenchido no `ENTREGA.md`; sem ele, a feature é `bloqueada`.
 
 **Depois da primeira feature entregue**, rode a revisão de convenções do B2: `stackx-detectar` agora tem código real para varrer. Converta cada regra de `decidido_pelo_buildx` para a evidência encontrada; regra contradita pelo código vira achado a resolver. É quando o projeto passa a acreditar em si mesmo em vez de no buildx.
 

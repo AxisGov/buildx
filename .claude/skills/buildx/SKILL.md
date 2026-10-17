@@ -127,7 +127,7 @@ sprintx F2        → descoberta: RESPONDIDA PELO BUILDX (ver abaixo)
 sprintx F3 → F5   → plano, orquestrador, auditoria
 sprintx F6        → execução autônoma sob TDD; aciona o E0 da mergex, que adota a branch
 mergex-check      → portão de prontidão
-mergex-pr         → descrição, push, PR aberto
+mergex-pr         → descrição, push, PR aberto (E7 sem PR: a feature fica bloqueada, nunca entregue)
 ```
 
 **A F2 no modo autônomo.** A regra 10 do sprintx obriga a F2 a entrevistar o humano. No buildx o humano já falou — na descrição e, no modo briefing, na rodada única. Então o buildx **responde a F2 no lugar dele**, derivando cada resposta do `PROJETO.md`, do `PREMISSAS.md` e do `CONVENCOES.md`, conferida contra os fatos que a F1 gravou em `base/` — cada lacuna de `base/00-LACUNAS.md` vira pergunta, e resposta que contradiz a base não vale —, e gravando em `00-DECISOES.md` com `respondido_por: buildx`. Nenhuma resposta é inventada: o que não estiver derivável de um desses três arquivos vira premissa nova em `PREMISSAS.md`, registrada antes de ser usada — **exceto regra de negócio**, que o buildx não decide. Regra de negócio sem resposta vai para `00-BLOQUEIOS.md` e para o `RECURSAO.md` como `decisao_humana`, e a feature segue só com a decisão mais reversível, marcada como provisória no código e na premissa, até o humano decidir (`references/05-construcao.md`, "A fronteira que a F2 não atravessa").

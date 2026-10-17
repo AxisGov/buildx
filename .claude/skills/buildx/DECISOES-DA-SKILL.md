@@ -276,3 +276,15 @@ Há um terceiro efeito, mais silencioso: um esqueleto gerado tem, no melhor caso
 **Por quê:** a `base/` registra o que existe no repositório, não o que o usuário quis; usá-la como fonte de decisão faria o código existente decidir pelo usuário. Ignorá-la, como a regra fazia, deixava a F2 decidir contra fatos já ingeridos — e o próprio sprintx manda a F2 reler a base, transformar lacunas em perguntas e apontar resposta que a contradiz. Achado do CodeAnt na AxisGov/conselhos-municipais#204 (SKILL.md:133).
 
 **O que invalida:** a F1 passar a gravar decisões, e não só fatos, na `base/`.
+
+---
+
+## D-21 — PR não aberto pelo E7 não é entrega
+
+**Decisão:** a feature só fica `entregue` com `pr_url` preenchido no `ENTREGA.md`. Quando o E7 termina sem PR, a feature fica `bloqueada` com o motivo literal do E7: sem ferramenta, sem autenticação ou serviço não suportado é `recurso_externo` (abrir o PR à mão com o `PR.md`, ou autenticar e rodar o `mergex-pr` de novo); PR acima do limite do fatiamento é `replanejamento`; PR não medido o B5 classifica pelo erro.
+
+**Alternativa descartada:** aceitar o desfecho como a mergex o declara — sucesso — e marcar `entregue`, deixando o "abra à mão" para o relatório final.
+
+**Por quê:** para a mergex, PR não aberto é sucesso porque há um desenvolvedor lendo o relato e abrindo o PR. No modo autônomo ninguém lê até o fim, e o buildx promete PRs abertos, verdes e descritos; uma feature `entregue` sem PR passaria pelo B6 como pronta, e as dependentes se empilhariam numa branch que revisor nenhum vê. Achado do CodeAnt na AxisGov/conselhos-municipais#204 (integracao/mergex.md:11).
+
+**O que invalida:** a mergex passar a tratar PR não aberto como falha, ou o buildx ganhar outro caminho de entrega que não seja PR.
