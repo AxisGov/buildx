@@ -88,8 +88,9 @@ Padrão 3 ciclos. O ciclo 2 resolve o que o B3 recortou mal — o mais
 produtivo. O ciclo 3 resolve o que o 2 criou. Do quarto em diante o que
 sobra normalmente não é falta de trabalho, é falta de decisão.
 
-Atingido o teto: toda pendência aberta vira decisao_humana, com a nota
-de que atingiu o teto, e o buildx segue para o B6.
+Atingido o teto: toda pendência trabalho_novo ou replanejamento ainda
+aberta vira decisao_humana, com a nota de que atingiu o teto, e o buildx
+segue para o B6. decisao_humana e recurso_externo mantêm a classe.
 
 O DETECTOR DE LAÇO EM FALSO
 

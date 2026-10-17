@@ -69,7 +69,8 @@ O ciclo B4 → B5 repete enquanto houver pendência `trabalho_novo` ou `replanej
 
 O ciclo 1 é o B4 original. Cada retorno ao B4 incrementa. Atingido o teto:
 
-- toda pendência ainda aberta é reclassificada como `decisao_humana`, com a nota de que atingiu o teto
+- toda pendência `trabalho_novo` ou `replanejamento` ainda aberta é reclassificada como `decisao_humana`, com a nota de que atingiu o teto
+- `decisao_humana` e `recurso_externo` mantêm a classe: o teto não transforma credencial ou acesso que falta em decisão de negócio, e o `recurso_externo` segue com o que providenciar e o que destrava
 - o buildx segue para o B6 com o que existe
 - o relatório final declara tudo, sem eufemismo
 
