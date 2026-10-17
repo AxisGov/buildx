@@ -44,7 +44,7 @@ O E7 tem dois desfechos, e para a mergex os dois são sucesso. Sem `gh`/`glab`, 
 Para o buildx, **sem PR não há entrega**. O critério é o `ENTREGA.md`: `pr_url` preenchido é PR aberto; `pr_url` vazio ou `null` é PR não aberto, qualquer que seja o motivo — nunca `entregue` no `MAPA.md`, por mais verde que esteja a suíte. A feature fica `bloqueada`, com o motivo literal do E7, e a pendência vai para o `RECURSAO.md`:
 
 - **ferramenta ausente, não autenticada ou serviço não suportado** → `recurso_externo`. O que providenciar: abrir à mão o PR da branch para a base que o E7 indicou, colando o `PR.md`, ou instalar e autenticar a ferramenta e rodar o `mergex-pr` de novo. O que destrava: a feature passa a `entregue` quando o `ENTREGA.md` tiver `pr_url`. O buildx nunca roda `gh auth login` nem pede credencial;
-- **PR acima do limite** → `replanejamento`: a feature é grande demais para uma revisão, e dividi-la é trabalho do plano;
+- **PR acima do limite** → `decisao_humana`, nunca `replanejamento`: o B5 preserva o recorte da feature, e um plano novo dentro dele produziria o mesmo PR grande. O código já existe; dividir a branch em PRs empilhados ou declarar a exceção de movimento mecânico (que só o desenvolvedor declara) é do humano. O relatório leva as violações e a divisão que o E7 sugeriu, e a feature vale como sinal de recorte errado no B3;
 - **PR não medido** → o B5 classifica pelo erro literal registrado.
 
 Feature que depende dela segue a regra da predecessora não entregue (`references/05-construcao.md`, passo 1): fica `bloqueada`, e não se empilha sobre uma branch que nenhum PR mostra ao revisor.
