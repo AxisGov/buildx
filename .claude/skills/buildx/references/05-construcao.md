@@ -67,6 +67,12 @@ Acrescente `origem_buildx` e `feature_id` ao frontmatter dos artefatos da featur
 
 A regra 10 do sprintx obriga a F2 a entrevistar o humano em blocos de até cinco perguntas, esperando resposta. No buildx o humano já falou — na descrição e, no modo briefing, na rodada única. Então o buildx **responde no lugar dele**.
 
+**Antes dos degraus, a base da F1.** A F1 gravou em `base/` o que o repositório já tem — código, esquema, o template do B2 —, com a fonte de cada fato, e em `base/00-LACUNAS.md` o que procurou e não achou. A base não decide nada: é fato, não escolha. Mas é contra ela que cada resposta é conferida:
+
+- releia `base/00-INDICE.md` e `base/00-LACUNAS.md` antes de responder; cada lacuna vira pergunta da F2, como no sprintx, e desce os degraus como as outras;
+- a justificativa cita o arquivo da `base/` que a resposta respeita, quando houver um;
+- resposta que contradiz a base — que supõe do repositório o contrário do que ela registra — não vale, mesmo que um dos três arquivos a sustente: o arquivo diz o que se queria, a base diz o que existe. Decidir mudar o que existe não é contradizer; supor que não existe, é. Registre a contradição em `00-BLOQUEIOS.md`, citando o arquivo da base e a fonte contrariada, e trate a pergunta como não derivável — degrau 4, ou a fronteira abaixo, se for regra de negócio.
+
 Como responder, na ordem, sem pular degrau:
 
 1. **Derivável do `PROJETO.md`?** Use, e cite a seção na justificativa.

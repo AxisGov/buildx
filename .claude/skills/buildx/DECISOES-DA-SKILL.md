@@ -264,3 +264,15 @@ Há um terceiro efeito, mais silencioso: um esqueleto gerado tem, no melhor caso
 **Por quê:** o merge é humano (D-03) e os PRs ficam abertos, então a base comum nunca tem o código das features entregues; uma feature dependente nascida dali constrói sobre o que não existe. Encadear resolve sem que o buildx integre nada: cada PR mostra só o próprio diff, e a ordem de merge é a do mapa. A branch de integração faria o buildx fazer merge — exatamente a fronteira que ele não atravessa — e ainda deixaria ao humano uma segunda integração no fim. Escolha do usuário, a partir do achado do CodeRabbit na AxisGov/login#2.
 
 **O que invalida:** o humano integrar cada PR antes da feature seguinte começar — aí nenhuma predecessora fica pendente, e a base comum basta.
+
+---
+
+## D-20 — A F2 autônoma responde dos três arquivos, conferida contra a `base/` da F1
+
+**Decisão:** as fontes das respostas continuam sendo o `PROJETO.md`, o `PREMISSAS.md` e o `CONVENCOES.md`, e o degrau 4 continua criando premissa. Antes dos degraus, o buildx relê a `base/` que a F1 gravou: cada lacuna de `base/00-LACUNAS.md` vira pergunta, a justificativa cita o arquivo da base que a resposta respeita, e resposta que contradiz a base não vale — a contradição vai para `00-BLOQUEIOS.md` e a pergunta desce como não derivável.
+
+**Alternativa descartada:** acrescentar a `base/` como quarto degrau, uma fonte de respostas ao lado dos três arquivos.
+
+**Por quê:** a `base/` registra o que existe no repositório, não o que o usuário quis; usá-la como fonte de decisão faria o código existente decidir pelo usuário. Ignorá-la, como a regra fazia, deixava a F2 decidir contra fatos já ingeridos — e o próprio sprintx manda a F2 reler a base, transformar lacunas em perguntas e apontar resposta que a contradiz. Achado do CodeAnt na AxisGov/conselhos-municipais#204 (SKILL.md:133).
+
+**O que invalida:** a F1 passar a gravar decisões, e não só fatos, na `base/`.
