@@ -23,6 +23,18 @@ houver pendência resolvível, até o teto.
 
 ---
 
+## Histórico das pendências
+
+<Uma linha por pendência em cada ciclo em que ela apareceu, aberta ou
+resolvida. Nunca apague nem reescreva linha: é daqui que o detector de
+laço em falso do B5 tira a repetição, com ou sem memox.>
+
+| ID | Ciclo | Classe | Feature/origem | Motivo | Resultado no ciclo |
+|---|---|---|---|---|---|
+| PEND-NN | <n> | <classe> | <FT-NN, ou a etapa que levantou> | <a descrição, com as mesmas palavras quando é a mesma pendência> | <virou FT-NN \| replanejada \| bloqueada de novo \| ficou para o humano> |
+
+---
+
 ## Aberto — o que exige decisão humana
 
 <Vai para a PRIMEIRA seção do relatório final. Nunca vira feature,

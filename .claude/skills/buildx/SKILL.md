@@ -264,7 +264,7 @@ Os caminhos são relativos à raiz desta skill. O detalhe operacional mora no re
 
 O buildx **depende** de prodx, stackx, sprintx e mergex — não é um fallback educado, é a arquitetura. Se alguma faltar, o buildx diz qual falta e como instalar, e para. Executar o método por conta própria seria reimplementar quatro skills mal.
 
-O `legadox` não participa (projeto novo não tem legado) e o `memox` é opcional: sem ele o B5 perde a consulta ao histórico, mas o ciclo funciona.
+O `legadox` não participa (projeto novo não tem legado) e o `memox` é opcional: sem ele o B5 perde a consulta ao histórico, mas o ciclo funciona — a pendência repetida continua detectada pelo histórico das pendências do `RECURSAO.md`.
 
 ## Ambiguidades
 

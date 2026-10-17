@@ -17,11 +17,11 @@ Colete de todas as fontes, sem filtrar nada ainda:
 | `docs/sprintx/features/<slug>/00-AUDITORIA.md` | todo achado alto que mandou voltar à F3 |
 | relatório da `mergex-check` | toda verificação que devolveu BLOQUEADO |
 | `PREMISSAS.md` | toda premissa marcada provisória |
-| `RECURSAO.md` do ciclo anterior | toda pendência que continua aberta |
+| `RECURSAO.md` do ciclo anterior | toda pendência que continua aberta, e o histórico das pendências |
 
 **Os artefatos da feature não estão no checkout principal.** A F1 do sprintx abre cada feature num worktree irmão, na branch `feature/<slug>` (regra 21), e o PR fica aberto até o merge humano, então `00-BLOQUEIOS.md` e `00-AUDITORIA.md` só existem lá. Leia cada um no worktree da feature (`git worktree list --porcelain`, a entrada com `branch refs/heads/feature/<slug>`); se o worktree já foi removido, leia os dois da branch (`git show feature/<slug>:docs/sprintx/features/<slug>/00-BLOQUEIOS.md` e o mesmo para `00-AUDITORIA.md`). Ler o caminho no checkout principal acharia nada e daria a feature por limpa. O que mora no checkout principal é o que o buildx grava: `docs/projeto/` (`MAPA.md`, `PREMISSAS.md`, `RECURSAO.md`).
 
-Consulte o `memox`, se instalado: uma pendência que já apareceu em ciclo anterior e voltou não é a mesma pendência — é sinal de que a tentativa anterior não resolveu, e repetir a mesma correção vai falhar igual.
+Compare cada pendência coletada com a seção "Histórico das pendências" do `RECURSAO.md`, que guarda, por pendência e por ciclo, a feature, o motivo e o resultado — é ela, e não o `memox`, que alimenta o detector de laço em falso (passo 3). Registre ali uma linha para cada pendência do ciclo, inclusive as que continuam abertas e as que viram feature; linha de ciclo anterior nunca é apagada. Consulte também o `memox`, se instalado: uma pendência que já apareceu em ciclo anterior e voltou não é a mesma pendência — é sinal de que a tentativa anterior não resolveu, e repetir a mesma correção vai falhar igual.
 
 ## Passo 2 — A classificação
 
@@ -103,6 +103,7 @@ Se não sobrou nada resolvível, ou o teto foi atingido: siga para o B6.
 - nenhuma pendência `trabalho_novo` ou `replanejamento` continua aberta, ou o teto foi atingido
 - toda `decisao_humana` registra: a decisão, as opções, o provisório adotado, o efeito de cada opção
 - todo `recurso_externo` registra o que providenciar e o que destrava
+- toda pendência do ciclo tem linha no histórico das pendências do `RECURSAO.md`
 - `RECURSAO.md` com frontmatter válido e os contadores certos
 
 ## Erros que esta etapa comete
