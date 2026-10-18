@@ -288,3 +288,15 @@ Há um terceiro efeito, mais silencioso: um esqueleto gerado tem, no melhor caso
 **Por quê:** para a mergex, PR não aberto é sucesso porque há um desenvolvedor lendo o relato e abrindo o PR. No modo autônomo ninguém lê até o fim, e o buildx promete PRs abertos, verdes e descritos; uma feature `entregue` sem PR passaria pelo B6 como pronta, e as dependentes se empilhariam numa branch que revisor nenhum vê. Achado do CodeAnt na AxisGov/conselhos-municipais#204 (integracao/mergex.md:11).
 
 **O que invalida:** a mergex passar a tratar PR não aberto como falha, ou o buildx ganhar outro caminho de entrega que não seja PR.
+
+---
+
+## D-22 — A base comum entra pela raiz da cadeia e se propaga
+
+**Decisão:** quando a feature se empilha numa cadeia de predecessoras entregues e outra predecessora já foi integrada, a base comum é mergeada só na raiz da cadeia — a feature cujo PR aponta para a base comum —, e cada branch seguinte, da raiz até a última, recebe merge da anterior, que é a base do PR dela, com push de cada uma. A base de cada PR vem de `gh pr view --json baseRefName`; sem o serviço, do `depende_de` do `MAPA.md`. Conflito em qualquer passo desfaz o merge e bloqueia a feature como `decisao_humana`; cadeia sem PR apontando para a base comum também, porque falta um reapontamento que é do humano.
+
+**Alternativa descartada:** mergear a base comum direto na última predecessora da cadeia, como a regra fazia.
+
+**Por quê:** quando a última predecessora é ela própria empilhada sobre outra feature não integrada, o PR dela compara com a branch dessa outra, não com a base comum; a base mergeada nela entra no diff do PR como mudança dela, e o PR deixa de mostrar só o próprio diff — o que a D-19 promete. Pela raiz, cada merge só traz para a branch a base do próprio PR, e nenhum diff muda. Achado do CodeAnt na AxisGov/buildx#8 (05-construcao.md:32).
+
+**O que invalida:** o serviço passar a atualizar PRs empilhados sozinho, ou o buildx deixar de empilhar (D-19).
