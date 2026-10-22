@@ -1,31 +1,31 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/banner-dark.svg">
-  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/banner-light.svg">
-  <img alt="buildx — a camada de orquestracao do metodo Expx" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/banner-light.svg" width="100%">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/AxisGov/buildx/main/.github/assets/banner-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/AxisGov/buildx/main/.github/assets/banner-light.svg">
+  <img alt="buildx — a camada de orquestracao do metodo Expx" src="https://raw.githubusercontent.com/AxisGov/buildx/main/.github/assets/banner-light.svg" width="100%">
 </picture>
 
 <p>
-  <img alt="harness: Claude Code" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/badge-claude.svg">
-  <img alt="harness: OpenCode" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/badge-opencode.svg">
-  <img alt="camada: orquestracao" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/badge-camada.svg">
-  <img alt="perguntas ao usuario: 1" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/badge-perguntas.svg">
-  <img alt="merge: humano" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/badge-merge.svg">
-  <img alt="design system: VS Code" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/badge-design.svg">
-  <img alt="schema expx v1" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/badge-schema.svg">
-  <img alt="docs pt-BR" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/badge-lang.svg">
-  <img alt="licenca MIT" src="https://raw.githubusercontent.com/bittencourtthulio/buildx/main/.github/assets/badge-license.svg">
+  <img alt="harness: Claude Code" src="https://raw.githubusercontent.com/AxisGov/buildx/main/.github/assets/badge-claude.svg">
+  <img alt="harness: OpenCode" src="https://raw.githubusercontent.com/AxisGov/buildx/main/.github/assets/badge-opencode.svg">
+  <img alt="camada: orquestracao" src="https://raw.githubusercontent.com/AxisGov/buildx/main/.github/assets/badge-camada.svg">
+  <img alt="perguntas ao usuario: 1" src="https://raw.githubusercontent.com/AxisGov/buildx/main/.github/assets/badge-perguntas.svg">
+  <img alt="merge: humano" src="https://raw.githubusercontent.com/AxisGov/buildx/main/.github/assets/badge-merge.svg">
+  <img alt="design system: VS Code" src="https://raw.githubusercontent.com/AxisGov/buildx/main/.github/assets/badge-design.svg">
+  <img alt="schema expx v1" src="https://raw.githubusercontent.com/AxisGov/buildx/main/.github/assets/badge-schema.svg">
+  <img alt="docs pt-BR" src="https://raw.githubusercontent.com/AxisGov/buildx/main/.github/assets/badge-lang.svg">
+  <img alt="licenca MIT" src="https://raw.githubusercontent.com/AxisGov/buildx/main/.github/assets/badge-license.svg">
 </p>
 
 <p>
-  <a href="https://bittencourtthulio.github.io/expxdev/"><strong>📘 Documentação do método</strong></a>
+  <a href="https://github.com/AxisGov/expxdev"><strong>📘 Documentação do método</strong></a>
   &nbsp;·&nbsp;
-  <a href="https://bittencourtthulio.github.io/expxdev/#ecossistema">O ecossistema</a>
+  <a href="https://github.com/AxisGov/expxdev#o-ecossistema">O ecossistema</a>
   &nbsp;·&nbsp;
-  <a href="https://bittencourtthulio.github.io/expxdev/#instalacao">Instalação</a>
+  <a href="#instalação">Instalação</a>
   &nbsp;·&nbsp;
-  <a href="https://bittencourtthulio.github.io/expxdev/#schema">Contratos</a>
+  <a href="https://github.com/AxisGov/expxdev#os-dois-contratos-compartilhados">Contratos</a>
 </p>
 
 <strong>A camada de orquestração do método Expx</strong> — uma descrição entra,<br>
@@ -47,23 +47,23 @@ O buildx faz **uma única pergunta** — autônomo ou briefing — e depois cond
 
 ## O ecossistema Expx
 
-O método Expx é um conjunto de skills que se compõem, instaladas e mantidas pelo CLI [`expxdev`](https://github.com/bittencourtthulio/expxdev).
+O método Expx é um conjunto de skills que se compõem, instaladas e mantidas pelo CLI [`expxdev`](https://github.com/AxisGov/expxdev).
 
 | Peça | Papel | Relação com o `buildx` |
 |---|---|---|
-| **[expxdev](https://github.com/bittencourtthulio/expxdev)** | o CLI: instala, atualiza e diagnostica o ecossistema | é quem instala esta skill (`npx expxdev init`) |
+| **[expxdev](https://github.com/AxisGov/expxdev)** | o CLI: instala, atualiza e diagnostica o ecossistema | é quem instala esta skill (`npx expxdev init`) |
 | **[prodx](https://github.com/bittencourtthulio/prodx)** | **camada** de produto: decide **se** há trabalho | abre o projeto no B1 (modo greenfield) e o valida no B6 — **obrigatório** |
-| **[sprintx](https://github.com/bittencourtthulio/sprintx)** | **Build** — feature nova, F1…F6 | planeja e executa cada feature do mapa, no B4 — **obrigatório** |
-| **[mergex](https://github.com/bittencourtthulio/mergex)** | entrega: branch, commit por task, PR e pacote de QA | abre a branch, verifica prontidão e monta o PR, no B4 — **obrigatório** |
+| **[sprintx](https://github.com/AxisGov/sprintx)** | **Build** — feature nova, F1…F6 | planeja e executa cada feature do mapa, no B4 — **obrigatório** |
+| **[mergex](https://github.com/AxisGov/mergex)** | entrega: branch, commit por task, PR e pacote de QA | abre a branch, verifica prontidão e monta o PR, no B4 — **obrigatório** |
 | **[stackx](https://github.com/bittencourtthulio/stackx)** | **camada** de convenções do repositório | grava o `CONVENCOES.md` no B2, invertido: decide em vez de detectar |
 | **[memox](https://github.com/bittencourtthulio/MemoX)** | **camada** de memória do projeto | consultado no B5, para não repetir uma tentativa que já falhou |
-| **[runx](https://github.com/bittencourtthulio/runx)** | **Run** — ocorrência em produção, E1…E5 | não participa: o buildx constrói, não corrige |
+| **[runx](https://github.com/AxisGov/runx)** | **Run** — ocorrência em produção, E1…E5 | não participa: o buildx constrói, não corrige |
 | **[legadox](https://github.com/bittencourtthulio/legadox)** | **camada** de segurança para código legado | não participa: projeto novo não tem legado |
 | **buildx** *(este repositório)* | orquestra um projeto inteiro | — |
 
 O buildx é a única peça do método que **depende** de outras: sem `prodx`, `sprintx` e `mergex` ele não roda, e diz o que falta. Não é falta de educação, é a arquitetura — rodar sem elas significaria reimplementar quatro skills mal, dentro de uma quinta.
 
-Detalhes do ecossistema inteiro no [README do expxdev](https://github.com/bittencourtthulio/expxdev).
+Detalhes do ecossistema inteiro no [README do expxdev](https://github.com/AxisGov/expxdev).
 
 ---
 
@@ -232,12 +232,12 @@ O mesmo vale para o merge (D-03). O buildx entrega PRs abertos e verdes; integra
 
 <div align="center">
 <sub>Parte do método <strong>Expx</strong> ·
-<a href="https://github.com/bittencourtthulio/expxdev">expxdev</a> ·
+<a href="https://github.com/AxisGov/expxdev">expxdev</a> ·
 <a href="https://github.com/bittencourtthulio/prodx">prodx</a> ·
-buildx ·
-<a href="https://github.com/bittencourtthulio/sprintx">sprintx</a> ·
-<a href="https://github.com/bittencourtthulio/runx">runx</a> ·
-<a href="https://github.com/bittencourtthulio/mergex">mergex</a> ·
+<a href="https://github.com/AxisGov/buildx">buildx</a> ·
+<a href="https://github.com/AxisGov/sprintx">sprintx</a> ·
+<a href="https://github.com/AxisGov/runx">runx</a> ·
+<a href="https://github.com/AxisGov/mergex">mergex</a> ·
 <a href="https://github.com/bittencourtthulio/stackx">stackx</a> ·
 <a href="https://github.com/bittencourtthulio/legadox">legadox</a> ·
 <a href="https://github.com/bittencourtthulio/MemoX">memox</a></sub>
