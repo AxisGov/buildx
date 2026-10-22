@@ -32,6 +32,8 @@ Verificável, sem adjetivo, numa frase.>
 **Paralelizável:** <true | false>
 **Origem:** <descricao | premissa | recursao>
 **Premissas que realiza:** <[PR-NN, ...] ou []>
+**Módulo disponível:** <id do modulo | ->
+**Fatias candidatas:** <slugs separados por virgula | ->
 **Status:** <pendente | em_andamento | entregue | bloqueada>
 
 <Se bloqueada:>

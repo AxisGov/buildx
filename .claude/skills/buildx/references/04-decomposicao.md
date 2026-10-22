@@ -41,6 +41,53 @@ O sprintx planeja bem uma feature que rende **entre uma e três sprints**. Fora 
 
 Faixa saudável de um projeto descrito num parágrafo: **entre 6 e 15 features.** Menos de 5, o recorte está grosso. Mais de 20, está picado — e cada feature carrega o custo fixo de branch, plano, auditoria e PR.
 
+## Features que já têm módulo
+
+**Esta consulta acontece com o `MAPA.md` fechado e antes de ele ser gravado**, e a ordem não é detalhe: nessa janela ela é barata e não contamina. Antes, decidiria o recorte; depois, não influenciaria nada.
+
+Terminado o recorte, para cada feature que integra um terceiro — pagamento, WhatsApp, storage, email transacional, nota fiscal, assinatura digital, mensageria — rode `/modulex-buscar` com o **problema** da feature, na linguagem do `MAPA.md`. Nunca pelo nome do fornecedor.
+
+O desfecho entra na feature como campo (`modulo_disponivel`, `fatias_candidatas`), não como texto solto.
+
+### O módulo não recorta o projeto
+
+**Os três testes — vertical, enunciável, demonstrável — continuam sendo os únicos que decidem onde cortar.** A fatia de um módulo é **candidata** a fronteira, nunca a fronteira: as fatias conhecem o sistema de onde o módulo saiu; os três testes conhecem este projeto.
+
+Fatias sugerindo fronteira diferente do seu recorte: **anote a divergência e siga com o seu recorte.** Refazer o corte para casar com o módulo é a casa de origem decidindo a arquitetura da casa de destino.
+
+**A exceção, e ela é estreita:** quando uma fatia opcional cobre exatamente uma feature que o seu recorte tinha grudado em outra, e separá-las passa nos três testes, separe. Aí o módulo é evidência de que a fronteira existe, não razão para criá-la.
+
+### Dois módulos para o mesmo problema
+
+Entram os dois, como dois candidatos. **O buildx não escolhe fornecedor** — a escolha acontece na F2/F3 do sprintx, dentro do B4, com o `CONVENCOES.md` na mesa.
+
+### A escolha de fatias, sem quebrar a pergunta única
+
+O M1 do `modulex`, por desenho, **não injeta módulo inteiro por padrão**: sem fatia indicada, ele pergunta quais fatias. O buildx não pode perguntar — depois da pergunta única, nenhuma outra chega ao usuário, em nenhum dos dois modos.
+
+A resolução é a mesma que o B4 já usa para a F2 do sprintx: **responder no lugar do humano e registrar a premissa.**
+
+1. Derive a escolha do **escopo da feature no `MAPA.md`**, que é fonte legítima porque saiu do `PROJETO.md` e das premissas.
+2. Registre em `docs/projeto/PREMISSAS.md` **antes de usar**, com o que assume e o que a invalidaria:
+
+   ```
+   Premissa: a feature FT-04 usa as fatias <nucleo> do modulo <id>.
+   Assume que <o que o MAPA.md diz que a feature entrega>.
+   Invalidada se o usuario quiser <o que as fatias descartadas cobrem>.
+   ```
+
+3. **Não sendo derivável qual fatia serve, a premissa é só o núcleo obrigatório.**
+
+**Injetar tudo é proibido.** Injetar seis fatias numa feature que só quer receber e responder mensagem enche a base da F1 com IA, ligações e grupos que ninguém pediu — e a F3 planeja o que foi injetado. No modo autônomo ninguém percebe a tempo.
+
+Errar para menos custa uma injeção a mais depois. Errar para mais custa um projeto inteiro planejado a mais. Por isso o padrão é o núcleo.
+
+### O que não desce daqui
+
+A stack **herdada** do módulo não vai para o `CONVENCOES.md` — ele é do B2, e já aconteceu. O que o módulo declara como **essencial ao terceiro** entra como restrição técnica a respeitar, nunca como convenção a adotar. Ver `references/integracao/stackx.md`.
+
+**Sem `modulex` instalado, ou com o catálogo não alcançável:** decomponha como sempre, com os dois campos em `-`. Não instale nada, não pergunte, não pare.
+
 ## O contrato da feature
 
 Toda feature do `MAPA.md` declara, obrigatoriamente:
@@ -55,6 +102,8 @@ Toda feature do `MAPA.md` declara, obrigatoriamente:
 | `paralelizavel` | `true` \| `false` | declarado aqui, nunca decidido no B4 |
 | `origem` | `descricao` \| `premissa` \| `recursao` \| `template` | rastreia por que a feature existe |
 | `status` | `pendente` \| `em_andamento` \| `entregue` \| `bloqueada` | nasce `pendente` |
+| `modulo_disponivel` | `<id>` \| `-` | preenchido pela consulta ao catálogo; `-` quando não há |
+| `fatias_candidatas` | `<slugs>` \| `-` | as fatias do módulo que cobrem esta feature |
 
 O campo `origem` é o que o B6 usa para conferir: toda premissa de segurança do `PREMISSAS.md` precisa ter virado feature com `origem: premissa`, ou estar explicitamente dentro de uma feature com `origem: descricao`. Premissa registrada que não virou código é a falha mais cara que este método pode cometer — ela cria a impressão de que o sistema está protegido.
 

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="486" viewBox="0 0 1000 486" role="img" aria-label="O relatório final em sete seções: o que exige ação vem antes do que foi feito.">
+<title>O relatório final: sete seções, e o que exige ação vem primeiro</title>
+<style>
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
+.sans{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+.on{opacity:0}
+@keyframes s1{0%,5%{opacity:0;transform:translateX(-8px);animation-timing-function:cubic-bezier(.2,.7,.2,1)}8%{opacity:1;transform:none}94%{opacity:1;transform:none;animation-timing-function:ease-in-out}97%,100%{opacity:0}}
+@keyframes s2{0%,10%{opacity:0;transform:translateX(-8px);animation-timing-function:cubic-bezier(.2,.7,.2,1)}13%{opacity:1;transform:none}94%{opacity:1;transform:none;animation-timing-function:ease-in-out}97%,100%{opacity:0}}
+@keyframes s3{0%,15%{opacity:0;transform:translateX(-8px);animation-timing-function:cubic-bezier(.2,.7,.2,1)}18%{opacity:1;transform:none}94%{opacity:1;transform:none;animation-timing-function:ease-in-out}97%,100%{opacity:0}}
+@keyframes s4{0%,20%{opacity:0;transform:translateX(-8px);animation-timing-function:cubic-bezier(.2,.7,.2,1)}23%{opacity:1;transform:none}94%{opacity:1;transform:none;animation-timing-function:ease-in-out}97%,100%{opacity:0}}
+@keyframes s5{0%,25%{opacity:0;transform:translateX(-8px);animation-timing-function:cubic-bezier(.2,.7,.2,1)}28%{opacity:1;transform:none}94%{opacity:1;transform:none;animation-timing-function:ease-in-out}97%,100%{opacity:0}}
+@keyframes s6{0%,30%{opacity:0;transform:translateX(-8px);animation-timing-function:cubic-bezier(.2,.7,.2,1)}33%{opacity:1;transform:none}94%{opacity:1;transform:none;animation-timing-function:ease-in-out}97%,100%{opacity:0}}
+@keyframes s7{0%,35%{opacity:0;transform:translateX(-8px);animation-timing-function:cubic-bezier(.2,.7,.2,1)}38%{opacity:1;transform:none}94%{opacity:1;transform:none;animation-timing-function:ease-in-out}97%,100%{opacity:0}}
+@keyframes gA{0%,46%{opacity:0}50%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes gB{0%,54%{opacity:0}58%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes nota{0%,68%{opacity:0}72%,94%{opacity:1}97%,100%{opacity:0}}
+</style>
+<defs>
+<clipPath id="rl-clip"><rect x="1" y="1" width="998" height="484" rx="15"/></clipPath>
+<pattern id="rl-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0 H0 V40" fill="none" stroke="#161b22" stroke-width="1"/></pattern>
+</defs>
+<rect x="0.5" y="0.5" width="999" height="485" rx="16" fill="#0d1117" stroke="#30363d"/>
+<g clip-path="url(#rl-clip)"><rect width="1000" height="486" fill="url(#rl-grid)"/></g>
+
+<text class="sans" x="40" y="40" font-size="15" fill="#e6edf3">O que você lê no fim — e <tspan fill="#4493f8" font-weight="600">em que ordem</tspan></text>
+<text class="mono" x="960" y="40" text-anchor="end" font-size="12" fill="#6e7681">docs/projeto/RELATORIO.md</text>
+
+<!-- grupo: exige acao -->
+<g class="on" style="animation:gA 14s linear infinite">
+<rect x="40" y="62" width="4" height="152" rx="2" fill="#d29922"/>
+<text class="sans" x="34" y="138" text-anchor="middle" font-size="11.5" font-weight="600" fill="#d29922" transform="rotate(-90 34 138)">exige ação sua</text>
+</g>
+<g class="on" style="animation:gB 14s linear infinite">
+<rect x="40" y="224" width="4" height="200" rx="2" fill="#30363d"/>
+<text class="sans" x="34" y="324" text-anchor="middle" font-size="11.5" font-weight="600" fill="#6e7681" transform="rotate(-90 34 324)">o que foi feito</text>
+</g>
+
+<g class="sans">
+<g class="on" style="animation:s1 14s linear infinite">
+<rect x="60" y="62" width="900" height="44" rx="8" fill="#1d1a12" stroke="#d29922"/>
+<text class="mono" x="84" y="90" font-size="14" font-weight="700" fill="#d29922">1</text>
+<text x="116" y="90" font-size="13.5" font-weight="600" fill="#e6edf3">O QUE VOCÊ PRECISA DECIDIR</text>
+<text x="940" y="90" text-anchor="end" font-size="12" fill="#8b949e">as regras de negócio que não foram declaradas</text>
+</g>
+<g class="on" style="animation:s2 14s linear infinite">
+<rect x="60" y="116" width="900" height="44" rx="8" fill="#1d1a12" stroke="#d29922"/>
+<text class="mono" x="84" y="144" font-size="14" font-weight="700" fill="#d29922">2</text>
+<text x="116" y="144" font-size="13.5" font-weight="600" fill="#e6edf3">O QUE VOCÊ PRECISA PROVIDENCIAR</text>
+<text x="940" y="144" text-anchor="end" font-size="12" fill="#8b949e">credenciais, acessos, contas</text>
+</g>
+<g class="on" style="animation:s3 14s linear infinite">
+<rect x="60" y="170" width="900" height="44" rx="8" fill="#12243d" stroke="#4493f8"/>
+<text class="mono" x="84" y="198" font-size="14" font-weight="700" fill="#4493f8">3</text>
+<text x="116" y="198" font-size="13.5" font-weight="600" fill="#e6edf3">O QUE FOI DECIDIDO POR VOCÊ</text>
+<text x="940" y="198" text-anchor="end" font-size="12" fill="#8b949e">as premissas, com o que invalida cada uma</text>
+</g>
+<g class="on" style="animation:s4 14s linear infinite">
+<rect x="60" y="224" width="900" height="44" rx="8" fill="#161b22" stroke="#30363d"/>
+<text class="mono" x="84" y="252" font-size="14" font-weight="700" fill="#3fb950">4</text>
+<text x="116" y="252" font-size="13.5" fill="#c9d1d9">O QUE FICOU PRONTO</text>
+<text x="940" y="252" text-anchor="end" font-size="12" fill="#6e7681">features entregues, com os PRs</text>
+</g>
+<g class="on" style="animation:s5 14s linear infinite">
+<rect x="60" y="278" width="900" height="44" rx="8" fill="#161b22" stroke="#30363d"/>
+<text class="mono" x="84" y="306" font-size="14" font-weight="700" fill="#8b949e">5</text>
+<text x="116" y="306" font-size="13.5" fill="#c9d1d9">O QUE NÃO FICOU</text>
+<text x="940" y="306" text-anchor="end" font-size="12" fill="#6e7681">pendências, com o porquê</text>
+</g>
+<g class="on" style="animation:s6 14s linear infinite">
+<rect x="60" y="332" width="900" height="44" rx="8" fill="#161b22" stroke="#30363d"/>
+<text class="mono" x="84" y="360" font-size="14" font-weight="700" fill="#8b949e">6</text>
+<text x="116" y="360" font-size="13.5" fill="#c9d1d9">COMO RODAR</text>
+<text x="940" y="360" text-anchor="end" font-size="12" fill="#6e7681">instalar, subir, entrar com o usuário demo</text>
+</g>
+<g class="on" style="animation:s7 14s linear infinite">
+<rect x="60" y="386" width="900" height="38" rx="8" fill="#161b22" stroke="#30363d"/>
+<text class="mono" x="84" y="410" font-size="14" font-weight="700" fill="#8b949e">7</text>
+<text x="116" y="410" font-size="13.5" fill="#c9d1d9">O QUE FAZER AGORA</text>
+<text x="940" y="410" text-anchor="end" font-size="12" fill="#6e7681">revisar os PRs e fazer merge</text>
+</g>
+</g>
+<g class="on" style="animation:nota 14s linear infinite">
+<line x1="40" y1="444" x2="960" y2="444" stroke="#21262d"/>
+<text class="sans" x="40" y="470" font-size="13" fill="#8b949e">A ordem é deliberada: <tspan fill="#e6edf3">o que exige ação vem antes do que foi feito</tspan>.</text>
+</g>
+</svg>

@@ -22,6 +22,7 @@ O buildx **não implementa nada, não planeja nada e não escreve teste nenhum.*
 | `sprintx` | planeja e executa cada feature, F1 a F6 (B4) |
 | `mergex` | abre a branch, verifica prontidão, monta PR e pacote de QA (B4) |
 | `legadox` | não participa: projeto novo não tem legado |
+| `modulex` | responde se a feature já tem módulo pronto (B3, com o `MAPA.md` fechado e antes de gravado); recebe de volta o que deveria virar módulo novo (B6) |
 | `memox` | indexa o que a cadeia produziu; consultado no B5 |
 
 A única coisa que o buildx faz e nenhuma outra camada faz é o **B3: quebrar um projeto em features**. Esse é o vão real que ele preenche — o sprintx planeja *uma* feature e não sabe recortar um sistema.
@@ -195,6 +196,7 @@ O modo autônomo viola regras que existem por bons motivos nas camadas irmãs. C
 10. Todo artefato usa o frontmatter `expx-schema v1`. Artefato sem frontmatter válido é considerado não entregue.
 11. Caminhos sempre relativos. Nunca escreva caminho absoluto em nenhum artefato.
 12. O relatório final declara toda pendência. Entregar com pendência declarada é honesto; entregar dizendo que está pronto quando não está, não.
+13. Módulo do `modulex` não recorta o projeto. No B3 os três testes continuam sendo os únicos que decidem onde cortar, e a fatia de um módulo é candidata a fronteira, nunca a fronteira. No B2 a stack herdada do módulo não entra no `CONVENCOES.md`: projeto novo não tem convenção ainda, e é aí que a herança alheia entra sem resistência.
 
 ## Estrutura em disco
 
