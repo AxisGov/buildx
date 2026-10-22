@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="440" viewBox="0 0 1000 440" role="img" aria-label="B3: o buildx recorta um parágrafo de descrição em features do tamanho que o sprintx sabe planejar, em ordem de dependência.">
+<title>B3 — decomposição: de um parágrafo a features em ordem de dependência</title>
+<style>
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
+.sans{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+@keyframes ft0{0%,30.000%{opacity:0;transform:translateY(8px);animation-timing-function:cubic-bezier(.2,.7,.2,1)}32.200%{opacity:1;transform:none}94%{opacity:1;transform:none;animation-timing-function:ease-in-out}97%,100%{opacity:0}}
+@keyframes ft1{0%,34.500%{opacity:0;transform:translateY(8px);animation-timing-function:cubic-bezier(.2,.7,.2,1)}36.700%{opacity:1;transform:none}94%{opacity:1;transform:none;animation-timing-function:ease-in-out}97%,100%{opacity:0}}
+@keyframes ft2{0%,39.000%{opacity:0;transform:translateY(8px);animation-timing-function:cubic-bezier(.2,.7,.2,1)}41.200%{opacity:1;transform:none}94%{opacity:1;transform:none;animation-timing-function:ease-in-out}97%,100%{opacity:0}}
+@keyframes ft3{0%,43.500%{opacity:0;transform:translateY(8px);animation-timing-function:cubic-bezier(.2,.7,.2,1)}45.700%{opacity:1;transform:none}94%{opacity:1;transform:none;animation-timing-function:ease-in-out}97%,100%{opacity:0}}
+@keyframes ft4{0%,48.000%{opacity:0;transform:translateY(8px);animation-timing-function:cubic-bezier(.2,.7,.2,1)}50.200%{opacity:1;transform:none}94%{opacity:1;transform:none;animation-timing-function:ease-in-out}97%,100%{opacity:0}}
+@keyframes ft5{0%,52.500%{opacity:0;transform:translateY(8px);animation-timing-function:cubic-bezier(.2,.7,.2,1)}54.700%{opacity:1;transform:none}94%{opacity:1;transform:none;animation-timing-function:ease-in-out}97%,100%{opacity:0}}
+@keyframes ft6{0%,57.000%{opacity:0;transform:translateY(8px);animation-timing-function:cubic-bezier(.2,.7,.2,1)}59.200%{opacity:1;transform:none}94%{opacity:1;transform:none;animation-timing-function:ease-in-out}97%,100%{opacity:0}}
+@keyframes ft7{0%,61.500%{opacity:0;transform:translateY(8px);animation-timing-function:cubic-bezier(.2,.7,.2,1)}63.700%{opacity:1;transform:none}94%{opacity:1;transform:none;animation-timing-function:ease-in-out}97%,100%{opacity:0}}
+@keyframes ft8{0%,66.000%{opacity:0;transform:translateY(8px);animation-timing-function:cubic-bezier(.2,.7,.2,1)}68.200%{opacity:1;transform:none}94%{opacity:1;transform:none;animation-timing-function:ease-in-out}97%,100%{opacity:0}}
+@keyframes desc{0%,3%{opacity:0}7%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes cut{0%,16%{opacity:0}20%{opacity:1}26%{opacity:1}30%,100%{opacity:0}}
+@keyframes cutx{0%,18%{transform:translateX(0)}28%,100%{transform:translateX(918px)}}
+@keyframes leg{0%,70%{opacity:0}74%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes nota{0%,78%{opacity:0}82%,94%{opacity:1}97%,100%{opacity:0}}
+</style>
+<defs>
+<clipPath id="dc-clip"><rect x="1" y="1" width="998" height="438" rx="15"/></clipPath>
+<pattern id="dc-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0 H0 V40" fill="none" stroke="#161b22" stroke-width="1"/></pattern>
+<linearGradient id="dc-cut" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4493f8" stop-opacity="0"/><stop offset="1" stop-color="#4493f8" stop-opacity="0.9"/></linearGradient>
+</defs>
+<rect x="0.5" y="0.5" width="999" height="439" rx="16" fill="#0d1117" stroke="#30363d"/>
+<g clip-path="url(#dc-clip)"><rect width="1000" height="440" fill="url(#dc-grid)"/></g>
+
+<text class="sans" x="40" y="34" font-size="15" fill="#e6edf3"><tspan class="mono" fill="#4493f8" font-weight="700">B3</tspan> — a única coisa que nenhuma outra camada faz: <tspan font-weight="600">recortar o projeto em features</tspan></text>
+
+<g style="animation:desc 13.0s linear infinite" opacity="0">
+<rect x="40" y="52" width="920" height="42" rx="8" fill="#161b22" stroke="#30363d"/>
+<rect x="40" y="52" width="3" height="42" fill="#4493f8"/>
+<text class="sans" x="64" y="78" font-size="13" fill="#8b949e">“quero um sistema para gestão de contratos, com upload de PDF, alerta de vencimento e relatório mensal por cliente”</text>
+</g>
+<g clip-path="url(#dc-clip)"><rect x="34" y="52" width="10" height="42" fill="url(#dc-cut)" style="animation:cut 13.0s linear infinite, cutx 13.0s linear infinite" opacity="0"/></g>
+
+<g><path d="M250 198 C 263 198, 263 198, 270 198" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<path d="M276 198 l-6 -3.5 v7 z" fill="#30363d"/>
+<path d="M250 198 C 263 198, 263 262, 270 262" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<path d="M276 262 l-6 -3.5 v7 z" fill="#30363d"/>
+<path d="M486 198 C 499 198, 499 230, 506 230" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<path d="M512 230 l-6 -3.5 v7 z" fill="#30363d"/>
+<path d="M722 230 C 735 230, 735 134, 742 134" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<path d="M748 134 l-6 -3.5 v7 z" fill="#30363d"/>
+<path d="M722 230 C 735 230, 735 198, 742 198" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<path d="M748 198 l-6 -3.5 v7 z" fill="#30363d"/>
+<path d="M722 230 C 735 230, 735 262, 742 262" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<path d="M748 262 l-6 -3.5 v7 z" fill="#30363d"/>
+<path d="M722 230 C 735 230, 735 326, 742 326" fill="none" stroke="#30363d" stroke-width="1.5"/>
+<path d="M748 326 l-6 -3.5 v7 z" fill="#30363d"/></g>
+<g><g style="animation:ft0 13.0s linear infinite" opacity="0"><rect x="40" y="174" width="210" height="48" rx="8" fill="#1b222b" stroke="#8b949e" stroke-dasharray="4 3"/><text class="mono" x="52" y="193" font-size="11.5" font-weight="700" fill="#8b949e">FT-01</text><text class="mono" x="238" y="193" text-anchor="end" font-size="10" fill="#6e7681">template</text><text class="sans" x="52" y="212" font-size="12" fill="#c9d1d9">acesso ao sistema</text></g>
+<g style="animation:ft1 13.0s linear infinite" opacity="0"><rect x="40" y="238" width="210" height="48" rx="8" fill="#12243d" stroke="#4493f8"/><text class="mono" x="52" y="257" font-size="11.5" font-weight="700" fill="#4493f8">FT-09</text><text class="mono" x="238" y="257" text-anchor="end" font-size="10" fill="#6e7681">premissa</text><text class="sans" x="52" y="276" font-size="12" fill="#c9d1d9">backup e restauração</text></g>
+<g style="animation:ft2 13.0s linear infinite" opacity="0"><rect x="276" y="174" width="210" height="48" rx="8" fill="#21262d" stroke="#30363d"/><text class="mono" x="288" y="193" font-size="11.5" font-weight="700" fill="#e6edf3">FT-02</text><text class="mono" x="474" y="193" text-anchor="end" font-size="10" fill="#6e7681">descrição</text><text class="sans" x="288" y="212" font-size="12" fill="#c9d1d9">cadastro de clientes</text></g>
+<g style="animation:ft3 13.0s linear infinite" opacity="0"><rect x="276" y="238" width="210" height="48" rx="8" fill="#12243d" stroke="#4493f8"/><text class="mono" x="288" y="257" font-size="11.5" font-weight="700" fill="#4493f8">FT-08</text><text class="mono" x="474" y="257" text-anchor="end" font-size="10" fill="#6e7681">premissa</text><text class="sans" x="288" y="276" font-size="12" fill="#c9d1d9">conta e dados pessoais</text></g>
+<g style="animation:ft4 13.0s linear infinite" opacity="0"><rect x="512" y="206" width="210" height="48" rx="8" fill="#21262d" stroke="#30363d"/><text class="mono" x="524" y="225" font-size="11.5" font-weight="700" fill="#e6edf3">FT-03</text><text class="mono" x="710" y="225" text-anchor="end" font-size="10" fill="#6e7681">descrição</text><text class="sans" x="524" y="244" font-size="12" fill="#c9d1d9">cadastro de contratos</text></g>
+<g style="animation:ft5 13.0s linear infinite" opacity="0"><rect x="748" y="110" width="210" height="48" rx="8" fill="#21262d" stroke="#30363d"/><text class="mono" x="760" y="129" font-size="11.5" font-weight="700" fill="#e6edf3">FT-04</text><text class="mono" x="946" y="129" text-anchor="end" font-size="10" fill="#6e7681">descrição</text><text class="sans" x="760" y="148" font-size="12" fill="#c9d1d9">upload e leitura de PDF</text></g>
+<g style="animation:ft6 13.0s linear infinite" opacity="0"><rect x="748" y="174" width="210" height="48" rx="8" fill="#21262d" stroke="#30363d"/><text class="mono" x="760" y="193" font-size="11.5" font-weight="700" fill="#e6edf3">FT-05</text><text class="mono" x="946" y="193" text-anchor="end" font-size="10" fill="#6e7681">descrição</text><text class="sans" x="760" y="212" font-size="12" fill="#c9d1d9">alerta de vencimento</text></g>
+<g style="animation:ft7 13.0s linear infinite" opacity="0"><rect x="748" y="238" width="210" height="48" rx="8" fill="#21262d" stroke="#30363d"/><text class="mono" x="760" y="257" font-size="11.5" font-weight="700" fill="#e6edf3">FT-06</text><text class="mono" x="946" y="257" text-anchor="end" font-size="10" fill="#6e7681">descrição</text><text class="sans" x="760" y="276" font-size="12" fill="#c9d1d9">relatório mensal</text></g>
+<g style="animation:ft8 13.0s linear infinite" opacity="0"><rect x="748" y="302" width="210" height="48" rx="8" fill="#12243d" stroke="#4493f8"/><text class="mono" x="760" y="321" font-size="11.5" font-weight="700" fill="#4493f8">FT-07</text><text class="mono" x="946" y="321" text-anchor="end" font-size="10" fill="#6e7681">premissa</text><text class="sans" x="760" y="340" font-size="12" fill="#c9d1d9">trilha de auditoria</text></g></g>
+
+<g style="animation:leg 13.0s linear infinite" opacity="0">
+<rect x="40" y="358" width="11" height="11" rx="2" fill="#21262d" stroke="#30363d"/><text class="sans" x="60" y="368" font-size="11.5" fill="#8b949e">descrição — você pediu (5)</text>
+<rect x="232" y="358" width="11" height="11" rx="2" fill="#12243d" stroke="#4493f8"/><text class="sans" x="252" y="368" font-size="11.5" fill="#8b949e">premissa — o buildx descobriu que faltava (3)</text>
+<rect x="540" y="358" width="11" height="11" rx="2" fill="#1b222b" stroke="#8b949e" stroke-dasharray="3 2"/><text class="sans" x="560" y="368" font-size="11.5" fill="#8b949e">template — já chega implementada (1)</text>
+<text class="mono" x="960" y="368" text-anchor="end" font-size="11.5" fill="#4493f8">9 features</text>
+</g>
+<g style="animation:nota 13.0s linear infinite" opacity="0">
+<line x1="40" y1="388" x2="960" y2="388" stroke="#21262d"/>
+<text class="sans" x="40" y="414" font-size="13" fill="#8b949e">A ordem não é negociável em dois pontos: a <tspan fill="#e6edf3">fundação vem primeiro</tspan>, e nenhuma feature precede aquilo de que depende.</text>
+</g>
+</svg>

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="462" viewBox="0 0 1000 462" role="img" aria-label="O buildx não gera o esqueleto: o B2 copia um template real, com suíte verde e CI próprio, e toda entrega nasce com as quatro telas do esqueleto.">
+<title>Os padrões da casa: um template real copiado, não um esqueleto gerado</title>
+<style>
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
+.sans{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+.on{opacity:0}
+@keyframes ar{0%,12%{opacity:0}16%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes e1{0%,22%{opacity:0}26%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes e2{0%,28%{opacity:0}32%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes e3{0%,34%{opacity:0}38%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes e4{0%,40%{opacity:0}44%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes su{0%,48%{opacity:0}53%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes ch1{0%,60%{opacity:0}64%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes ch2{0%,64%{opacity:0}68%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes ch3{0%,68%{opacity:0}72%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes ch4{0%,72%{opacity:0}76%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes nota{0%,80%{opacity:0}84%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes flow{to{stroke-dashoffset:-48}}
+</style>
+<defs>
+<clipPath id="pd-clip"><rect x="1" y="1" width="998" height="460" rx="15"/></clipPath>
+<pattern id="pd-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0 H0 V40" fill="none" stroke="#161b22" stroke-width="1"/></pattern>
+<marker id="pd-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#4493f8"/></marker>
+<g id="pd-ok"><path d="M0 4.6 l3.2 3.2 L9.2 0.8" fill="none" stroke="#3fb950" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+</defs>
+<rect x="0.5" y="0.5" width="999" height="461" rx="16" fill="#0d1117" stroke="#30363d"/>
+<g clip-path="url(#pd-clip)"><rect width="1000" height="462" fill="url(#pd-grid)"/></g>
+
+<text class="sans" x="40" y="40" font-size="15" fill="#e6edf3">O buildx <tspan fill="#4493f8" font-weight="600">não gera</tspan> o esqueleto — ele parte de um que já passa no CI</text>
+<text class="sans" x="960" y="40" text-anchor="end" font-size="12.5" fill="#6e7681">etapa B2 · padrões P-1 a P-10</text>
+
+<!-- template -->
+<rect x="40" y="64" width="420" height="254" rx="10" fill="#161b22" stroke="#30363d"/>
+<text class="mono" x="60" y="90" font-size="12.5" font-weight="700" fill="#e6edf3">template/</text>
+<text class="sans" x="440" y="90" text-anchor="end" font-size="11" fill="#6e7681">versionado na skill</text>
+<line x1="41" y1="100" x2="459" y2="100" stroke="#21262d"/>
+<g class="mono" font-size="12" fill="#8b949e">
+<text x="60" y="126">src/app/<tspan fill="#6e7681">    painel, configurações, perfil</tspan></text>
+<text x="60" y="150">src/lib/<tspan fill="#6e7681">    autenticação, banco, papéis</tspan></text>
+<text x="60" y="174">prisma/<tspan fill="#6e7681">     migrations e semente</tspan></text>
+<text x="60" y="198">tests/<tspan fill="#6e7681">      integração e funcional</tspan></text>
+<text x="60" y="222">.github/<tspan fill="#6e7681">    CI próprio</tspan></text>
+</g>
+<rect x="60" y="244" width="180" height="30" rx="15" fill="#0d1117" stroke="#3fb950"/>
+<use href="#pd-ok" x="78" y="254"/>
+<text class="mono" x="100" y="263.5" font-size="12" fill="#3fb950">61 testes verdes</text>
+<text class="sans" x="60" y="298" font-size="11.5" fill="#6e7681">nenhuma entidade de domínio · nenhuma regra de negócio</text>
+
+<!-- copia -->
+<g class="on" style="animation:ar 12s linear infinite">
+<path d="M468 190 H548" fill="none" stroke="#4493f8" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#pd-arrow)" style="animation:flow 1.4s linear infinite"/>
+<text class="mono" x="508" y="176" text-anchor="middle" font-size="11" fill="#4493f8">B2 copia</text>
+<text class="sans" x="508" y="212" text-anchor="middle" font-size="10.5" fill="#6e7681">não gera</text>
+</g>
+
+<!-- projeto -->
+<rect x="560" y="64" width="400" height="254" rx="10" fill="#161b22" stroke="#30363d"/>
+<text class="mono" x="580" y="90" font-size="12.5" font-weight="700" fill="#e6edf3">meu-projeto/</text>
+<text class="sans" x="940" y="90" text-anchor="end" font-size="11" fill="#6e7681">em toda entrega</text>
+<line x1="561" y1="100" x2="959" y2="100" stroke="#21262d"/>
+<g class="mono" font-size="12">
+<g class="on" style="animation:e1 12s linear infinite"><text x="580" y="126" fill="#4493f8">E-1</text><text class="sans" x="620" y="126" font-size="12.5" fill="#c9d1d9">painel inicial</text><text class="sans" x="940" y="126" text-anchor="end" font-size="11" fill="#6e7681">título e subtítulo próprios</text></g>
+<g class="on" style="animation:e2 12s linear infinite"><text x="580" y="152" fill="#4493f8">E-2</text><text class="sans" x="620" y="152" font-size="12.5" fill="#c9d1d9">configurações</text><text class="sans" x="940" y="152" text-anchor="end" font-size="11" fill="#6e7681">cadastro de usuários</text></g>
+<g class="on" style="animation:e3 12s linear infinite"><text x="580" y="178" fill="#4493f8">E-3</text><text class="sans" x="620" y="178" font-size="12.5" fill="#c9d1d9">perfil</text><text class="sans" x="940" y="178" text-anchor="end" font-size="11" fill="#6e7681">nome e e-mail</text></g>
+<g class="on" style="animation:e4 12s linear infinite"><text x="580" y="204" fill="#4493f8">E-4</text><text class="sans" x="620" y="204" font-size="12.5" fill="#c9d1d9">troca de senha</text><text class="sans" x="940" y="204" text-anchor="end" font-size="11" fill="#6e7681">exige a atual</text></g>
+</g>
+<g class="on" style="animation:su 12s linear infinite">
+<rect x="580" y="230" width="190" height="30" rx="15" fill="#0d1117" stroke="#3fb950"/>
+<use href="#pd-ok" x="598" y="240"/>
+<text class="mono" x="620" y="249.5" font-size="12" fill="#3fb950">suíte herdada verde</text>
+<text class="sans" x="580" y="284" font-size="11.5" fill="#6e7681">ninguém pede isso, e todo sistema com login precisa</text>
+<text class="sans" x="580" y="302" font-size="11.5" fill="#6e7681">o que depende do seu pedido nasce no B4, sob TDD</text>
+</g>
+
+<!-- padroes -->
+<g class="mono" font-size="11.5">
+<g class="on" style="animation:ch1 12s linear infinite"><rect x="40" y="342" width="219" height="30" rx="8" fill="#21262d" stroke="#30363d"/><text x="56" y="361.5" fill="#6e7681">arquitetura</text><text x="243" y="361.5" text-anchor="end" fill="#c9d1d9">três camadas</text></g>
+<g class="on" style="animation:ch2 12s linear infinite"><rect x="273" y="342" width="219" height="30" rx="8" fill="#21262d" stroke="#30363d"/><text x="289" y="361.5" fill="#6e7681">stack</text><text x="476" y="361.5" text-anchor="end" fill="#c9d1d9">Next.js + TypeScript</text></g>
+<g class="on" style="animation:ch3 12s linear infinite"><rect x="506" y="342" width="219" height="30" rx="8" fill="#21262d" stroke="#30363d"/><text x="522" y="361.5" fill="#6e7681">banco</text><text x="709" y="361.5" text-anchor="end" fill="#c9d1d9">SQLite local</text></g>
+<g class="on" style="animation:ch4 12s linear infinite"><rect x="739" y="342" width="219" height="30" rx="8" fill="#21262d" stroke="#30363d"/><text x="755" y="361.5" fill="#6e7681">autenticação</text><text x="942" y="361.5" text-anchor="end" fill="#c9d1d9">JWT + hash</text></g>
+<g class="on" style="animation:ch1 12s linear infinite"><rect x="40" y="380" width="219" height="30" rx="8" fill="#21262d" stroke="#30363d"/><text x="56" y="399.5" fill="#6e7681">demonstração</text><text x="243" y="399.5" text-anchor="end" fill="#c9d1d9">usuário demo</text></g>
+<g class="on" style="animation:ch2 12s linear infinite"><rect x="273" y="380" width="219" height="30" rx="8" fill="#21262d" stroke="#30363d"/><text x="289" y="399.5" fill="#6e7681">visual</text><text x="476" y="399.5" text-anchor="end" fill="#c9d1d9">VS Code Dark+/Light+</text></g>
+<g class="on" style="animation:ch3 12s linear infinite"><rect x="506" y="380" width="219" height="30" rx="8" fill="#21262d" stroke="#30363d"/><text x="522" y="399.5" fill="#6e7681">método</text><text x="709" y="399.5" text-anchor="end" fill="#c9d1d9">suíte Expx instalada</text></g>
+<g class="on" style="animation:ch4 12s linear infinite"><rect x="739" y="380" width="219" height="30" rx="8" fill="#12243d" stroke="#4493f8"/><text x="755" y="399.5" fill="#4493f8">você sempre</text><text x="942" y="399.5" text-anchor="end" fill="#4493f8">ganha do padrão</text></g>
+</g>
+<g class="on" style="animation:nota 12s linear infinite">
+<text class="sans" x="40" y="440" font-size="13" fill="#8b949e">Gerar custaria milhares de tokens para produzir, a cada projeto, uma variação <tspan fill="#e6edf3">não verificada</tspan> do que já estava verificado.</text>
+</g>
+</svg>

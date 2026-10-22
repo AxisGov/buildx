@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="448" viewBox="0 0 1000 448" role="img" aria-label="O buildx descobre em que etapa está inspecionando o disco, nunca perguntando.">
+<title>A máquina de estados do buildx: a etapa é deduzida do que existe em docs/</title>
+<style>
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
+.sans{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+.on{opacity:0}
+@keyframes mk1{0%,7%{opacity:0}9.5%,93%{opacity:1}96%,100%{opacity:0}}
+@keyframes mk2{0%,11%{opacity:0}13.5%,93%{opacity:1}96%,100%{opacity:0}}
+@keyframes mk3{0%,15%{opacity:0}17.5%,93%{opacity:1}96%,100%{opacity:0}}
+@keyframes mk4{0%,19%{opacity:0}21.5%,93%{opacity:1}96%,100%{opacity:0}}
+@keyframes mk5{0%,23%{opacity:0}25.5%,93%{opacity:1}96%,100%{opacity:0}}
+@keyframes mk6{0%,27%{opacity:0}29.5%,93%{opacity:1}96%,100%{opacity:0}}
+@keyframes mk7{0%,31%{opacity:0}33.5%,93%{opacity:1}96%,100%{opacity:0}}
+@keyframes mk8{0%,35%{opacity:0}37.5%,93%{opacity:1}96%,100%{opacity:0}}
+@keyframes mk9{0%,39%{opacity:0}41.5%,93%{opacity:1}96%,100%{opacity:0}}
+@keyframes mk10{0%,43%{opacity:0}45.5%,93%{opacity:1}96%,100%{opacity:0}}
+@keyframes scan{0%,4%{opacity:0}6%{opacity:1}46%{opacity:1}49%,100%{opacity:0}}
+@keyframes scanmove{0%,5%{transform:translateY(0)}46%,100%{transform:translateY(216px)}}
+@keyframes ded{0%,50%{opacity:0}54%,93%{opacity:1}96%,100%{opacity:0}}
+@keyframes rule{0%,57%{opacity:0}61%,93%{opacity:1}96%,100%{opacity:0}}
+@keyframes flow{to{stroke-dashoffset:-60}}
+</style>
+<defs>
+<clipPath id="me-clip"><rect x="1" y="1" width="998" height="446" rx="15"/></clipPath>
+<pattern id="me-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0 H0 V40" fill="none" stroke="#161b22" stroke-width="1"/></pattern>
+<clipPath id="me-list"><rect x="41" y="106" width="428" height="264"/></clipPath>
+<marker id="me-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#4493f8"/></marker>
+<g id="me-ok"><path d="M0 4.6 l3.2 3.2 L9.2 0.8" fill="none" stroke="#3fb950" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g id="me-no"><path d="M0 0 L9 9 M9 0 L0 9" fill="none" stroke="#6e7681" stroke-width="1.8" stroke-linecap="round"/></g>
+</defs>
+
+<rect x="0.5" y="0.5" width="999" height="447" rx="16" fill="#0d1117" stroke="#30363d"/>
+<g clip-path="url(#me-clip)"><rect width="1000" height="448" fill="url(#me-grid)"/></g>
+
+<text class="sans" x="40" y="42" font-size="15" fill="#e6edf3">O buildx descobre onde está <tspan fill="#4493f8" font-weight="600">inspecionando o disco</tspan> — nunca perguntando</text>
+
+<!-- painel do disco -->
+<rect x="40" y="70" width="430" height="300" rx="10" fill="#161b22" stroke="#30363d"/>
+<text class="mono" x="60" y="94" font-size="12.5" fill="#8b949e">docs/</text>
+<text class="mono" x="450" y="94" text-anchor="end" font-size="11" fill="#6e7681">o que existe</text>
+<line x1="41" y1="104" x2="469" y2="104" stroke="#21262d"/>
+
+<g clip-path="url(#me-list)">
+<rect class="on" x="41" y="112" width="428" height="26" fill="#4493f8" opacity="0.10" style="animation:scan 11s linear infinite, scanmove 11s linear infinite"/>
+</g>
+
+<g class="mono" font-size="12.5" fill="#8b949e">
+<text x="60" y="130">projeto/<tspan fill="#e6edf3">PROJETO.md</tspan></text>
+<g class="on" style="animation:mk1 11s linear infinite"><use href="#me-ok" x="436" y="121"/></g>
+<text x="60" y="154">projeto/<tspan fill="#e6edf3">PREMISSAS.md</tspan></text>
+<g class="on" style="animation:mk2 11s linear infinite"><use href="#me-ok" x="436" y="145"/><text x="410" y="154" text-anchor="end" font-size="11" fill="#6e7681">37 premissas</text></g>
+<text x="60" y="178">stack/<tspan fill="#e6edf3">CONVENCOES.md</tspan></text>
+<g class="on" style="animation:mk3 11s linear infinite"><use href="#me-ok" x="436" y="169"/></g>
+<text x="60" y="202">projeto/<tspan fill="#e6edf3">MAPA.md</tspan></text>
+<g class="on" style="animation:mk4 11s linear infinite"><use href="#me-ok" x="436" y="193"/><text x="410" y="202" text-anchor="end" font-size="11" fill="#6e7681">9 features</text></g>
+
+<text x="60" y="232" fill="#6e7681">upload-de-pdf/</text>
+<g class="on" style="animation:mk5 11s linear infinite"><text x="446" y="232" text-anchor="end" font-size="11" fill="#3fb950">entregue</text></g>
+<text x="60" y="256" fill="#6e7681">alerta-de-vencimento/</text>
+<g class="on" style="animation:mk6 11s linear infinite"><text x="446" y="256" text-anchor="end" font-size="11" fill="#d29922">em_andamento</text></g>
+<text x="60" y="280" fill="#6e7681">relatorio-mensal-por-cliente/</text>
+<g class="on" style="animation:mk7 11s linear infinite"><text x="446" y="280" text-anchor="end" font-size="11" fill="#8b949e">pendente</text></g>
+
+<text x="60" y="310">projeto/<tspan fill="#6e7681">RECURSAO.md</tspan></text>
+<g class="on" style="animation:mk8 11s linear infinite"><use href="#me-no" x="437" y="301"/></g>
+<text x="60" y="334">projeto/<tspan fill="#6e7681">VALIDACAO.md</tspan></text>
+<g class="on" style="animation:mk9 11s linear infinite"><use href="#me-no" x="437" y="325"/></g>
+<text x="60" y="358">projeto/<tspan fill="#6e7681">RELATORIO.md</tspan></text>
+<g class="on" style="animation:mk10 11s linear infinite"><use href="#me-no" x="437" y="349"/></g>
+</g>
+
+<!-- ponte -->
+<g class="on" style="animation:ded 11s linear infinite">
+<path d="M470 244 H508" fill="none" stroke="#4493f8" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#me-arrow)" style="animation:flow 1.4s linear infinite"/>
+</g>
+
+<!-- painel das etapas -->
+<rect x="516" y="70" width="444" height="300" rx="10" fill="#161b22" stroke="#30363d"/>
+<text class="mono" x="536" y="94" font-size="12.5" fill="#8b949e">etapa deduzida</text>
+<line x1="517" y1="104" x2="959" y2="104" stroke="#21262d"/>
+
+<g class="mono" font-size="12">
+<g><rect x="532" y="118" width="412" height="30" rx="6" fill="#0d1117" stroke="#21262d"/><text x="548" y="137" font-weight="700" fill="#6e7681">B1</text><text class="sans" x="584" y="137" font-size="12.5" fill="#6e7681">PROJETO.md não existe</text></g>
+<g><rect x="532" y="156" width="412" height="30" rx="6" fill="#0d1117" stroke="#21262d"/><text x="548" y="175" font-weight="700" fill="#6e7681">B2</text><text class="sans" x="584" y="175" font-size="12.5" fill="#6e7681">PROJETO.md sim, CONVENCOES.md não</text></g>
+<g><rect x="532" y="194" width="412" height="30" rx="6" fill="#0d1117" stroke="#21262d"/><text x="548" y="213" font-weight="700" fill="#6e7681">B3</text><text class="sans" x="584" y="213" font-size="12.5" fill="#6e7681">CONVENCOES.md sim, MAPA.md não</text></g>
+<g>
+  <rect x="532" y="232" width="412" height="30" rx="6" fill="#0d1117" stroke="#21262d"/>
+  <rect class="on" x="532" y="232" width="412" height="30" rx="6" fill="#12243d" stroke="#4493f8" stroke-width="1.5" style="animation:ded 11s linear infinite"/>
+  <text x="548" y="251" font-weight="700" fill="#6e7681">B4</text>
+  <text class="sans" x="584" y="251" font-size="12.5" fill="#6e7681">MAPA.md sim, feature não entregue</text>
+  <g class="on" style="animation:ded 11s linear infinite"><text x="548" y="251" class="mono" font-size="12" font-weight="700" fill="#4493f8">B4</text><text class="sans" x="584" y="251" font-size="12.5" fill="#e6edf3">MAPA.md sim, feature não entregue</text></g>
+</g>
+<g><rect x="532" y="270" width="412" height="30" rx="6" fill="#0d1117" stroke="#21262d"/><text x="548" y="289" font-weight="700" fill="#6e7681">B5</text><text class="sans" x="584" y="289" font-size="12.5" fill="#6e7681">todas fechadas, RECURSAO.md pendente</text></g>
+<g><rect x="532" y="308" width="412" height="30" rx="6" fill="#0d1117" stroke="#21262d"/><text x="548" y="327" font-weight="700" fill="#6e7681">B6</text><text class="sans" x="584" y="327" font-size="12.5" fill="#6e7681">sem pendência, VALIDACAO.md não existe</text></g>
+</g>
+<g class="on" style="animation:rule 11s linear infinite">
+<text class="sans" x="536" y="358" font-size="12" fill="#8b949e">VALIDACAO.md com <tspan class="mono" fill="#3fb950">veredito: aprovado</tspan> → fim</text>
+</g>
+
+<line x1="40" y1="394" x2="960" y2="394" stroke="#21262d"/>
+<text class="sans" x="40" y="420" font-size="13" fill="#8b949e">Peça uma etapa adiantada e ele executa a <tspan fill="#e6edf3">pendente</tspan>, dizendo em uma linha o que fez em vez de obedecer fora de ordem.</text>
+</svg>

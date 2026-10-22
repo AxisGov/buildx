@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="452" viewBox="0 0 1000 452" role="img" aria-label="expx-schema v1: a máquina lê o frontmatter YAML, a pessoa lê a prosa, e o projeto_id costura o projeto às features.">
+<title>expx-schema v1 no buildx: o projeto é o nível acima do trabalho</title>
+<style>
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
+.sans{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+.on{opacity:0}
+.k{fill:#79c0ff}.v{fill:#a5d6ff}.n{fill:#d29922}.c{fill:#6e7681}
+@keyframes y1{0%,5%{opacity:0}8%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes y2{0%,14%{opacity:0}17%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes pr{0%,26%{opacity:0}30%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes b1{0%,42%{opacity:0}46%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes b2{0%,50%{opacity:0}54%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes b3{0%,58%{opacity:0}62%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes nota{0%,72%{opacity:0}76%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes flow{to{stroke-dashoffset:-48}}
+</style>
+<defs>
+<clipPath id="sc-clip"><rect x="1" y="1" width="998" height="450" rx="15"/></clipPath>
+<pattern id="sc-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0 H0 V40" fill="none" stroke="#161b22" stroke-width="1"/></pattern>
+<marker id="sc-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#4493f8"/></marker>
+</defs>
+<rect x="0.5" y="0.5" width="999" height="451" rx="16" fill="#0d1117" stroke="#30363d"/>
+<g clip-path="url(#sc-clip)"><rect width="1000" height="452" fill="url(#sc-grid)"/></g>
+
+<text class="sans" x="40" y="40" font-size="15" fill="#e6edf3">A máquina lê o <tspan class="mono" fill="#4493f8">YAML</tspan>, a pessoa lê a prosa — e só a skill escreve</text>
+<text class="mono" x="960" y="40" text-anchor="end" font-size="12" fill="#6e7681">expx-schema v1</text>
+
+<!-- yaml -->
+<rect x="40" y="62" width="486" height="248" rx="10" fill="#161b22" stroke="#30363d"/>
+<text class="mono" x="60" y="86" font-size="11.5" fill="#8b949e">docs/projeto/PROJETO.md</text>
+<line x1="41" y1="96" x2="525" y2="96" stroke="#21262d"/>
+<g class="mono" font-size="11.5">
+<g class="on" style="animation:y1 13s linear infinite">
+<text x="60" y="118" class="c">---</text>
+<text x="60" y="136"><tspan class="k">expx_schema:</tspan><tspan class="v"> 1</tspan></text>
+<text x="60" y="154"><tspan class="k">expx_tool:</tspan><tspan class="v"> buildx</tspan></text>
+<text x="60" y="172"><tspan class="k">kind:</tspan><tspan class="v"> projeto</tspan></text>
+<text x="60" y="190"><tspan class="k">projeto_id:</tspan><tspan class="n"> gestao-de-contratos</tspan></text>
+</g>
+<g class="on" style="animation:y2 13s linear infinite">
+<text x="60" y="208"><tspan class="k">modo:</tspan><tspan class="v"> autonomo</tspan></text>
+<text x="60" y="226"><tspan class="k">etapa:</tspan><tspan class="v"> b4</tspan></text>
+<text x="60" y="244"><tspan class="k">total_features:</tspan><tspan class="v"> 9</tspan></text>
+<text x="60" y="262"><tspan class="k">features_entregues:</tspan><tspan class="v"> 3</tspan></text>
+<text x="60" y="280"><tspan class="k">ciclos_recursao:</tspan><tspan class="v"> 2</tspan></text>
+<text x="60" y="298" class="c">---</text>
+</g>
+</g>
+
+<!-- prosa -->
+<rect x="558" y="62" width="402" height="248" rx="10" fill="#161b22" stroke="#30363d"/>
+<text class="sans" x="578" y="86" font-size="11.5" fill="#8b949e">a mesma coisa, para gente</text>
+<line x1="559" y1="96" x2="959" y2="96" stroke="#21262d"/>
+<g class="on" style="animation:pr 13s linear infinite">
+<text class="sans" x="578" y="124" font-size="15" font-weight="700" fill="#e6edf3">Sistema de gestão de contratos</text>
+<text class="sans" x="578" y="150" font-size="12.5" fill="#8b949e">Conduzido em modo autônomo. Está na etapa</text>
+<text class="sans" x="578" y="168" font-size="12.5" fill="#8b949e">B4, construção, com 3 das 9 features</text>
+<text class="sans" x="578" y="186" font-size="12.5" fill="#8b949e">entregues e 2 ciclos de recursão rodados.</text>
+<rect x="578" y="206" width="180" height="26" rx="13" fill="#12243d" stroke="#4493f8"/>
+<text class="mono" x="668" y="223" text-anchor="middle" font-size="11" fill="#4493f8">o painel apenas lê</text>
+<text class="sans" x="578" y="256" font-size="11.5" fill="#6e7681">Artefato sem frontmatter válido é considerado</text>
+<text class="sans" x="578" y="274" font-size="11.5" fill="#6e7681">não entregue — regra 10, sem exceção.</text>
+</g>
+
+<!-- a ponte entre os dois niveis -->
+<text class="sans" x="40" y="342" font-size="12.5" fill="#8b949e">O buildx grava o estado de um <tspan fill="#e6edf3">projeto</tspan>; o sprintx, o de um <tspan fill="#e6edf3">trabalho</tspan>. Duas chaves costuram os dois níveis:</text>
+<g class="mono" font-size="11.5">
+<g class="on" style="animation:b1 13s linear infinite">
+<rect x="40" y="356" width="272" height="56" rx="8" fill="#12243d" stroke="#4493f8"/>
+<text x="58" y="378" fill="#e6edf3">PROJETO.md</text>
+<text x="58" y="398" class="n">projeto_id</text>
+</g>
+<g class="on" style="animation:b2 13s linear infinite">
+<path d="M320 384 H356" fill="none" stroke="#4493f8" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#sc-arrow)" style="animation:flow 1.4s linear infinite"/>
+<rect x="364" y="356" width="272" height="56" rx="8" fill="#161b22" stroke="#30363d"/>
+<text x="382" y="378" fill="#e6edf3">MAPA.md</text>
+<text x="382" y="398" class="n">feature_id: FT-04</text>
+</g>
+<g class="on" style="animation:b3 13s linear infinite">
+<path d="M644 384 H680" fill="none" stroke="#4493f8" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#sc-arrow)" style="animation:flow 1.4s linear infinite"/>
+<rect x="688" y="356" width="272" height="56" rx="8" fill="#161b22" stroke="#30363d"/>
+<text x="706" y="378" fill="#e6edf3">docs/upload-de-pdf/tasks.md</text>
+<text x="706" y="398" class="n">origem_buildx + feature_id</text>
+</g>
+</g>
+<g class="on" style="animation:nota 13s linear infinite">
+<text class="sans" x="40" y="434" font-size="12" fill="#6e7681">Olhe qualquer plano de sprint e saiba de qual projeto e de qual feature do mapa ele veio.</text>
+</g>
+</svg>

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="404" viewBox="0 0 1000 404" role="img" aria-label="Toda decisão tomada em seu nome vira uma premissa de cinco campos, e o quinto — o que invalida — é o que se revisa.">
+<title>A premissa auditável: cinco campos, e o quinto é o que permite revisar tudo em minutos</title>
+<style>
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace}
+.sans{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+.on{opacity:0}
+@keyframes f1{0%,6%{opacity:0}10%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes f2{0%,16%{opacity:0}20%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes f3{0%,26%{opacity:0}30%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes box{0%,34%{opacity:0}38%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes r1{0%,46%{opacity:0}49%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes r2{0%,51%{opacity:0}54%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes r3{0%,56%{opacity:0}59%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes r4{0%,61%{opacity:0}64%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes r5{0%,66%{opacity:0}69%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes nota{0%,76%{opacity:0}80%,94%{opacity:1}97%,100%{opacity:0}}
+@keyframes glow{0%,100%{opacity:.18}50%{opacity:.4}}
+</style>
+<defs>
+<clipPath id="pr-clip"><rect x="1" y="1" width="998" height="402" rx="15"/></clipPath>
+<pattern id="pr-grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0 H0 V40" fill="none" stroke="#161b22" stroke-width="1"/></pattern>
+</defs>
+<rect x="0.5" y="0.5" width="999" height="403" rx="16" fill="#0d1117" stroke="#30363d"/>
+<g clip-path="url(#pr-clip)"><rect width="1000" height="404" fill="url(#pr-grid)"/></g>
+
+<text class="sans" x="40" y="42" font-size="15" fill="#e6edf3">Cada decisão tomada em seu nome vira uma premissa de cinco campos — e o <tspan fill="#4493f8" font-weight="600">quinto</tspan> é o que importa</text>
+
+<!-- a premissa -->
+<rect x="40" y="70" width="524" height="252" rx="10" fill="#161b22" stroke="#30363d"/>
+<rect x="40" y="70" width="3" height="252" fill="#4493f8"/>
+<text class="mono" x="64" y="100" font-size="13.5" font-weight="700" fill="#e6edf3">PR-07 <tspan fill="#6e7681">—</tspan> Autorização por papéis</text>
+<text class="mono" x="544" y="100" text-anchor="end" font-size="11" fill="#6e7681">origem: catalogo_lacunas · B1</text>
+<line x1="41" y1="112" x2="563" y2="112" stroke="#21262d"/>
+
+<g class="on" style="animation:f1 12s linear infinite">
+<text class="mono" x="64" y="140" font-size="11.5" fill="#4493f8">decisão</text>
+<text class="sans" x="64" y="160" font-size="13" fill="#e6edf3">papéis <tspan class="mono" font-size="12">admin</tspan> e <tspan class="mono" font-size="12">usuario</tspan> desde a primeira feature,</text>
+<text class="sans" x="64" y="178" font-size="13" fill="#e6edf3">verificados no servidor.</text>
+</g>
+<g class="on" style="animation:f2 12s linear infinite">
+<text class="mono" x="64" y="206" font-size="11.5" fill="#4493f8">por quê</text>
+<text class="sans" x="64" y="226" font-size="13" fill="#8b949e">o sistema tem dado de mais de um usuário; sem papel,</text>
+<text class="sans" x="64" y="244" font-size="13" fill="#8b949e">qualquer conta alcança o dado de qualquer outra.</text>
+</g>
+<g class="on" style="animation:f3 12s linear infinite">
+<text class="mono" x="64" y="272" font-size="11.5" fill="#4493f8">o que invalida</text>
+<text class="sans" x="64" y="292" font-size="13" fill="#e6edf3">se todo usuário tiver exatamente o mesmo acesso aos</text>
+<text class="sans" x="64" y="310" font-size="13" fill="#e6edf3">mesmos dados, de forma permanente.</text>
+</g>
+<g class="on" style="animation:box 12s linear infinite">
+<rect x="52" y="256" width="500" height="66" rx="8" fill="#4493f8" style="animation:glow 3s ease-in-out infinite"/>
+<rect x="52" y="256" width="500" height="66" rx="8" fill="none" stroke="#4493f8" stroke-width="1.5"/>
+</g>
+
+<!-- a revisao -->
+<text class="sans" x="596" y="96" font-size="13.5" font-weight="600" fill="#e6edf3">Revisar 37 decisões em cinco minutos</text>
+<text class="sans" x="596" y="116" font-size="12" fill="#8b949e">leia só o campo <tspan class="mono" fill="#4493f8">o que invalida</tspan></text>
+
+<g class="mono" font-size="11">
+<g class="on" style="animation:r1 12s linear infinite"><rect x="596" y="136" width="364" height="32" rx="6" fill="#161b22" stroke="#21262d"/><text x="612" y="156" fill="#6e7681">PR-03</text><text class="sans" x="656" y="156" font-size="12" fill="#8b949e">se ninguém fizer upload de arquivo</text></g>
+<g class="on" style="animation:r2 12s linear infinite"><rect x="596" y="174" width="364" height="32" rx="6" fill="#161b22" stroke="#21262d"/><text x="612" y="194" fill="#6e7681">PR-07</text><text class="sans" x="656" y="194" font-size="12" fill="#8b949e">se todo usuário tiver o mesmo acesso</text></g>
+<g class="on" style="animation:r3 12s linear infinite"><rect x="596" y="212" width="364" height="32" rx="6" fill="#161b22" stroke="#21262d"/><text x="612" y="232" fill="#6e7681">PR-12</text><text class="sans" x="656" y="232" font-size="12" fill="#8b949e">se o dado não sair do país de origem</text></g>
+<g class="on" style="animation:r4 12s linear infinite"><rect x="596" y="250" width="364" height="32" rx="6" fill="#161b22" stroke="#21262d"/><text x="612" y="270" fill="#6e7681">PR-19</text><text class="sans" x="656" y="270" font-size="12" fill="#8b949e">se a carga passar de mil requisições/min</text></g>
+<g class="on" style="animation:r5 12s linear infinite"><rect x="596" y="288" width="364" height="32" rx="6" fill="#161b22" stroke="#21262d"/><text x="612" y="308" fill="#6e7681">PR-24</text><text class="sans" x="656" y="308" font-size="12" fill="#8b949e">se o público falar mais de um idioma</text></g>
+</g>
+
+<g class="on" style="animation:nota 12s linear infinite">
+<line x1="40" y1="346" x2="960" y2="346" stroke="#21262d"/>
+<text class="sans" x="40" y="372" font-size="13" fill="#8b949e">Se aquilo é verdade no seu caso, a premissa merece atenção. Se não é, siga — e você não leu os outros quatro campos.</text>
+</g>
+</svg>

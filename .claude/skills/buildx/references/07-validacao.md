@@ -78,6 +78,23 @@ A regra que não se dobra: **nenhuma premissa de segurança sem código pode sai
 
 Grave o `VALIDACAO.md` com `assets/TEMPLATE-VALIDACAO.md`.
 
+## Passo 4.a — Candidatas a módulo novo
+
+Para cada feature entregue que integrou um terceiro e tinha `modulo_disponivel: -`, registre-a como **candidata a extração** e ofereça `/modulex-extrair`.
+
+**O buildx é o melhor gatilho de extração da suíte inteira.** Ele acabou de construir um sistema com o plano, o QA e o relatório de entrega ainda na mão — que são exatamente as fontes das 14 seções do `MODULO.md`. Seis meses depois esse material está frio e a extração custa dez vezes mais.
+
+É a metade "escrita" do ciclo do `modulex`, e é a que sempre falta: sem ela o catálogo só é lido, envelhece e apodrece.
+
+Dois limites, e os dois são duros:
+
+- **Ofereça, não execute.** A extração publica conhecimento entre clientes e exige sanitização — nenhum token, domínio de cliente ou telefone real. Isso não roda em modo autônomo.
+- **Feature que ainda não rodou em produção não vira módulo, vira exemplo.** O que dá valor ao módulo são as cicatrizes, e código que não rodou não tem nenhuma. Registre a candidatura e diga que falta produção.
+
+Encontrando divergência entre um módulo injetado e a realidade — endpoint que mudou, erro novo, armadilha que não estava lá — dispare `/modulex-verificar` sobre **aquele campo**, nunca uma verificação completa.
+
+**Sem `modulex`, ou com o catálogo não alcançável:** pule este passo. O projeto está entregue do mesmo jeito.
+
 ## Passo 5 — O relatório final
 
 A primeira coisa que o usuário lê desde a pergunta única. Ele fechou os olhos no começo; isto é o que ele encontra ao abrir.
@@ -90,6 +107,7 @@ Escrito para quem **não acompanhou nada**. Ordem deliberada — o que exige aç
 3. O QUE FOI DECIDIDO POR VOCÊ     as premissas, com o que invalida cada uma
 4. O QUE FICOU PRONTO              features entregues, com os PRs
 5. O QUE NÃO FICOU                 pendências, com o porquê
+5.a CANDIDATAS A MÓDULO            o que deveria virar módulo do catálogo
 6. COMO RODAR                      instalar, subir, entrar com o usuário demo
 7. O QUE FAZER AGORA               revisar os PRs e fazer merge
 ```
