@@ -118,7 +118,7 @@ Toda tela entregue tem as duas variantes de tema, os três estados obrigatórios
 
 ## Passo 6 — O portão e o PR
 
-`mergex-check` roda as dez verificações. Devolveu **BLOQUEADO**: não force o PR. Trate como bloqueio da feature — marque `bloqueada` no `MAPA.md` com o motivo que a mergex deu, e siga para a próxima feature. O B5 decide o que fazer.
+`mergex-check` roda as doze verificações. Devolveu **BLOQUEADO**: não force o PR. Trate como bloqueio da feature — marque `bloqueada` no `MAPA.md` com o motivo que a mergex deu, e siga para a próxima feature. O B5 decide o que fazer.
 
 Devolveu **PRONTO**: `mergex-pr` monta a descrição, sobe a branch e abre o PR. A descrição referencia o `projeto_id` e o `FT-NN`.
 
