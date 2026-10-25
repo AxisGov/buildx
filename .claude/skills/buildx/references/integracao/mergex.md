@@ -7,7 +7,7 @@ A mergex leva o trabalho implementado até o repositório e até o revisor human
 | Etapa | Quando | O que faz |
 |---|---|---|
 | `mergex-abrir` (E0) | início da F6, **acionado pelo sprintx** — o buildx não invoca | adota a `feature/<slug>` que a F1 abriu; exige o `ORQUESTRADOR.md` da F4, então antes dela não abre nada |
-| `mergex-check` (E2) | depois da F6 | portão de prontidão, dez verificações |
+| `mergex-check` (E2) | depois da F6 | portão de prontidão, doze verificações |
 | `mergex-pr` (E4/E6/E7) | com o portão PRONTO | descrição, push, PR aberto — ou "PR não aberto", que não é entrega (abaixo) |
 | `mergex-qa` (E5) | depois do PR | pacote de teste manual |
 | `mergex-revisar` | **nunca** | integrar código é decisão humana |
@@ -26,7 +26,7 @@ Um buildx que faz merge sozinho não é mais autônomo: é irreversível. São c
 
 ## O portão de prontidão no modo autônomo
 
-As dez verificações da `mergex-check` são o que impede o laço do B4 de produzir onze PRs que parecem prontos.
+As doze verificações da `mergex-check` são o que impede o laço do B4 de produzir onze PRs que parecem prontos.
 
 Devolveu **BLOQUEADO**: o buildx **não força**. Marca a feature `bloqueada` no `MAPA.md` com o motivo que a mergex deu, registra a pendência, e segue para a próxima feature. O B5 classifica depois.
 
@@ -61,7 +61,7 @@ O relatório final aponta para os pacotes de QA de cada feature. É o caminho de
 
 ## O modo legado não se aplica
 
-A `mergex-check` verifica modo legado entre as dez. Num projeto do buildx não há legado: todo código nasceu neste projeto. A verificação passa por vacuidade, e isso é correto — não a desative.
+A `mergex-check` verifica modo legado entre as doze. Num projeto do buildx não há legado: todo código nasceu neste projeto. A verificação passa por vacuidade, e isso é correto — não a desative.
 
 Se um projeto do buildx um dia acumular legado, o legadox entra normalmente, e aí o buildx já não é a camada em uso: o projeto virou manutenção, que é sprintx e runx.
 
