@@ -173,7 +173,7 @@ Na dúvida, `false`. Duas features paralelas que colidem no mesmo arquivo custam
 
 ## Critério de saída do B3
 
-- `MAPA.md` existe, com frontmatter válido e toda feature com os oito campos
+- `MAPA.md` existe, com frontmatter válido e toda feature com os dez campos
 - toda feature passa nos três testes: vertical, enunciável, demonstrável
 - `FT-01` é a fundação, com `origem: template`: autenticação, usuário de demonstração, casca visual e o esqueleto do P-9, herdados do B2 e verificados
 - nenhuma feature do mapa duplica o que o P-9 já entrega: feature de negócio acrescenta item à barra lateral e tela ao sistema, não recria a área de configurações
