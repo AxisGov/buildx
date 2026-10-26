@@ -51,12 +51,17 @@ else
 fi
 # O enum de `origem` e um so: a FT-01 nasce `template`.
 for f in "$doc" "$skill_md" "$raiz/.claude/skills/buildx/assets/TEMPLATE-MAPA.md"; do
+  # o conjunto EXATO de valores: na tabela, as palavras entre crases da linha (menos o nome do
+  # campo); no template, as opções entre < e >. Nem falta nem sobra.
   linha_origem="$(grep -m1 -E '^(\| `origem` \||\*\*Origem:\*\*)' "$f")"
-  if printf '%s' "$linha_origem" | grep -q 'descricao' && printf '%s' "$linha_origem" | grep -q 'premissa' \
-     && printf '%s' "$linha_origem" | grep -q 'recursao' && printf '%s' "$linha_origem" | grep -q 'template'; then
+  case "$linha_origem" in
+    '**Origem:**'*) valores="$(printf '%s' "$linha_origem" | sed 's/.*<\(.*\)>.*/\1/' | tr '|' '\n' | tr -d ' ')" ;;
+    *) valores="$(printf '%s' "$linha_origem" | grep -oE '`[a-z_]+`' | tr -d '`' | grep -vx origem)" ;;
+  esac
+  if [ "$(printf '%s\n' "$valores" | grep -v '^$' | sort -u | tr '\n' ' ')" = "descricao premissa recursao template " ]; then
     printf '  ok    enum de origem completo em %s\n' "${f#$raiz/}"
   else
-    printf '  FALHA enum de origem incompleto em %s\n' "${f#$raiz/}"; falhou=1
+    printf '  FALHA enum de origem difere de descricao|premissa|recursao|template em %s\n' "${f#$raiz/}"; falhou=1
   fi
 done
 # O briefing do B4 leva os candidatos a F2/F3, onde o fornecedor e escolhido (CodeAnt no buildx#14).
