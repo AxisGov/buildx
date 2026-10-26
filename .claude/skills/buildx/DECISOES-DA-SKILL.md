@@ -300,3 +300,15 @@ Há um terceiro efeito, mais silencioso: um esqueleto gerado tem, no melhor caso
 **Por quê:** quando a última predecessora é ela própria empilhada sobre outra feature não integrada, o PR dela compara com a branch dessa outra, não com a base comum; a base mergeada nela entra no diff do PR como mudança dela, e o PR deixa de mostrar só o próprio diff — o que a D-19 promete. Pela raiz, cada merge só traz para a branch a base do próprio PR, e nenhum diff muda. Achado do CodeAnt na AxisGov/buildx#8 (05-construcao.md:32).
 
 **O que invalida:** o serviço passar a atualizar PRs empilhados sozinho, ou o buildx deixar de empilhar (D-19).
+
+---
+
+## D-23 — Os candidatos a módulo são coleção
+
+**Decisão:** a feature registra `modulos_candidatos`, lista JSON dos ids de módulos do catálogo alternativos para o mesmo terceiro (`[]` quando não há), e `fatias_candidatas`, objeto JSON com as fatias de cada candidato (`"<id>": []` quando o candidato não tem fatia que cubra a feature). O B6 oferece a extração quando a lista é vazia. Dois terceiros na mesma feature continuam sendo corte grosso, quebrado pela regra do "e" da entrega.
+
+**Alternativa descartada:** manter o valor único (`modulo_disponivel: <id> | -`) e tratar dois módulos como corte grosso.
+
+**Por quê:** o próprio recorte manda registrar os dois quando há dois módulos para o mesmo problema ("Dois módulos para o mesmo problema"), sem o buildx escolher o fornecedor; o valor único não guardava o segundo, e a regra do corte grosso quebraria uma feature que não deve ser quebrada. Achado do CodeRabbit no katosmv/login#29, decidido pelo dono.
+
+**O que invalida:** o buildx passar a escolher o fornecedor na decomposição, ou o catálogo passar a devolver um módulo só por terceiro.

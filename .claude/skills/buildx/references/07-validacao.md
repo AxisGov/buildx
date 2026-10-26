@@ -80,7 +80,11 @@ Grave o `VALIDACAO.md` com `assets/TEMPLATE-VALIDACAO.md`.
 
 ## Passo 4.a — Candidatas a módulo novo
 
-Para cada feature entregue que integrou um terceiro e tinha `modulo_disponivel: -`, registre-a como **candidata a extração** e ofereça `/modulex-extrair`.
+Para cada feature entregue que integrou um terceiro e tinha `modulos_candidatos: []` — nenhum módulo do catálogo para ele —, registre-a como **candidata a extração** e ofereça `/modulex-extrair`.
+
+### Compatibilidade com o `MAPA.md` anterior
+
+Mapa gravado antes da D-23 traz o valor único (`modulo_disponivel`, `fatias_candidatas` com slugs). Ele só vale quando os campos novos não existem; com os dois presentes, os novos vencem. `modulo_disponivel: -` equivale a `modulos_candidatos: []`, e `modulo_disponivel: <id>` a `["<id>"]`, com as fatias desse id; `fatias_candidatas: -` é a lista vazia. A forma antiga não é mais gravada.
 
 **O buildx é o melhor gatilho de extração da suíte inteira.** Ele acabou de construir um sistema com o plano, o QA e o relatório de entrega ainda na mão — que são exatamente as fontes das 14 seções do `MODULO.md`. Seis meses depois esse material está frio e a extração custa dez vezes mais.
 

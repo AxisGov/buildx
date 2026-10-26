@@ -47,7 +47,7 @@ Faixa saudável de um projeto descrito num parágrafo: **entre 6 e 15 features.*
 
 Terminado o recorte, para cada feature que integra um terceiro — pagamento, WhatsApp, storage, email transacional, nota fiscal, assinatura digital, mensageria — rode `/modulex-buscar` com o **problema** da feature, na linguagem do `MAPA.md`. Nunca pelo nome do fornecedor.
 
-O desfecho entra na feature como campo (`modulo_disponivel`, `fatias_candidatas`), não como texto solto.
+O desfecho entra na feature como campo (`modulos_candidatos`, `fatias_candidatas`), não como texto solto.
 
 ### O módulo não recorta o projeto
 
@@ -59,7 +59,7 @@ Fatias sugerindo fronteira diferente do seu recorte: **anote a divergência e si
 
 ### Dois módulos para o mesmo problema
 
-Entram os dois, como dois candidatos. **O buildx não escolhe fornecedor** — a escolha acontece na F2/F3 do sprintx, dentro do B4, com o `CONVENCOES.md` na mesa.
+Entram os dois em `modulos_candidatos`, como dois candidatos, cada um com as suas fatias em `fatias_candidatas`. **O buildx não escolhe fornecedor** — a escolha acontece na F2/F3 do sprintx, dentro do B4, com o `CONVENCOES.md` na mesa.
 
 ### A escolha de fatias, sem quebrar a pergunta única
 
@@ -86,7 +86,7 @@ Errar para menos custa uma injeção a mais depois. Errar para mais custa um pro
 
 A stack **herdada** do módulo não vai para o `CONVENCOES.md` — ele é do B2, e já aconteceu. O que o módulo declara como **essencial ao terceiro** entra como restrição técnica a respeitar, nunca como convenção a adotar. Ver `references/integracao/stackx.md`.
 
-**Sem `modulex` instalado, ou com o catálogo não alcançável:** decomponha como sempre, com os dois campos em `-`. Não instale nada, não pergunte, não pare.
+**Sem `modulex` instalado, ou com o catálogo não alcançável:** decomponha como sempre, com `modulos_candidatos: []` e `fatias_candidatas: {}`. Não instale nada, não pergunte, não pare.
 
 ## O contrato da feature
 
@@ -102,8 +102,8 @@ Toda feature do `MAPA.md` declara, obrigatoriamente:
 | `paralelizavel` | `true` \| `false` | declarado aqui, nunca decidido no B4 |
 | `origem` | `descricao` \| `premissa` \| `recursao` \| `template` | rastreia por que a feature existe |
 | `status` | `pendente` \| `em_andamento` \| `entregue` \| `bloqueada` | nasce `pendente` |
-| `modulo_disponivel` | `<id>` \| `-` | preenchido pela consulta ao catálogo; `-` quando não há |
-| `fatias_candidatas` | `<slugs>` \| `-` | as fatias do módulo que cobrem esta feature |
+| `modulos_candidatos` | lista JSON de ids, `["<id>", ...]` \| `[]` | os módulos alternativos do catálogo para o terceiro desta feature, preenchidos pela consulta; `[]` quando não há |
+| `fatias_candidatas` | objeto JSON, `{"<id>": ["<slug>", ...]}` \| `{}` | para cada candidato, as fatias que cobrem esta feature; candidato sem fatia fica com `"<id>": []` |
 
 O campo `origem` é o que o B6 usa para conferir: toda premissa de segurança do `PREMISSAS.md` precisa ter virado feature com `origem: premissa`, ou estar explicitamente dentro de uma feature com `origem: descricao`. Premissa registrada que não virou código é a falha mais cara que este método pode cometer — ela cria a impressão de que o sistema está protegido.
 
