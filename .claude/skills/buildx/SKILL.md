@@ -107,7 +107,10 @@ Contrato da feature — toda feature do mapa declara, obrigatoriamente:
 | `entrega` | o que o usuário do sistema consegue fazer que não conseguia |
 | `depende_de` | `[ids]` ou `[]` |
 | `paralelizavel` | `true` \| `false` |
-| `origem` | `descricao` (o usuário pediu) \| `premissa` (o buildx descobriu que faltava) |
+| `origem` | `descricao` (o usuário pediu) \| `premissa` (o buildx descobriu que faltava) \| `recursao` (nasceu de uma pendência) \| `template` (a fundação, que o B2 já trouxe) |
+| `premissas_realizadas` | `[PR-NN, ...]` ou `[]`: as premissas que esta feature realiza |
+| `modulos_candidatos` | `["<id>", ...]` ou `[]`: os módulos do catálogo para o terceiro desta feature |
+| `fatias_candidatas` | `{"<id>": ["<slug>", ...]}` ou `{}`: as fatias de cada candidato |
 | `status` | `pendente` \| `em_andamento` \| `entregue` \| `bloqueada` |
 
 A ordem não é negociável em dois pontos: a **feature de fundação** vem primeiro, e nenhuma feature de negócio precede aquilo de que depende.

@@ -107,7 +107,7 @@ entregues: 4
 bloqueadas: 0
 ```
 
-Cada feature no corpo carrega o contrato completo do B3: `id`, `slug`, `titulo`, `entrega`, `depende_de`, `paralelizavel`, `origem`, `status`.
+Cada feature no corpo carrega o contrato completo do B3: `id`, `slug`, `titulo`, `entrega`, `depende_de`, `paralelizavel`, `origem`, `premissas_realizadas`, `modulos_candidatos`, `fatias_candidatas`, `status`.
 
 ### `recursao` — `docs/projeto/RECURSAO.md`
 

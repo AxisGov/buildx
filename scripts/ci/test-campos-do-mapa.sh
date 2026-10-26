@@ -14,16 +14,62 @@ n="$(awk '/^\| Campo \| Conteúdo \| Regra \|$/ { dentro = 1; next }
          dentro && /^\| `/ { n++; next }
          dentro { exit }
          END { print n + 0 }' "$doc")"
-if [ "$n" = 10 ]; then
-  printf '  ok    a tabela de campos da feature tem 10 linhas de dados\n'
+# Onze desde a D-24: `premissas_realizadas` entra no contrato (o template já o renderizava, e o
+# B6 e o briefing do B4 dependem dele; CodeRabbit no katosmv/login#30).
+if [ "$n" = 11 ]; then
+  printf '  ok    a tabela de campos da feature tem 11 linhas de dados\n'
 else
-  printf '  FALHA esperava 10 linhas de dados na tabela de campos, achou %s\n' "$n"; falhou=1
+  printf '  FALHA esperava 11 linhas de dados na tabela de campos, achou %s\n' "$n"; falhou=1
 fi
 
-if grep -q 'toda feature com os dez campos' "$doc" && ! grep -qE '\b(oito|nove) campos\b' "$doc"; then
-  printf '  ok    o critério de saída exige os dez campos\n'
+if grep -q 'toda feature com os onze campos' "$doc" && ! grep -qE '\b(oito|nove|dez) campos\b' "$doc"; then
+  printf '  ok    o critério de saída exige os onze campos\n'
 else
-  printf '  FALHA o critério de saída não diz "dez campos": %s\n' "$(grep -nE 'campos' "$doc" | tr '\n' '|')"; falhou=1
+  printf '  FALHA o critério de saída não diz "onze campos": %s\n' "$(grep -nE 'campos' "$doc" | tr '\n' '|')"; falhou=1
+fi
+
+# A lista canônica é a da tabela do 04; o SKILL.md e o 00-schema.md nomeiam os mesmos campos, na
+# mesma ordem (CodeAnt no AxisGov/buildx#14: eles tinham ficado nos oito antigos).
+canon="$(awk '/^\| Campo \| Conteúdo \| Regra \|$/ { dentro = 1; next }
+         dentro && /^\|---/ { next }
+         dentro && /^\| `/ { c = $0; sub(/^\| `/, "", c); sub(/`.*/, "", c); print c; next }
+         dentro { exit }' "$doc" | tr '\n' ' ')"
+skill_md="$raiz/.claude/skills/buildx/SKILL.md"
+sk="$(awk '/^Contrato da feature/ { a = 1 } a && /^\| `/ { c = $0; sub(/^\| `/, "", c); sub(/`.*/, "", c); print c }
+           a && /^$/ && n++ > 1 { exit }' "$skill_md" | tr '\n' ' ')"
+if [ "$sk" = "$canon" ]; then
+  printf '  ok    o SKILL.md nomeia os campos do contrato na ordem canonica\n'
+else
+  printf '  FALHA SKILL.md [%s] difere do contrato [%s]\n' "$sk" "$canon"; falhou=1
+fi
+sch="$(grep -m1 'contrato completo do B3' "$raiz/.claude/skills/buildx/references/00-schema.md" \
+       | grep -oE '`[a-z_]+`' | tr -d '`' | tr '\n' ' ')"
+if [ "$sch" = "$canon" ]; then
+  printf '  ok    o 00-schema.md nomeia os campos do contrato na ordem canonica\n'
+else
+  printf '  FALHA 00-schema.md [%s] difere do contrato [%s]\n' "$sch" "$canon"; falhou=1
+fi
+# O enum de `origem` e um so: a FT-01 nasce `template`.
+for f in "$doc" "$skill_md" "$raiz/.claude/skills/buildx/assets/TEMPLATE-MAPA.md"; do
+  if grep -E '(`origem`|\*\*Origem:\*\*)' "$f" | grep -q 'recursao' && grep -E '(`origem`|\*\*Origem:\*\*)' "$f" | grep -q 'template'; then
+    printf '  ok    enum de origem completo em %s\n' "${f#$raiz/}"
+  else
+    printf '  FALHA enum de origem incompleto em %s\n' "${f#$raiz/}"; falhou=1
+  fi
+done
+# O briefing do B4 leva os candidatos a F2/F3, onde o fornecedor e escolhido (CodeAnt no buildx#14).
+for f in references/05-construcao.md references/integracao/sprintx.md; do
+  if grep -qF 'modulos_candidatos' "$raiz/.claude/skills/buildx/$f" && grep -qF 'fatias_candidatas' "$raiz/.claude/skills/buildx/$f"; then
+    printf '  ok    o briefing em %s repassa os candidatos\n' "$f"
+  else
+    printf '  FALHA o briefing em %s nao repassa modulos_candidatos e fatias_candidatas\n' "$f"; falhou=1
+  fi
+done
+# O B6 cruza cada premissa com `premissas_realizadas`.
+if grep -qF 'premissas_realizadas' "$raiz/.claude/skills/buildx/references/07-validacao.md"; then
+  printf '  ok    o B6 cruza as premissas com premissas_realizadas\n'
+else
+  printf '  FALHA o B6 nao cita premissas_realizadas\n'; falhou=1
 fi
 
 # Os candidatos a módulo são coleção (D-23): `modulos_candidatos` (lista JSON de ids) e

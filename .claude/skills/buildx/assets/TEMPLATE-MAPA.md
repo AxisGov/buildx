@@ -30,7 +30,7 @@ Ordem de dependência. Nenhuma feature precede aquilo de que depende.
 Verificável, sem adjetivo, numa frase.>
 **Depende de:** <[FT-NN, ...] ou []>
 **Paralelizável:** <true | false>
-**Origem:** <descricao | premissa | recursao>
+**Origem:** <descricao | premissa | recursao | template>
 **Premissas que realiza:** <[PR-NN, ...] ou []>
 **Módulos candidatos:** <["id", ...] ou []>
 **Fatias candidatas:** <{"id": ["slug", ...], ...} ou {}>

@@ -21,7 +21,7 @@ Cada item vira uma linha verificável, de três fontes:
 | `PROJETO.md`, "o que foi pedido" | um item por linha da seção |
 | `PROJETO.md`, "o que foi descoberto" | um item por lacuna que virou requisito |
 | `PROJETO.md`, critérios de aceite de negócio | um item por critério |
-| `PREMISSAS.md` | um item por premissa, exceto as de estilo puro |
+| `PREMISSAS.md` | um item por premissa, exceto as de estilo puro; cada uma cruzada com o `premissas_realizadas` das features — premissa que nenhuma feature realiza é achado |
 | `MAPA.md` | um item por feature |
 
 A conferência das premissas é a mais importante do B6, e a mais fácil de pular por parecer burocrática. Uma premissa de segurança registrada que nunca virou código é a pior falha possível deste método: ela documenta uma proteção que não existe, e alguém vai confiar nela.
