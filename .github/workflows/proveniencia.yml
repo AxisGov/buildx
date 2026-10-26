@@ -18,3 +18,4 @@ jobs:
       - run: bash scripts/ci/test-proveniencia.sh
       - run: bash scripts/ci/test-proveniencia-contrato.sh
       - run: bash scripts/ci/test-contagem-mergex-check.sh
+      - run: bash scripts/ci/test-campos-do-mapa.sh
