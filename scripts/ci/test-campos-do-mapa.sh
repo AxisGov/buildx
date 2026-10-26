@@ -51,7 +51,9 @@ else
 fi
 # O enum de `origem` e um so: a FT-01 nasce `template`.
 for f in "$doc" "$skill_md" "$raiz/.claude/skills/buildx/assets/TEMPLATE-MAPA.md"; do
-  if grep -E '(`origem`|\*\*Origem:\*\*)' "$f" | grep -q 'recursao' && grep -E '(`origem`|\*\*Origem:\*\*)' "$f" | grep -q 'template'; then
+  linha_origem="$(grep -m1 -E '^(\| `origem` \||\*\*Origem:\*\*)' "$f")"
+  if printf '%s' "$linha_origem" | grep -q 'descricao' && printf '%s' "$linha_origem" | grep -q 'premissa' \
+     && printf '%s' "$linha_origem" | grep -q 'recursao' && printf '%s' "$linha_origem" | grep -q 'template'; then
     printf '  ok    enum de origem completo em %s\n' "${f#$raiz/}"
   else
     printf '  FALHA enum de origem incompleto em %s\n' "${f#$raiz/}"; falhou=1
@@ -65,6 +67,13 @@ for f in references/05-construcao.md references/integracao/sprintx.md; do
     printf '  FALHA o briefing em %s nao repassa modulos_candidatos e fatias_candidatas\n' "$f"; falhou=1
   fi
 done
+# A relação premissa -> feature é o `premissas_realizadas`, não o `origem` (revisão do Codex).
+if grep -qF 'O campo `premissas_realizadas` é o que o B6 usa para conferir' "$doc" \
+   && ! grep -qF 'O campo `origem` é o que o B6 usa' "$doc"; then
+  printf '  ok    o 04 confere premissas por premissas_realizadas, nao por origem\n'
+else
+  printf '  FALHA o 04 ainda confere premissas pelo campo origem\n'; falhou=1
+fi
 # O B6 cruza cada premissa com `premissas_realizadas`.
 if grep -qF 'premissas_realizadas' "$raiz/.claude/skills/buildx/references/07-validacao.md"; then
   printf '  ok    o B6 cruza as premissas com premissas_realizadas\n'

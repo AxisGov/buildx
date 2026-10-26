@@ -106,7 +106,7 @@ Toda feature do `MAPA.md` declara, obrigatoriamente:
 | `fatias_candidatas` | objeto JSON, `{"<id>": ["<slug>", ...]}` \| `{}` | para cada candidato, as fatias que cobrem esta feature; candidato sem fatia fica com `"<id>": []` |
 | `status` | `pendente` \| `em_andamento` \| `entregue` \| `bloqueada` | nasce `pendente` |
 
-O campo `origem` é o que o B6 usa para conferir: toda premissa de segurança do `PREMISSAS.md` precisa ter virado feature com `origem: premissa`, ou estar explicitamente dentro de uma feature com `origem: descricao`. Premissa registrada que não virou código é a falha mais cara que este método pode cometer — ela cria a impressão de que o sistema está protegido.
+O campo `premissas_realizadas` é o que o B6 usa para conferir: toda premissa de segurança do `PREMISSAS.md` precisa aparecer no `premissas_realizadas` de alguma feature, qualquer que seja a `origem` dela — a fundação, com `origem: template`, realiza as de autenticação. O `origem` só explica por que a feature existe (D-24). Premissa registrada que não virou código é a falha mais cara que este método pode cometer — ela cria a impressão de que o sistema está protegido.
 
 ## A ordem
 
