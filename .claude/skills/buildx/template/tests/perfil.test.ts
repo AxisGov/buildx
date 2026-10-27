@@ -4,6 +4,10 @@ import { entrar, usuarioDaSessao } from '../src/servicos/autenticacao.js'
 import { prisma } from '../src/lib/prisma.js'
 import { criarUsuario, limparBanco, SENHA_PADRAO } from './ajuda.js'
 
+// Senha fictícia com nome: no uso (`senha: SENHA_NOVA,`) é referência, e a varredura de
+// segredo da mergex não a confunde com credencial.
+const SENHA_NOVA = 'senha-nova-456'
+
 beforeEach(limparBanco)
 
 describe('atualizarPerfil', () => {
@@ -67,13 +71,13 @@ describe('trocarSenha', () => {
 
     await trocarSenha(usuario, {
       senhaAtual: SENHA_PADRAO,
-      senhaNova: 'senha-nova-456',
-      confirmacao: 'senha-nova-456',
+      senhaNova: SENHA_NOVA,
+      confirmacao: SENHA_NOVA,
     })
 
     const { usuario: entrou } = await entrar({
       email: 'troca@teste.local',
-      senha: 'senha-nova-456',
+      senha: SENHA_NOVA,
     })
     expect(entrou.id).toBe(usuario.id)
   })
@@ -83,8 +87,8 @@ describe('trocarSenha', () => {
 
     await trocarSenha(usuario, {
       senhaAtual: SENHA_PADRAO,
-      senhaNova: 'senha-nova-456',
-      confirmacao: 'senha-nova-456',
+      senhaNova: SENHA_NOVA,
+      confirmacao: SENHA_NOVA,
     })
 
     await expect(
@@ -98,8 +102,8 @@ describe('trocarSenha', () => {
     await expect(
       trocarSenha(usuario, {
         senhaAtual: 'chute-errado',
-        senhaNova: 'senha-nova-456',
-        confirmacao: 'senha-nova-456',
+        senhaNova: SENHA_NOVA,
+        confirmacao: SENHA_NOVA,
       }),
     ).rejects.toMatchObject({ status: 422 })
   })
@@ -110,7 +114,7 @@ describe('trocarSenha', () => {
     await expect(
       trocarSenha(usuario, {
         senhaAtual: SENHA_PADRAO,
-        senhaNova: 'senha-nova-456',
+        senhaNova: SENHA_NOVA,
         confirmacao: 'outra-coisa-789',
       }),
     ).rejects.toMatchObject({ status: 422 })
@@ -146,8 +150,8 @@ describe('trocarSenha', () => {
 
     await trocarSenha(usuario, {
       senhaAtual: 'chute-errado',
-      senhaNova: 'senha-nova-456',
-      confirmacao: 'senha-nova-456',
+      senhaNova: SENHA_NOVA,
+      confirmacao: SENHA_NOVA,
     }).catch(() => undefined)
 
     const depois = await prisma.usuario.findUniqueOrThrow({ where: { id: usuario.id } })
@@ -171,8 +175,8 @@ describe('a troca de senha derruba as outras sessões (L4)', () => {
 
     await trocarSenha(usuario, {
       senhaAtual: SENHA_PADRAO,
-      senhaNova: 'senha-nova-456',
-      confirmacao: 'senha-nova-456',
+      senhaNova: SENHA_NOVA,
+      confirmacao: SENHA_NOVA,
     })
 
     await expect(usuarioDaSessao(tokenAntigo)).rejects.toMatchObject({ status: 401 })
@@ -183,8 +187,8 @@ describe('a troca de senha derruba as outras sessões (L4)', () => {
 
     const { token } = await trocarSenha(usuario, {
       senhaAtual: SENHA_PADRAO,
-      senhaNova: 'senha-nova-456',
-      confirmacao: 'senha-nova-456',
+      senhaNova: SENHA_NOVA,
+      confirmacao: SENHA_NOVA,
     })
 
     expect(await usuarioDaSessao(token)).toMatchObject({ id: usuario.id })

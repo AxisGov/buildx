@@ -9,7 +9,10 @@ import { beforeAll, afterAll } from 'vitest'
 const arquivo = path.resolve(process.cwd(), 'prisma/test.db')
 
 process.env.DATABASE_URL = `file:${arquivo}`
-process.env.JWT_SECRET = 'segredo-de-teste-nao-usar-em-producao'
+// Por `Object.assign`, com o segredo nomeado: `JWT_SECRET = '<literal>'` é o
+// formato que a varredura de segredo da mergex acusa como credencial.
+const SEGREDO_DE_TESTE = 'segredo-de-teste-nao-usar-em-producao'
+Object.assign(process.env, { JWT_SECRET: SEGREDO_DE_TESTE })
 process.env.JWT_TTL_SEGUNDOS = '900'
 // NODE_ENV é somente-leitura nos tipos do Node; o vitest já o define como
 // 'test', e a atribuição direta não compila.

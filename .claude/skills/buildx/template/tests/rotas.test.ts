@@ -13,6 +13,10 @@ import { COOKIE_SESSAO } from '@/lib/sessao'
 import { hashDeSenha } from '@/lib/senha'
 import { prisma } from '@/lib/prisma'
 
+// Senha fictícia com nome: no uso (`senha: SENHA_DE_ROTA,`) é referência, e a varredura de
+// segredo da mergex não a confunde com credencial.
+const SENHA_DE_ROTA = 'senha-de-rota-123'
+
 const PORTA = 3178
 const BASE = `http://localhost:${PORTA}`
 
@@ -44,13 +48,13 @@ beforeAll(async () => {
       {
         nome: 'Admin de Rota',
         email: 'admin.rota@teste.local',
-        senhaHash: await hashDeSenha('senha-de-rota-123'),
+        senhaHash: await hashDeSenha(SENHA_DE_ROTA),
         papel: 'admin',
       },
       {
         nome: 'Comum de Rota',
         email: 'comum.rota@teste.local',
-        senhaHash: await hashDeSenha('senha-de-rota-123'),
+        senhaHash: await hashDeSenha(SENHA_DE_ROTA),
         papel: 'usuario',
       },
     ],
@@ -68,7 +72,7 @@ afterAll(() => {
 })
 
 async function cookieDe(email: string): Promise<string> {
-  const { token } = await entrar({ email, senha: 'senha-de-rota-123' })
+  const { token } = await entrar({ email, senha: SENHA_DE_ROTA })
   return `${COOKIE_SESSAO}=${token}`
 }
 

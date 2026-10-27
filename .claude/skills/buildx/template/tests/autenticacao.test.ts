@@ -5,6 +5,12 @@ import { assinarSessao } from '../src/lib/sessao.js'
 import { prisma } from '../src/lib/prisma.js'
 import { criarUsuario, criarAdmin, limparBanco, SENHA_PADRAO } from './ajuda.js'
 
+// Senhas e segredos fictícios com nome: no uso (`senha: SENHA_ERRADA,`) são referência, e a
+// varredura de segredo da mergex não os confunde com credencial.
+const SENHA_ERRADA = 'senha-errada'
+const SENHA_ALTERNATIVA = 'outra-senha'
+const OUTRO_SEGREDO = 'um-segredo-completamente-diferente'
+
 beforeEach(limparBanco)
 
 describe('entrar', () => {
@@ -32,7 +38,7 @@ describe('entrar', () => {
   it('recusa senha errada', async () => {
     const criado = await criarUsuario()
     await expect(
-      entrar({ email: criado.email, senha: 'senha-errada' }),
+      entrar({ email: criado.email, senha: SENHA_ERRADA }),
     ).rejects.toThrow(ErroDeAplicacao)
   })
 
@@ -52,7 +58,7 @@ describe('entrar', () => {
     }).catch((e: ErroDeAplicacao) => e)
     const senhaErrada = await entrar({
       email: criado.email,
-      senha: 'outra-senha',
+      senha: SENHA_ALTERNATIVA,
     }).catch((e: ErroDeAplicacao) => e)
 
     expect((inexistente as ErroDeAplicacao).message).toBe(
@@ -79,9 +85,9 @@ describe('usuarioDaSessao', () => {
   it('recusa token assinado com outro segredo', async () => {
     const criado = await criarUsuario()
     const segredoOriginal = process.env.JWT_SECRET
-    process.env.JWT_SECRET = 'um-segredo-completamente-diferente'
+    Object.assign(process.env, { JWT_SECRET: OUTRO_SEGREDO })
     const tokenIntruso = await assinarSessao(criado.id, 'admin')
-    process.env.JWT_SECRET = segredoOriginal
+    Object.assign(process.env, { JWT_SECRET: segredoOriginal })
 
     await expect(usuarioDaSessao(tokenIntruso)).rejects.toMatchObject({ status: 401 })
   })

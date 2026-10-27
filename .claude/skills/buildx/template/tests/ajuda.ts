@@ -14,12 +14,12 @@ export async function criarUsuario(opcoes?: {
   email?: string
 }): Promise<UsuarioAutenticado & { senha: string }> {
   contador += 1
-  const senha = opcoes?.senha ?? SENHA_PADRAO
+  const senhaUsada = opcoes?.senha ?? SENHA_PADRAO
   const usuario = await prisma.usuario.create({
     data: {
       nome: `Usuário ${contador}`,
       email: opcoes?.email ?? `usuario${contador}@teste.local`,
-      senhaHash: await hashDeSenha(senha),
+      senhaHash: await hashDeSenha(senhaUsada),
       papel: opcoes?.papel ?? 'usuario',
       ativo: opcoes?.ativo ?? true,
     },
@@ -29,7 +29,7 @@ export async function criarUsuario(opcoes?: {
     nome: usuario.nome,
     email: usuario.email,
     papel: usuario.papel,
-    senha,
+    senha: senhaUsada,
   }
 }
 

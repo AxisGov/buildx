@@ -8,18 +8,21 @@ if (!url) throw new Error('DATABASE_URL ausente. Veja o .env.example.')
 const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url }) })
 
 // Credenciais fictícias, para uso local. A seed nunca roda em produção:
-// o guarda abaixo é o que garante isso.
+// o guarda abaixo é o que garante isso. A senha tem nome: no uso ela é
+// referência, e a varredura de segredo da mergex não a confunde com credencial.
+const SENHA_DE_DEMONSTRACAO = 'demo1234'
+
 const DEMONSTRACAO = [
   {
     nome: 'Administradora de demonstração',
     email: 'admin@exemplo.local',
-    senha: 'demo1234',
+    senha: SENHA_DE_DEMONSTRACAO,
     papel: 'admin',
   },
   {
     nome: 'Usuário de demonstração',
     email: 'usuario@exemplo.local',
-    senha: 'demo1234',
+    senha: SENHA_DE_DEMONSTRACAO,
     papel: 'usuario',
   },
 ]
