@@ -4,6 +4,10 @@ import { entrar } from '../src/servicos/autenticacao.js'
 import { prisma } from '../src/lib/prisma.js'
 import { criarUsuario, criarAdmin, limparBanco } from './ajuda.js'
 
+// Senha fictícia com nome: no uso (`senha: SENHA_BOA,`) é referência, e a varredura de
+// segredo da mergex não a confunde com credencial.
+const SENHA_BOA = 'senha-boa-123'
+
 beforeEach(limparBanco)
 
 describe('quem pode administrar usuários', () => {
@@ -24,7 +28,7 @@ describe('quem pode administrar usuários', () => {
       criar(comum, {
         nome: 'Intruso',
         email: 'intruso@teste.local',
-        senha: 'senha-boa-123',
+        senha: SENHA_BOA,
       }),
     ).rejects.toMatchObject({ status: 403 })
   })
@@ -43,7 +47,7 @@ describe('criar', () => {
     const novo = await criar(admin, {
       nome: 'Pessoa Nova',
       email: 'nova@teste.local',
-      senha: 'senha-boa-123',
+      senha: SENHA_BOA,
     })
     expect(novo.papel).toBe('usuario')
     expect(novo.ativo).toBe(true)
@@ -54,12 +58,12 @@ describe('criar', () => {
     const novo = await criar(admin, {
       nome: 'Pessoa Nova',
       email: 'nova@teste.local',
-      senha: 'senha-boa-123',
+      senha: SENHA_BOA,
     })
 
     const noBanco = await prisma.usuario.findUniqueOrThrow({ where: { id: novo.id } })
-    expect(noBanco.senhaHash).not.toBe('senha-boa-123')
-    expect(noBanco.senhaHash).not.toContain('senha-boa-123')
+    expect(noBanco.senhaHash).not.toBe(SENHA_BOA)
+    expect(noBanco.senhaHash).not.toContain(SENHA_BOA)
   })
 
   it('o usuário criado consegue entrar com a senha definida', async () => {
@@ -67,12 +71,12 @@ describe('criar', () => {
     await criar(admin, {
       nome: 'Pessoa Nova',
       email: 'nova@teste.local',
-      senha: 'senha-boa-123',
+      senha: SENHA_BOA,
     })
 
     const { usuario } = await entrar({
       email: 'nova@teste.local',
-      senha: 'senha-boa-123',
+      senha: SENHA_BOA,
     })
     expect(usuario.email).toBe('nova@teste.local')
   })
@@ -84,7 +88,7 @@ describe('criar', () => {
       criar(admin, {
         nome: 'Outra',
         email: 'ocupado@teste.local',
-        senha: 'senha-boa-123',
+        senha: SENHA_BOA,
       }),
     ).rejects.toMatchObject({ status: 409 })
   })
@@ -96,7 +100,7 @@ describe('criar', () => {
       criar(admin, {
         nome: 'Outra',
         email: 'OCUPADO@TESTE.LOCAL',
-        senha: 'senha-boa-123',
+        senha: SENHA_BOA,
       }),
     ).rejects.toMatchObject({ status: 409 })
   })
@@ -114,7 +118,7 @@ describe('criar', () => {
       criar(admin, {
         nome: 'Estranha',
         email: 'estranha@teste.local',
-        senha: 'senha-boa-123',
+        senha: SENHA_BOA,
         papel: 'superusuario',
       }),
     ).rejects.toMatchObject({ status: 422 })
