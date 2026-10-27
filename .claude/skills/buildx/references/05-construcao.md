@@ -54,7 +54,8 @@ O briefing da feature carrega:
 | escopo | o recorte da feature, e o que pertence a outras |
 | não-objetivos | as features vizinhas, nominalmente — evita que a F2 invada escopo alheio |
 | critérios de aceite de negócio | os do `PROJETO.md` que esta feature cobre |
-| premissas aplicáveis | as `PR-NN` que esta feature realiza |
+| premissas aplicáveis | as `PR-NN` que esta feature realiza (`premissas_realizadas` no `MAPA.md`) |
+| módulos candidatos | `modulos_candidatos` e `fatias_candidatas` da feature no `MAPA.md`, intactos (`[]` e `{}` quando não há). Com dois ou mais candidatos, a escolha do fornecedor é da F2/F3, que os recebe aqui |
 | convenções | ponteiro para `docs/stack/CONVENCOES.md` |
 | base | `feature/<predecessora>` quando a feature se encadeia (passo 1); ausente quando nasce da base comum. A F1 abre o worktree sobre ela e a F6 a repassa ao E0 da mergex, que mede e abre o PR contra ela |
 | orçamento | `max_reprovacoes_f5: 3`, `orcamento_declarado_por: buildx`, `max_replanejamentos_f6: 1` — o teto do laço F3 ↔ F5 e do replanejamento da execução (`integracao/sprintx.md`); sem isso o sprintx não tem teto e o laço não para |

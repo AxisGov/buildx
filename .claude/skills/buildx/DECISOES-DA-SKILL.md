@@ -78,6 +78,8 @@ Requisito não-funcional tem padrão defensável por classe de sistema. Regra de
 
 **Por quê:** o que o buildx precisa saber de uma feature cabe em oito campos. O detalhe já tem dono e já tem lugar. Duplicar criaria duas fontes que divergem no primeiro replanejamento.
 
+*Nota posterior:* o "oito" é o contrato de quando esta decisão foi tomada. Ele passou a onze campos com a D-23 (`modulos_candidatos`, `fatias_candidatas`) e a D-24 (`premissas_realizadas`), ainda bem abaixo do limite de quinze que esta decisão dá como invalidador.
+
 **O que invalida:** se o contrato da feature crescer além de uns quinze campos, o arquivo único fica ilegível.
 
 ---
@@ -300,3 +302,27 @@ Há um terceiro efeito, mais silencioso: um esqueleto gerado tem, no melhor caso
 **Por quê:** quando a última predecessora é ela própria empilhada sobre outra feature não integrada, o PR dela compara com a branch dessa outra, não com a base comum; a base mergeada nela entra no diff do PR como mudança dela, e o PR deixa de mostrar só o próprio diff — o que a D-19 promete. Pela raiz, cada merge só traz para a branch a base do próprio PR, e nenhum diff muda. Achado do CodeAnt na AxisGov/buildx#8 (05-construcao.md:32).
 
 **O que invalida:** o serviço passar a atualizar PRs empilhados sozinho, ou o buildx deixar de empilhar (D-19).
+
+---
+
+## D-23 — Os candidatos a módulo são coleção
+
+**Decisão:** a feature registra `modulos_candidatos`, lista JSON dos ids de módulos do catálogo alternativos para o mesmo terceiro (`[]` quando não há), e `fatias_candidatas`, objeto JSON com as fatias de cada candidato (`"<id>": []` quando o candidato não tem fatia que cubra a feature). O B6 oferece a extração quando a lista é vazia. Dois terceiros na mesma feature continuam sendo corte grosso, quebrado pela regra do "e" da entrega.
+
+**Alternativa descartada:** manter o valor único (`modulo_disponivel: <id> | -`) e tratar dois módulos como corte grosso.
+
+**Por quê:** o próprio recorte manda registrar os dois quando há dois módulos para o mesmo problema ("Dois módulos para o mesmo problema"), sem o buildx escolher o fornecedor; o valor único não guardava o segundo, e a regra do corte grosso quebraria uma feature que não deve ser quebrada. Achado do CodeRabbit no katosmv/login#29, decidido pelo dono.
+
+**O que invalida:** o buildx passar a escolher o fornecedor na decomposição, ou o catálogo passar a devolver um módulo só por terceiro.
+
+---
+
+## D-24 — `premissas_realizadas` é campo do contrato da feature
+
+**Decisão:** toda feature do `MAPA.md` declara `premissas_realizadas` (`[PR-NN, ...]` ou `[]`), logo depois de `origem`. O contrato vai a onze campos, na mesma ordem no `04-decomposicao.md`, no `SKILL.md` e no `00-schema.md`, e o `test-campos-do-mapa.sh` confere a ordem nos três. O enum de `origem` fica `descricao | premissa | recursao | template` em todo lugar.
+
+**Alternativa descartada:** deixar a linha "Premissas que realiza" só no `TEMPLATE-MAPA.md`, como texto.
+
+**Por quê:** o template já a renderizava, o briefing do B4 repassa "as `PR-NN` que esta feature realiza" e o B6 cruza toda premissa com ela; fora do contrato, o B3 podia omiti-la e o B6 conferiria contra nada (CodeRabbit no katosmv/login#30, trazido pela sessão do Login; CodeAnt no AxisGov/buildx#14). O `template` faltava no enum do `SKILL.md` e do template, embora a FT-01 nasça com ele.
+
+**O que invalida:** um B6 que deixe de cruzar premissa por feature, ou um mapa que registre as premissas em outro artefato.

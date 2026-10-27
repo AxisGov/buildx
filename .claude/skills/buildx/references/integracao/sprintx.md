@@ -25,7 +25,8 @@ Um briefing montado do `MAPA.md`, `PROJETO.md` e `PREMISSAS.md` — o mesmo pape
 | escopo | o recorte do B3 | a fronteira com as features vizinhas |
 | não-objetivos | as features vizinhas, nominalmente | impede a F2 de invadir escopo alheio |
 | critérios de aceite de negócio | `PROJETO.md` | os que esta feature cobre |
-| premissas aplicáveis | os `PR-NN` que esta feature realiza | as decisões já tomadas, com o que as invalida |
+| premissas aplicáveis | os `PR-NN` que esta feature realiza (`premissas_realizadas`) | as decisões já tomadas, com o que as invalida |
+| módulos candidatos | `modulos_candidatos` e `fatias_candidatas` da feature, intactos | a F2/F3 escolhe o fornecedor entre eles; sem isso decidiria sem saber o que o catálogo achou |
 | convenções | ponteiro para `CONVENCOES.md` | o dialeto do projeto, decidido no B2 |
 
 Mais duas chaves no frontmatter de todo artefato da feature: `origem_buildx` (o `projeto_id`) e `feature_id` (o `FT-NN`). São elas que permitem, depois, abrir qualquer plano de sprint e saber de qual projeto e qual feature ele veio.

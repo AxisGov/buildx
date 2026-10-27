@@ -47,7 +47,7 @@ Faixa saudável de um projeto descrito num parágrafo: **entre 6 e 15 features.*
 
 Terminado o recorte, para cada feature que integra um terceiro — pagamento, WhatsApp, storage, email transacional, nota fiscal, assinatura digital, mensageria — rode `/modulex-buscar` com o **problema** da feature, na linguagem do `MAPA.md`. Nunca pelo nome do fornecedor.
 
-O desfecho entra na feature como campo (`modulo_disponivel`, `fatias_candidatas`), não como texto solto.
+O desfecho entra na feature como campo (`modulos_candidatos`, `fatias_candidatas`), não como texto solto.
 
 ### O módulo não recorta o projeto
 
@@ -59,7 +59,7 @@ Fatias sugerindo fronteira diferente do seu recorte: **anote a divergência e si
 
 ### Dois módulos para o mesmo problema
 
-Entram os dois, como dois candidatos. **O buildx não escolhe fornecedor** — a escolha acontece na F2/F3 do sprintx, dentro do B4, com o `CONVENCOES.md` na mesa.
+Entram os dois em `modulos_candidatos`, como dois candidatos, cada um com as suas fatias em `fatias_candidatas`. **O buildx não escolhe fornecedor** — a escolha acontece na F2/F3 do sprintx, dentro do B4, com o `CONVENCOES.md` na mesa. Os dois campos chegam lá pelo briefing da F1 (`references/05-construcao.md`, passo 2), intactos.
 
 ### A escolha de fatias, sem quebrar a pergunta única
 
@@ -86,7 +86,7 @@ Errar para menos custa uma injeção a mais depois. Errar para mais custa um pro
 
 A stack **herdada** do módulo não vai para o `CONVENCOES.md` — ele é do B2, e já aconteceu. O que o módulo declara como **essencial ao terceiro** entra como restrição técnica a respeitar, nunca como convenção a adotar. Ver `references/integracao/stackx.md`.
 
-**Sem `modulex` instalado, ou com o catálogo não alcançável:** decomponha como sempre, com os dois campos em `-`. Não instale nada, não pergunte, não pare.
+**Sem `modulex` instalado, ou com o catálogo não alcançável:** decomponha como sempre, com `modulos_candidatos: []` e `fatias_candidatas: {}`. Não instale nada, não pergunte, não pare.
 
 ## O contrato da feature
 
@@ -101,11 +101,12 @@ Toda feature do `MAPA.md` declara, obrigatoriamente:
 | `depende_de` | `[ids]` ou `[]` | explícito; nunca inferido em tempo de execução |
 | `paralelizavel` | `true` \| `false` | declarado aqui, nunca decidido no B4 |
 | `origem` | `descricao` \| `premissa` \| `recursao` \| `template` | rastreia por que a feature existe |
+| `premissas_realizadas` | lista de ids, `[PR-NN, ...]` \| `[]` | as premissas do `PREMISSAS.md` que esta feature realiza; o B6 confere que toda premissa aparece em alguma feature (D-24) |
+| `modulos_candidatos` | lista JSON de ids, `["<id>", ...]` \| `[]` | os módulos alternativos do catálogo para o terceiro desta feature, preenchidos pela consulta; `[]` quando não há |
+| `fatias_candidatas` | objeto JSON, `{"<id>": ["<slug>", ...]}` \| `{}` | para cada candidato, as fatias que cobrem esta feature; candidato sem fatia fica com `"<id>": []` |
 | `status` | `pendente` \| `em_andamento` \| `entregue` \| `bloqueada` | nasce `pendente` |
-| `modulo_disponivel` | `<id>` \| `-` | preenchido pela consulta ao catálogo; `-` quando não há |
-| `fatias_candidatas` | `<slugs>` \| `-` | as fatias do módulo que cobrem esta feature |
 
-O campo `origem` é o que o B6 usa para conferir: toda premissa de segurança do `PREMISSAS.md` precisa ter virado feature com `origem: premissa`, ou estar explicitamente dentro de uma feature com `origem: descricao`. Premissa registrada que não virou código é a falha mais cara que este método pode cometer — ela cria a impressão de que o sistema está protegido.
+O campo `premissas_realizadas` é o que o B6 usa para conferir: toda premissa de segurança do `PREMISSAS.md` precisa aparecer no `premissas_realizadas` de alguma feature, qualquer que seja a `origem` dela — a fundação, com `origem: template`, realiza as de autenticação. O `origem` só explica por que a feature existe (D-24). Premissa registrada que não virou código é a falha mais cara que este método pode cometer — ela cria a impressão de que o sistema está protegido.
 
 ## A ordem
 
@@ -173,7 +174,7 @@ Na dúvida, `false`. Duas features paralelas que colidem no mesmo arquivo custam
 
 ## Critério de saída do B3
 
-- `MAPA.md` existe, com frontmatter válido e toda feature com os dez campos
+- `MAPA.md` existe, com frontmatter válido e toda feature com os onze campos
 - toda feature passa nos três testes: vertical, enunciável, demonstrável
 - `FT-01` é a fundação, com `origem: template`: autenticação, usuário de demonstração, casca visual e o esqueleto do P-9, herdados do B2 e verificados
 - nenhuma feature do mapa duplica o que o P-9 já entrega: feature de negócio acrescenta item à barra lateral e tela ao sistema, não recria a área de configurações
