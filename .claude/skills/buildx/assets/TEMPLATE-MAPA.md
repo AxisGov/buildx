@@ -15,6 +15,8 @@ bloqueadas: <n>
 
 Ordem de dependência. Nenhuma feature precede aquilo de que depende.
 
+**Catálogo de módulos:** `consulta_modulex: <concluida | indisponivel>`
+
 ## Painel
 
 | ID | Feature | Status | PR |

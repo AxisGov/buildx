@@ -28,7 +28,9 @@ npm run dev
 ```
 
 Contas de demonstração — fictícias, criadas pela seed, que **não roda em
-produção**:
+produção**: ela só roda com `SEED_DE_DEMONSTRACAO="permitida"`, que vem no
+`.env.example` (portanto no `.env` local), e recusa `NODE_ENV=production`. Nunca
+defina essa permissão no ambiente de produção:
 
 ```
 admin@exemplo.local     demo1234    administrador

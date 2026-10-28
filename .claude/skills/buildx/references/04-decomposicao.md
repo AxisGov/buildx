@@ -86,7 +86,7 @@ Errar para menos custa uma injeção a mais depois. Errar para mais custa um pro
 
 A stack **herdada** do módulo não vai para o `CONVENCOES.md` — ele é do B2, e já aconteceu. O que o módulo declara como **essencial ao terceiro** entra como restrição técnica a respeitar, nunca como convenção a adotar. Ver `references/integracao/stackx.md`.
 
-**Sem `modulex` instalado, ou com o catálogo não alcançável:** decomponha como sempre, com `modulos_candidatos: []` e `fatias_candidatas: {}`. Não instale nada, não pergunte, não pare.
+**Sem `modulex` instalado, ou com o catálogo não alcançável:** decomponha como sempre, com `modulos_candidatos: []` e `fatias_candidatas: {}`. Não instale nada, não pergunte, não pare. E registre no `MAPA.md`, na linha do catálogo, `consulta_modulex: indisponivel`; com a consulta feita, `consulta_modulex: concluida`. A lista vazia sozinha não distingue "o catálogo não tem módulo para este terceiro" de "o catálogo não respondeu", e o B6 só oferece extração no primeiro caso.
 
 ## O contrato da feature
 

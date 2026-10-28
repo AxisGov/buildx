@@ -119,4 +119,19 @@ else
   printf '  FALHA modulo_disponivel fora da secao de compatibilidade: %s\n' "$(printf '%s' "$fora" | tr '\n' ' ')"; falhou=1
 fi
 
+# katosmv/login#34: o B4 normaliza o mapa anterior à D-23 antes do briefing; a premissa da F2 entra
+# no premissas_realizadas da feature; e a consulta indisponível não vira candidata a extração.
+refs="$raiz/.claude/skills/buildx/references"
+confere_doc() { # <descrição> <comando>
+  if eval "$2"; then printf '  ok    %s\n' "$1"; else printf '  FALHA %s\n' "$1"; falhou=1; fi
+}
+confere_doc 'o briefing do B4 normaliza o mapa anterior a D-23' \
+  "grep -q 'Compatibilidade com o \`MAPA.md\` anterior' '$refs/05-construcao.md'"
+confere_doc 'a premissa nova da F2 entra no premissas_realizadas da feature' \
+  "awk '/Nenhum dos três responde/' '$refs/05-construcao.md' | grep -q 'premissas_realizadas'"
+confere_doc 'o B3 registra a consulta ao catalogo (concluida ou indisponivel)' \
+  "grep -q 'consulta_modulex: indisponivel' '$refs/04-decomposicao.md' && grep -q 'consulta_modulex' '$raiz/.claude/skills/buildx/assets/TEMPLATE-MAPA.md'"
+confere_doc 'o B6 so oferece extracao com a consulta concluida' \
+  "awk '/Candidatas a módulo novo/,/Compatibilidade com o/' '$refs/07-validacao.md' | grep -q 'consulta_modulex: concluida'"
+
 [ "$falhou" = 0 ]

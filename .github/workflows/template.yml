@@ -27,6 +27,8 @@ jobs:
     env:
       DATABASE_URL: file:./prisma/ci.db
       JWT_SECRET: segredo-de-ci-nao-usar-em-producao
+      # a permissão da seed de demonstração: só em ambiente descartável (katosmv/login#34)
+      SEED_DE_DEMONSTRACAO: permitida
     steps:
       - uses: actions/checkout@v4
 
