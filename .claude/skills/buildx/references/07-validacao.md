@@ -80,7 +80,7 @@ Grave o `VALIDACAO.md` com `assets/TEMPLATE-VALIDACAO.md`.
 
 ## Passo 4.a — Candidatas a módulo novo
 
-Para cada feature entregue que integrou um terceiro e tinha `modulos_candidatos: []` — nenhum módulo do catálogo para ele —, registre-a como **candidata a extração** e ofereça `/modulex-extrair`. Só quando o `MAPA.md` registra `consulta_modulex: concluida`: com `indisponivel`, a lista vazia não diz que o catálogo não tem o módulo, e a feature não é candidata. Mapa sem a linha (anterior a ela) segue a regra de antes.
+Para cada feature entregue que integrou um terceiro e tinha `modulos_candidatos: []` — nenhum módulo do catálogo para ele —, registre-a como **candidata a extração** e ofereça `/modulex-extrair`. Só quando a feature registra `consulta_modulex: concluida`: com `indisponivel`, a lista vazia não diz que o catálogo não tem o módulo, e a feature não é candidata. Feature sem o campo (mapa anterior à D-25) segue a regra de antes.
 
 ### Compatibilidade com o `MAPA.md` anterior
 

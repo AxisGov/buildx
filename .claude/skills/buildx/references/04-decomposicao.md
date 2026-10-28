@@ -47,7 +47,7 @@ Faixa saudável de um projeto descrito num parágrafo: **entre 6 e 15 features.*
 
 Terminado o recorte, para cada feature que integra um terceiro — pagamento, WhatsApp, storage, email transacional, nota fiscal, assinatura digital, mensageria — rode `/modulex-buscar` com o **problema** da feature, na linguagem do `MAPA.md`. Nunca pelo nome do fornecedor.
 
-O desfecho entra na feature como campo (`modulos_candidatos`, `fatias_candidatas`), não como texto solto.
+O desfecho entra na feature como campo (`modulos_candidatos`, `fatias_candidatas`, `consulta_modulex`), não como texto solto.
 
 ### O módulo não recorta o projeto
 
@@ -86,7 +86,7 @@ Errar para menos custa uma injeção a mais depois. Errar para mais custa um pro
 
 A stack **herdada** do módulo não vai para o `CONVENCOES.md` — ele é do B2, e já aconteceu. O que o módulo declara como **essencial ao terceiro** entra como restrição técnica a respeitar, nunca como convenção a adotar. Ver `references/integracao/stackx.md`.
 
-**Sem `modulex` instalado, ou com o catálogo não alcançável:** decomponha como sempre, com `modulos_candidatos: []` e `fatias_candidatas: {}`. Não instale nada, não pergunte, não pare. E registre no `MAPA.md`, na linha do catálogo, `consulta_modulex: indisponivel`; com a consulta feita, `consulta_modulex: concluida`. A lista vazia sozinha não distingue "o catálogo não tem módulo para este terceiro" de "o catálogo não respondeu", e o B6 só oferece extração no primeiro caso.
+**Sem `modulex` instalado, ou com o catálogo não alcançável:** decomponha como sempre, com `modulos_candidatos: []` e `fatias_candidatas: {}`. Não instale nada, não pergunte, não pare. E registre `consulta_modulex: indisponivel` em cada feature cuja consulta não respondeu; a consulta que respondeu, com ou sem candidato, é `consulta_modulex: concluida`. A lista vazia sozinha não distingue "o catálogo não tem módulo para este terceiro" de "o catálogo não respondeu", e o B6 só oferece extração no primeiro caso.
 
 ## O contrato da feature
 
@@ -104,6 +104,7 @@ Toda feature do `MAPA.md` declara, obrigatoriamente:
 | `premissas_realizadas` | lista de ids, `[PR-NN, ...]` \| `[]` | as premissas do `PREMISSAS.md` que esta feature realiza; o B6 confere que toda premissa aparece em alguma feature (D-24) |
 | `modulos_candidatos` | lista JSON de ids, `["<id>", ...]` \| `[]` | os módulos alternativos do catálogo para o terceiro desta feature, preenchidos pela consulta; `[]` quando não há |
 | `fatias_candidatas` | objeto JSON, `{"<id>": ["<slug>", ...]}` \| `{}` | para cada candidato, as fatias que cobrem esta feature; candidato sem fatia fica com `"<id>": []` |
+| `consulta_modulex` | `concluida` \| `indisponivel` | se a consulta ao catálogo desta feature respondeu; `indisponivel` sem `modulex` instalado ou com o catálogo fora do ar. A lista vazia sozinha não distingue os dois casos (D-25) |
 | `status` | `pendente` \| `em_andamento` \| `entregue` \| `bloqueada` | nasce `pendente` |
 
 O campo `premissas_realizadas` é o que o B6 usa para conferir: toda premissa de segurança do `PREMISSAS.md` precisa aparecer no `premissas_realizadas` de alguma feature, qualquer que seja a `origem` dela — a fundação, com `origem: template`, realiza as de autenticação. O `origem` só explica por que a feature existe (D-24). Premissa registrada que não virou código é a falha mais cara que este método pode cometer — ela cria a impressão de que o sistema está protegido.
@@ -174,7 +175,7 @@ Na dúvida, `false`. Duas features paralelas que colidem no mesmo arquivo custam
 
 ## Critério de saída do B3
 
-- `MAPA.md` existe, com frontmatter válido e toda feature com os onze campos
+- `MAPA.md` existe, com frontmatter válido e toda feature com os doze campos
 - toda feature passa nos três testes: vertical, enunciável, demonstrável
 - `FT-01` é a fundação, com `origem: template`: autenticação, usuário de demonstração, casca visual e o esqueleto do P-9, herdados do B2 e verificados
 - nenhuma feature do mapa duplica o que o P-9 já entrega: feature de negócio acrescenta item à barra lateral e tela ao sistema, não recria a área de configurações

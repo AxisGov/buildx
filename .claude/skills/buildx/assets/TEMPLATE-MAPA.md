@@ -15,8 +15,6 @@ bloqueadas: <n>
 
 Ordem de dependência. Nenhuma feature precede aquilo de que depende.
 
-**Catálogo de módulos:** `consulta_modulex: <concluida | indisponivel>`
-
 ## Painel
 
 | ID | Feature | Status | PR |
@@ -36,6 +34,7 @@ Verificável, sem adjetivo, numa frase.>
 **Premissas que realiza:** <[PR-NN, ...] ou []>
 **Módulos candidatos:** <["id", ...] ou []>
 **Fatias candidatas:** <{"id": ["slug", ...], ...} ou {}>
+**Consulta ao catálogo:** <concluida | indisponivel>
 **Status:** <pendente | em_andamento | entregue | bloqueada>
 
 <Se bloqueada:>
