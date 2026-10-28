@@ -336,7 +336,7 @@ Há um terceiro efeito, mais silencioso: um esqueleto gerado tem, no melhor caso
 - A seed de demonstração exige `SEED_DE_DEMONSTRACAO="permitida"`, que vem no `.env.example` e no ambiente do CI do template, e continua recusando `NODE_ENV=production`. A guarda mora em `prisma/guarda-seed.ts`, testada sem banco, e a seed carrega o `.env`.
 - O briefing do B4 normaliza o mapa anterior à D-23 pela mesma regra de compatibilidade do B6.
 - A premissa criada no degrau 4 da F2 entra no `premissas_realizadas` da feature que a realiza, antes de a resposta ser gravada.
-- Cada feature registra a consulta ao catálogo dela (`consulta_modulex: concluida | indisponivel`), o 12º campo do contrato, na mesma ordem no `04-decomposicao.md`, no `SKILL.md` e no `00-schema.md`. O B6 só oferece extração quando a consulta daquela feature foi concluída; feature sem o campo (mapa anterior) segue a regra de antes.
+- Cada feature registra a consulta ao catálogo dela (`consulta_modulex: concluida | indisponivel | nao_aplicavel`; o último na feature que não integra terceiro, em que não há consulta), o 12º campo do contrato, na mesma ordem no `04-decomposicao.md`, no `SKILL.md` e no `00-schema.md`. O B6 só oferece extração quando a consulta daquela feature foi concluída; feature sem o campo (mapa anterior) segue a regra de antes.
 
 **Alternativa descartada:** recusar só `NODE_ENV=production`, como antes. E, para a consulta, um estado único no mapa: a consulta é por feature, e com uma concluída e outra fora do ar qualquer valor global erra uma das duas (revisão do Codex).
 

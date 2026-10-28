@@ -111,7 +111,7 @@ Contrato da feature — toda feature do mapa declara, obrigatoriamente:
 | `premissas_realizadas` | `[PR-NN, ...]` ou `[]`: as premissas que esta feature realiza |
 | `modulos_candidatos` | `["<id>", ...]` ou `[]`: os módulos do catálogo para o terceiro desta feature |
 | `fatias_candidatas` | `{"<id>": ["<slug>", ...]}` ou `{}`: as fatias de cada candidato |
-| `consulta_modulex` | `concluida` \| `indisponivel`: se a consulta ao catálogo desta feature respondeu |
+| `consulta_modulex` | `concluida` \| `indisponivel` \| `nao_aplicavel`: se a consulta ao catálogo desta feature respondeu; `nao_aplicavel` sem terceiro |
 | `status` | `pendente` \| `em_andamento` \| `entregue` \| `bloqueada` |
 
 A ordem não é negociável em dois pontos: a **feature de fundação** vem primeiro, e nenhuma feature de negócio precede aquilo de que depende.

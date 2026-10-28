@@ -133,6 +133,8 @@ confere_doc 'a premissa nova da F2 entra no premissas_realizadas da feature' \
   "awk '/Nenhum dos três responde/' '$refs/05-construcao.md' | grep -q 'premissas_realizadas'"
 confere_doc 'o B3 registra a consulta ao catalogo por feature (concluida ou indisponivel)' \
   "grep -q 'consulta_modulex: indisponivel. em cada feature' '$refs/04-decomposicao.md' && grep -q 'Consulta ao catálogo:' '$raiz/.claude/skills/buildx/assets/TEMPLATE-MAPA.md'"
+confere_doc 'consulta_modulex tem nao_aplicavel para feature sem terceiro, nos tres lugares' \
+  "grep -q 'nao_aplicavel' '$refs/04-decomposicao.md' && grep -q 'nao_aplicavel' '$raiz/.claude/skills/buildx/SKILL.md' && grep -q 'nao_aplicavel' '$raiz/.claude/skills/buildx/assets/TEMPLATE-MAPA.md'"
 confere_doc 'o B6 so oferece extracao com a consulta concluida' \
   "awk '/Candidatas a módulo novo/,/Compatibilidade com o/' '$refs/07-validacao.md' | grep -q 'consulta_modulex: concluida'"
 

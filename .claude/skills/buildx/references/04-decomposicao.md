@@ -104,7 +104,7 @@ Toda feature do `MAPA.md` declara, obrigatoriamente:
 | `premissas_realizadas` | lista de ids, `[PR-NN, ...]` \| `[]` | as premissas do `PREMISSAS.md` que esta feature realiza; o B6 confere que toda premissa aparece em alguma feature (D-24) |
 | `modulos_candidatos` | lista JSON de ids, `["<id>", ...]` \| `[]` | os módulos alternativos do catálogo para o terceiro desta feature, preenchidos pela consulta; `[]` quando não há |
 | `fatias_candidatas` | objeto JSON, `{"<id>": ["<slug>", ...]}` \| `{}` | para cada candidato, as fatias que cobrem esta feature; candidato sem fatia fica com `"<id>": []` |
-| `consulta_modulex` | `concluida` \| `indisponivel` | se a consulta ao catálogo desta feature respondeu; `indisponivel` sem `modulex` instalado ou com o catálogo fora do ar. A lista vazia sozinha não distingue os dois casos (D-25) |
+| `consulta_modulex` | `concluida` \| `indisponivel` \| `nao_aplicavel` | se a consulta ao catálogo desta feature respondeu; `indisponivel` sem `modulex` instalado ou com o catálogo fora do ar; `nao_aplicavel` na feature que não integra terceiro, em que não há consulta. A lista vazia sozinha não distingue os casos (D-25) |
 | `status` | `pendente` \| `em_andamento` \| `entregue` \| `bloqueada` | nasce `pendente` |
 
 O campo `premissas_realizadas` é o que o B6 usa para conferir: toda premissa de segurança do `PREMISSAS.md` precisa aparecer no `premissas_realizadas` de alguma feature, qualquer que seja a `origem` dela — a fundação, com `origem: template`, realiza as de autenticação. O `origem` só explica por que a feature existe (D-24). Premissa registrada que não virou código é a falha mais cara que este método pode cometer — ela cria a impressão de que o sistema está protegido.
