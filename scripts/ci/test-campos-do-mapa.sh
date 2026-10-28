@@ -16,16 +16,18 @@ n="$(awk '/^\| Campo \| Conteúdo \| Regra \|$/ { dentro = 1; next }
          END { print n + 0 }' "$doc")"
 # Onze desde a D-24: `premissas_realizadas` entra no contrato (o template já o renderizava, e o
 # B6 e o briefing do B4 dependem dele; CodeRabbit no katosmv/login#30).
-if [ "$n" = 11 ]; then
-  printf '  ok    a tabela de campos da feature tem 11 linhas de dados\n'
+# Doze desde a D-25: `consulta_modulex` diz, por feature, se a consulta ao catálogo respondeu
+# (katosmv/login#34).
+if [ "$n" = 12 ]; then
+  printf '  ok    a tabela de campos da feature tem 12 linhas de dados\n'
 else
-  printf '  FALHA esperava 11 linhas de dados na tabela de campos, achou %s\n' "$n"; falhou=1
+  printf '  FALHA esperava 12 linhas de dados na tabela de campos, achou %s\n' "$n"; falhou=1
 fi
 
-if grep -q 'toda feature com os onze campos' "$doc" && ! grep -qE '\b(oito|nove|dez) campos\b' "$doc"; then
-  printf '  ok    o critério de saída exige os onze campos\n'
+if grep -q 'toda feature com os doze campos' "$doc" && ! grep -qE '\b(oito|nove|dez|onze) campos\b' "$doc"; then
+  printf '  ok    o critério de saída exige os doze campos\n'
 else
-  printf '  FALHA o critério de saída não diz "onze campos": %s\n' "$(grep -nE 'campos' "$doc" | tr '\n' '|')"; falhou=1
+  printf '  FALHA o critério de saída não diz "doze campos": %s\n' "$(grep -nE 'campos' "$doc" | tr '\n' '|')"; falhou=1
 fi
 
 # A lista canônica é a da tabela do 04; o SKILL.md e o 00-schema.md nomeiam os mesmos campos, na
@@ -118,5 +120,22 @@ if [ -z "$fora" ]; then
 else
   printf '  FALHA modulo_disponivel fora da secao de compatibilidade: %s\n' "$(printf '%s' "$fora" | tr '\n' ' ')"; falhou=1
 fi
+
+# katosmv/login#34: o B4 normaliza o mapa anterior à D-23 antes do briefing; a premissa da F2 entra
+# no premissas_realizadas da feature; e a consulta indisponível não vira candidata a extração.
+refs="$raiz/.claude/skills/buildx/references"
+confere_doc() { # <descrição> <comando>
+  if eval "$2"; then printf '  ok    %s\n' "$1"; else printf '  FALHA %s\n' "$1"; falhou=1; fi
+}
+confere_doc 'o briefing do B4 normaliza o mapa anterior a D-23' \
+  "grep -q 'Compatibilidade com o \`MAPA.md\` anterior' '$refs/05-construcao.md'"
+confere_doc 'a premissa nova da F2 entra no premissas_realizadas da feature' \
+  "awk '/Nenhum dos três responde/' '$refs/05-construcao.md' | grep -q 'premissas_realizadas'"
+confere_doc 'o B3 registra a consulta ao catalogo por feature (concluida ou indisponivel)' \
+  "grep -q 'consulta_modulex: indisponivel. em cada feature' '$refs/04-decomposicao.md' && grep -q 'Consulta ao catálogo:' '$raiz/.claude/skills/buildx/assets/TEMPLATE-MAPA.md'"
+confere_doc 'consulta_modulex tem nao_aplicavel para feature sem terceiro, nos tres lugares' \
+  "grep -q 'nao_aplicavel' '$refs/04-decomposicao.md' && grep -q 'nao_aplicavel' '$raiz/.claude/skills/buildx/SKILL.md' && grep -q 'nao_aplicavel' '$raiz/.claude/skills/buildx/assets/TEMPLATE-MAPA.md'"
+confere_doc 'o B6 so oferece extracao com a consulta concluida' \
+  "awk '/Candidatas a módulo novo/,/Compatibilidade com o/' '$refs/07-validacao.md' | grep -q 'consulta_modulex: concluida'"
 
 [ "$falhou" = 0 ]

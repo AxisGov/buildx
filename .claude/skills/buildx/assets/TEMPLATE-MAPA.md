@@ -34,6 +34,7 @@ Verificável, sem adjetivo, numa frase.>
 **Premissas que realiza:** <[PR-NN, ...] ou []>
 **Módulos candidatos:** <["id", ...] ou []>
 **Fatias candidatas:** <{"id": ["slug", ...], ...} ou {}>
+**Consulta ao catálogo:** <concluida | indisponivel | nao_aplicavel>
 **Status:** <pendente | em_andamento | entregue | bloqueada>
 
 <Se bloqueada:>

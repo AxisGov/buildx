@@ -55,7 +55,7 @@ O briefing da feature carrega:
 | não-objetivos | as features vizinhas, nominalmente — evita que a F2 invada escopo alheio |
 | critérios de aceite de negócio | os do `PROJETO.md` que esta feature cobre |
 | premissas aplicáveis | as `PR-NN` que esta feature realiza (`premissas_realizadas` no `MAPA.md`) |
-| módulos candidatos | `modulos_candidatos` e `fatias_candidatas` da feature no `MAPA.md`, intactos (`[]` e `{}` quando não há). Com dois ou mais candidatos, a escolha do fornecedor é da F2/F3, que os recebe aqui |
+| módulos candidatos | `modulos_candidatos` e `fatias_candidatas` da feature no `MAPA.md`, intactos (`[]` e `{}` quando não há). Num mapa anterior à D-23, que traz o valor único do catálogo no lugar desses dois campos, normalize antes pela regra de "Compatibilidade com o `MAPA.md` anterior" (`references/07-validacao.md`), a mesma do B6: sem isso, o briefing perde o módulo que o catálogo já indicou. Com dois ou mais candidatos, a escolha do fornecedor é da F2/F3, que os recebe aqui |
 | convenções | ponteiro para `docs/stack/CONVENCOES.md` |
 | base | `feature/<predecessora>` quando a feature se encadeia (passo 1); ausente quando nasce da base comum. A F1 abre o worktree sobre ela e a F6 a repassa ao E0 da mergex, que mede e abre o PR contra ela |
 | orçamento | `max_reprovacoes_f5: 3`, `orcamento_declarado_por: buildx`, `max_replanejamentos_f6: 1` — o teto do laço F3 ↔ F5 e do replanejamento da execução (`integracao/sprintx.md`); sem isso o sprintx não tem teto e o laço não para |
@@ -81,7 +81,7 @@ Como responder, na ordem, sem pular degrau:
 1. **Derivável do `PROJETO.md`?** Use, e cite a seção na justificativa.
 2. **Derivável do `PREMISSAS.md`?** Use, e cite o `PR-NN`.
 3. **Derivável do `CONVENCOES.md`?** Use, e cite a regra.
-4. **Nenhum dos três responde?** → **crie uma premissa nova** em `PREMISSAS.md`, com `origem: f2_autonoma`, e só então responda com ela.
+4. **Nenhum dos três responde?** → **crie uma premissa nova** em `PREMISSAS.md`, com `origem: f2_autonoma`, e só então responda com ela. Se esta feature a realiza, acrescente o `PR-NN` ao `premissas_realizadas` dela no `MAPA.md` antes de gravar a resposta: o B6 cruza cada premissa com essa lista, e a premissa da F2 que ficou fora dela aparece como órfã.
 
 O degrau 4 é o que separa decisão auditável de invenção. Nunca responda a F2 com algo que não esteja escrito em um dos três arquivos — se não estiver, escreva primeiro, com o `o_que_invalida` preenchido, e responda depois.
 

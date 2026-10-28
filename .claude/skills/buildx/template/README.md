@@ -16,7 +16,7 @@ literal: o B2 copia esta pasta para a raiz do projeto novo e segue dali.
 | Autenticação | e-mail e senha, hash bcrypt, sessão JWT em cookie `httpOnly`, papéis `admin` e `usuario` |
 | Interface | tokens do VS Code (Dark+ e Light+), layout de regiões, alternador de tema |
 | P-9 | painel `/`, `/configuracoes/usuarios`, `/perfil`, `/perfil/senha` |
-| Testes | 61, cobrindo os serviços e as rotas com o servidor de pé |
+| Testes | 66, cobrindo os serviços, as rotas com o servidor de pé e a guarda da seed |
 
 ## Como rodar
 
@@ -28,7 +28,9 @@ npm run dev
 ```
 
 Contas de demonstração — fictícias, criadas pela seed, que **não roda em
-produção**:
+produção**: ela só roda com o argumento `--demonstracao` na linha de comando
+(o `npm run setup` o passa; à mão, `npx tsx prisma/seed.ts --demonstracao`) e
+recusa `NODE_ENV=production`. O `npm run setup` é só para o ambiente local:
 
 ```
 admin@exemplo.local     demo1234    administrador
@@ -44,7 +46,7 @@ usuario@exemplo.local   demo1234    usuário comum
 | `npm test` | a suíte inteira |
 | `npm run lint` | ESLint |
 | `npm run setup` | prepara o banco do zero |
-| `npm run db:seed` | só a seed |
+| `npm run db:seed -- --demonstracao` | só a seed (sem o argumento, recusa) |
 
 ## O que este template não traz, de propósito
 

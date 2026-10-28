@@ -44,7 +44,8 @@ jobs:
         run: npx prisma migrate deploy
 
       - name: Semear
-        run: npm run db:seed
+        # a seed de demonstração só roda com o argumento explícito (D-25)
+        run: npm run db:seed -- --demonstracao
 
       - name: Lint
         run: npm run lint
