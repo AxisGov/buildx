@@ -333,13 +333,13 @@ Há um terceiro efeito, mais silencioso: um esqueleto gerado tem, no melhor caso
 
 **Decisão:** quatro achados do CodeAnt e do CodeRabbit no katosmv/login#34 (0.12.6 instalada):
 
-- A seed de demonstração exige `SEED_DE_DEMONSTRACAO="permitida"`, que vem no `.env.example` e no ambiente do CI do template, e continua recusando `NODE_ENV=production`. A guarda mora em `prisma/guarda-seed.ts`, testada sem banco, e a seed carrega o `.env`.
+- A seed de demonstração só roda com o argumento `--demonstracao`, exato, na linha de comando — o `npm run setup` e o CI do template o passam — e continua recusando `NODE_ENV=production`. A permissão não mora no ambiente: o `.env` de um servidor copiado do `.env.example` a carregaria (CodeAnt no buildx#16). A guarda mora em `prisma/guarda-seed.ts`, testada sem banco e como processo.
 - O briefing do B4 normaliza o mapa anterior à D-23 pela mesma regra de compatibilidade do B6.
 - A premissa criada no degrau 4 da F2 entra no `premissas_realizadas` da feature que a realiza, antes de a resposta ser gravada.
 - Cada feature registra a consulta ao catálogo dela (`consulta_modulex: concluida | indisponivel | nao_aplicavel`; o último na feature que não integra terceiro, em que não há consulta), o 12º campo do contrato, na mesma ordem no `04-decomposicao.md`, no `SKILL.md` e no `00-schema.md`. O B6 só oferece extração quando a consulta daquela feature foi concluída; feature sem o campo (mapa anterior) segue a regra de antes.
 
-**Alternativa descartada:** recusar só `NODE_ENV=production`, como antes. E, para a consulta, um estado único no mapa: a consulta é por feature, e com uma concluída e outra fora do ar qualquer valor global erra uma das duas (revisão do Codex).
+**Alternativa descartada:** recusar só `NODE_ENV=production`, como antes; e a permissão numa variável de ambiente no `.env.example` (a primeira versão deste PR), que um `.env` copiado levaria para produção. E, para a consulta, um estado único no mapa: a consulta é por feature, e com uma concluída e outra fora do ar qualquer valor global erra uma das duas (revisão do Codex).
 
-**Por quê:** a seed rodada de um shell sem `NODE_ENV` contra o banco de produção criava um administrador com senha pública; fechar por padrão troca isso por uma permissão que só o ambiente local tem. Sem a normalização, o mapa antigo chegava à F1 sem o módulo que o catálogo já tinha indicado. Sem o vínculo, a premissa da F2 aparecia órfã no B6. E a lista vazia não distinguia "o catálogo não tem o módulo" de "o catálogo não respondeu", e uma indisponibilidade virava candidatura a extração.
+**Por quê:** a seed rodada de um shell sem `NODE_ENV` contra o banco de produção criava um administrador com senha pública; fechar por padrão troca isso por uma intenção explícita no comando, que nenhum arquivo copiado carrega. Sem a normalização, o mapa antigo chegava à F1 sem o módulo que o catálogo já tinha indicado. Sem o vínculo, a premissa da F2 aparecia órfã no B6. E a lista vazia não distinguia "o catálogo não tem o módulo" de "o catálogo não respondeu", e uma indisponibilidade virava candidatura a extração.
 
 **O que invalida:** um ambiente de produção que precise da seed de demonstração, ou o catálogo passar a responder por feature, e não pelo mapa.

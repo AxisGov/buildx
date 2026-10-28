@@ -10,8 +10,8 @@ if (!url) throw new Error('DATABASE_URL ausente. Veja o .env.example.')
 const prisma = new PrismaClient({ adapter: new PrismaBetterSqlite3({ url }) })
 
 // Credenciais fictícias, para uso local. A seed nunca roda em produção:
-// a guarda (prisma/guarda-seed.ts) exige a permissão explícita do ambiente
-// de demonstração e recusa NODE_ENV=production. A senha tem nome: no uso ela é
+// a guarda (prisma/guarda-seed.ts) exige o argumento --demonstracao na linha
+// de comando e recusa NODE_ENV=production. A senha tem nome: no uso ela é
 // referência, e a varredura de segredo da mergex não a confunde com credencial.
 const SENHA_DE_DEMONSTRACAO = 'demo1234'
 
@@ -31,7 +31,7 @@ const DEMONSTRACAO = [
 ]
 
 async function semear() {
-  const recusa = motivoParaNaoSemear(process.env)
+  const recusa = motivoParaNaoSemear(process.argv.slice(2), process.env)
   if (recusa !== null) throw new Error(recusa)
 
   for (const conta of DEMONSTRACAO) {

@@ -27,8 +27,6 @@ jobs:
     env:
       DATABASE_URL: file:./prisma/ci.db
       JWT_SECRET: segredo-de-ci-nao-usar-em-producao
-      # a permissão da seed de demonstração: só em ambiente descartável (katosmv/login#34)
-      SEED_DE_DEMONSTRACAO: permitida
     steps:
       - uses: actions/checkout@v4
 
@@ -46,7 +44,8 @@ jobs:
         run: npx prisma migrate deploy
 
       - name: Semear
-        run: npm run db:seed
+        # a seed de demonstração só roda com o argumento explícito (D-25)
+        run: npm run db:seed -- --demonstracao
 
       - name: Lint
         run: npm run lint
