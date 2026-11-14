@@ -98,4 +98,4 @@ Terceira reprovação: o sprintx para em `orcamento_esgotado`, **terminal** — 
 
 ## Comportamento sem sprintx
 
-O buildx **não roda**. O sprintx é o motor de tudo que acontece no B4. Diga que falta e como instalar (`npx expxdev init`), e pare.
+O buildx **não roda**. O sprintx é o motor de tudo que acontece no B4. Diga que falta e como instalar (`expx init`, com o CLI `expx` instalado pela release do expxdev: https://github.com/AxisGov/expxdev#instalar-a-partir-da-release), e pare.

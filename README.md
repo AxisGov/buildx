@@ -37,8 +37,10 @@ Descreva o sistema inteiro que você quer. O buildx faz **uma única pergunta** 
   <img alt="Demonstração: uma descrição entra, o buildx faz uma única pergunta e conduz as seis etapas até os PRs abertos" src=".github/assets/anim/demo-terminal.svg" width="100%">
 </p>
 
+Com o CLI `expx` instalado pela [release do expxdev](https://github.com/AxisGov/expxdev#instalar-a-partir-da-release):
+
 ```bash
-npx expxdev init          # instala o buildx e o resto do método no seu harness
+expx init          # instala o buildx e o resto do método no seu harness
 ```
 
 ```
@@ -169,15 +171,15 @@ O método Expx é um conjunto de skills que se compõem, instaladas e mantidas p
 
 | Peça | Papel | Relação com o `buildx` |
 |---|---|---|
-| **[expxdev](https://github.com/AxisGov/expxdev)** | o CLI: instala, atualiza e diagnostica o ecossistema | é quem instala esta skill (`npx expxdev init`) |
-| **[prodx](https://github.com/bittencourtthulio/prodx)** | **camada** de produto: decide **se** há trabalho | abre o projeto no B1 (modo greenfield) e o valida no B6 — **obrigatório** |
+| **[expxdev](https://github.com/AxisGov/expxdev)** | o CLI: instala, atualiza e diagnostica o ecossistema | é quem instala esta skill (`expx init`) |
+| **[prodx](https://github.com/AxisGov/prodx)** | **camada** de produto: decide **se** há trabalho | abre o projeto no B1 (modo greenfield) e o valida no B6 — **obrigatório** |
 | **[sprintx](https://github.com/AxisGov/sprintx)** | **Build** — feature nova, F1…F6 | planeja e executa cada feature do mapa, no B4 — **obrigatório** |
 | **[mergex](https://github.com/AxisGov/mergex)** | entrega: branch, commit por task, PR e pacote de QA | abre a branch, verifica prontidão e monta o PR, no B4 — **obrigatório** |
-| **[stackx](https://github.com/bittencourtthulio/stackx)** | **camada** de convenções do repositório | grava o `CONVENCOES.md` no B2, invertido: decide em vez de detectar |
-| **[memox](https://github.com/bittencourtthulio/MemoX)** | **camada** de memória do projeto | consultado no B5, para não repetir uma tentativa que já falhou |
+| **[stackx](https://github.com/AxisGov/stackx)** | **camada** de convenções do repositório | grava o `CONVENCOES.md` no B2, invertido: decide em vez de detectar |
+| **[memox](https://github.com/AxisGov/MemoX)** | **camada** de memória do projeto | consultado no B5, para não repetir uma tentativa que já falhou |
 | **[modulex](https://github.com/bittencourtthulio/modulex)** | catálogo de integrações já resolvidas | responde no B3 se a feature já tem módulo pronto; recebe de volta, no B6, o que virou módulo novo |
 | **[runx](https://github.com/AxisGov/runx)** | **Run** — ocorrência em produção, E1…E5 | não participa: o buildx constrói, não corrige |
-| **[legadox](https://github.com/bittencourtthulio/legadox)** | **camada** de segurança para código legado | não participa: projeto novo não tem legado |
+| **[legadox](https://github.com/AxisGov/legadox)** | **camada** de segurança para código legado | não participa: projeto novo não tem legado |
 | **buildx** *(este repositório)* | orquestra um projeto inteiro | — |
 
 O buildx é a única peça do método que **depende** de outras: sem `prodx`, `sprintx` e `mergex` ele não roda, e diz o que falta. Não é falta de educação, é a arquitetura — rodar sem elas significaria reimplementar quatro skills mal, dentro de uma quinta. O `stackx`, o `memox` e o `modulex` são opcionais e degradam com aviso.
@@ -405,8 +407,10 @@ docs/
 
 ## Instalação
 
+Com o CLI `expx` instalado pela [release do expxdev](https://github.com/AxisGov/expxdev#instalar-a-partir-da-release):
+
 ```bash
-npx expxdev init
+expx init
 ```
 
 Selecione `buildx` junto de `prodx`, `sprintx` e `mergex` — as três são obrigatórias. O `init` busca as skills nos repositórios oficiais, empacota as selecionadas como um plugin local e configura os dois harnesses: os comandos ficam com namespace no Claude Code (`/expx:buildx`) e sem namespace no OpenCode (`/buildx`).
@@ -472,12 +476,12 @@ O mesmo vale para o merge (D-03). O buildx entrega PRs abertos e verdes; integra
 <div align="center">
 <sub>Parte do método <strong>Expx</strong> ·
 <a href="https://github.com/AxisGov/expxdev">expxdev</a> ·
-<a href="https://github.com/bittencourtthulio/prodx">prodx</a> ·
+<a href="https://github.com/AxisGov/prodx">prodx</a> ·
 <a href="https://github.com/AxisGov/buildx">buildx</a> ·
 <a href="https://github.com/AxisGov/sprintx">sprintx</a> ·
 <a href="https://github.com/AxisGov/runx">runx</a> ·
 <a href="https://github.com/AxisGov/mergex">mergex</a> ·
-<a href="https://github.com/bittencourtthulio/stackx">stackx</a> ·
-<a href="https://github.com/bittencourtthulio/legadox">legadox</a> ·
-<a href="https://github.com/bittencourtthulio/MemoX">memox</a></sub>
+<a href="https://github.com/AxisGov/stackx">stackx</a> ·
+<a href="https://github.com/AxisGov/legadox">legadox</a> ·
+<a href="https://github.com/AxisGov/MemoX">memox</a></sub>
 </div>

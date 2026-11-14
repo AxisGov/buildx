@@ -124,7 +124,7 @@ A camada de dados (P-1) existe em parte para tornar a troca por Postgres uma fea
 
 ## D-10 — A suíte Expx é instalada no B2, antes do código
 
-**Decisão:** `npx expxdev init` roda antes da primeira linha de negócio, e falhar ali é bloqueio real.
+**Decisão:** `expx init` roda antes da primeira linha de negócio, e falhar ali é bloqueio real.
 
 **Alternativa descartada:** instalar no fim, como acabamento da entrega.
 

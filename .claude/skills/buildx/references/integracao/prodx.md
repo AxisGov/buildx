@@ -58,4 +58,4 @@ Detalhe operacional em `07-validacao.md`.
 
 O buildx **não roda sem prodx**. Diferente do que valeria para o memox, isto não é degradação graciosa: sem o P2 o buildx recortaria features a partir da solução imaginada pelo usuário, e sem o P4 não haveria escopo mínimo para ordenar o mapa.
 
-Sem prodx, diga qual camada falta e como instalar (`npx expxdev init`), e pare.
+Sem prodx, diga qual camada falta e como instalar (`expx init`, com o CLI `expx` instalado pela release do expxdev: https://github.com/AxisGov/expxdev#instalar-a-partir-da-release), e pare.
