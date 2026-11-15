@@ -69,4 +69,4 @@ Se um projeto do buildx um dia acumular legado, o legadox entra normalmente, e a
 
 O buildx **não roda**. Sem `mergex-check` não há portão, e sem `mergex-pr` a entrega não chega a lugar nenhum: o laço do B4 deixaria uma branch por feature (a F1 do sprintx as abre de qualquer jeito) que nunca vira PR.
 
-Diga que falta e como instalar (`npx expxdev init`), e pare.
+Diga que falta e como instalar (`expx init`, com o CLI `expx` instalado pela release do expxdev: https://github.com/AxisGov/expxdev#instalar-a-partir-da-release), e pare.

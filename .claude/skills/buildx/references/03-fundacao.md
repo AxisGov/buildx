@@ -38,8 +38,10 @@ Cada escolha vira premissa em `PREMISSAS.md` com `origem: decisao_de_stack` — 
 
 Padrão P-8. Roda **antes do esqueleto de código**: o projeto se instala antes de se construir.
 
+Com o CLI `expx` instalado pela [release do expxdev](https://github.com/AxisGov/expxdev#instalar-a-partir-da-release):
+
 ```bash
-npx expxdev init
+expx init
 ```
 
 A instalação precisa deixar, versionados: `.expx/expx-lock.json`, `.expx/marketplace/plugins/expx/`, `.claude/` e `.opencode/`. A suíte completa — `sprintx`, `runx`, `mergex`, `stackx`, `memox`, `legadox`, `prodx` e `buildx`.

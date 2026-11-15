@@ -105,7 +105,7 @@ Regras da instalação, sem exceção:
 
 **Decisão:** todo projeto criado pelo buildx já vem com o método Expx instalado e os dois harnesses configurados — Claude Code e OpenCode — antes da primeira feature.
 
-Instalado por `npx expxdev init`, com a suíte completa: `sprintx`, `runx`, `mergex`, `stackx`, `memox`, `legadox`, `prodx` e o próprio `buildx`. Os comandos ficam com namespace no Claude Code (`/expx:sprintx-sprints`) e sem namespace no OpenCode (`/sprintx-sprints`).
+Instalado por `expx init`, com a suíte completa: `sprintx`, `runx`, `mergex`, `stackx`, `memox`, `legadox`, `prodx` e o próprio `buildx`. Os comandos ficam com namespace no Claude Code (`/expx:sprintx-sprints`) e sem namespace no OpenCode (`/sprintx-sprints`).
 
 O que fica no projeto, versionado:
 
